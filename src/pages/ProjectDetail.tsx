@@ -6,7 +6,7 @@ import { Project } from "@/types/Project";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Clock, Github, ExternalLink, Code } from "lucide-react";
+import { ArrowLeft, Clock, Github, ExternalLink, Code, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 const ProjectDetail = () => {
@@ -110,7 +110,15 @@ const ProjectDetail = () => {
                 onClick={() => window.open(project.demoUrl, "_blank")}
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
-                Live Demo
+                External Demo
+              </Button>
+              <Button 
+                variant="secondary"
+                className="flex items-center"
+                onClick={() => navigate(`/projects/${project.id}/demo`)}
+              >
+                <Play className="mr-2 h-4 w-4" />
+                View Demo
               </Button>
             </div>
           </div>
@@ -167,13 +175,23 @@ const ProjectDetail = () => {
                   Experience the project in action with our interactive demo.
                 </p>
               </div>
-              <Button 
-                onClick={() => window.open(project.demoUrl, "_blank")}
-                className="flex items-center"
-              >
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Open Live Demo
-              </Button>
+              <div className="flex space-x-4">
+                <Button 
+                  onClick={() => navigate(`/projects/${project.id}/demo`)}
+                  className="flex items-center"
+                >
+                  <Play className="mr-2 h-4 w-4" />
+                  View Demo
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => window.open(project.demoUrl, "_blank")}
+                  className="flex items-center"
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  External Demo
+                </Button>
+              </div>
             </div>
           </TabsContent>
           <TabsContent value="code">
@@ -211,13 +229,23 @@ const ProjectDetail = () => {
                   </div>
                 </li>
               </ul>
-              <Button 
-                onClick={() => window.open(project.githubUrl, "_blank")}
-                className="flex items-center"
-              >
-                <Github className="mr-2 h-4 w-4" />
-                View Code Repository
-              </Button>
+              <div className="flex space-x-4">
+                <Button 
+                  onClick={() => window.open(project.githubUrl, "_blank")}
+                  className="flex items-center"
+                >
+                  <Github className="mr-2 h-4 w-4" />
+                  View Code Repository
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => navigate(`/projects/${project.id}/demo`)}
+                  className="flex items-center"
+                >
+                  <Play className="mr-2 h-4 w-4" />
+                  View Demo
+                </Button>
+              </div>
             </div>
           </TabsContent>
           <TabsContent value="resources">

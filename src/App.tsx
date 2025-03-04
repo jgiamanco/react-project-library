@@ -11,6 +11,7 @@ import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import ProjectDetail from "./pages/ProjectDetail";
 import NotFound from "./pages/NotFound";
+import ProjectDemo from "./components/projects/ProjectDemo";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/signup" element={<SignUp />} />
           <Route path="/dashboard" element={<Layout requireAuth><Dashboard /></Layout>} />
           <Route path="/projects/:id" element={<Layout requireAuth><ProjectDetail /></Layout>} />
+          <Route path="/projects/:id/demo" element={<ProjectDemo />} />
           <Route path="*" element={<Layout><NotFound /></Layout>} />
         </Routes>
       </BrowserRouter>
