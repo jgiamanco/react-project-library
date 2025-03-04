@@ -30,8 +30,11 @@ const Dashboard = () => {
     <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="mb-8 animate-fade-in">
         <h1 className="text-3xl font-bold mb-2">Project Dashboard</h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mb-2">
           Browse our collection of 25 React TypeScript projects. Each project includes complete source code and documentation.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          All projects include GitHub repositories with full source code and live demos to explore the functionality.
         </p>
       </div>
 

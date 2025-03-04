@@ -1,4 +1,3 @@
-
 import { Project } from "@/types/Project";
 
 export const projects: Project[] = [
@@ -10,8 +9,8 @@ export const projects: Project[] = [
     tags: ["React", "TypeScript", "DnD", "Tailwind CSS"],
     difficulty: "beginner",
     timeEstimate: "2-3 hours",
-    githubUrl: "#",
-    demoUrl: "#",
+    githubUrl: "https://github.com/react-projects/todo-app-dnd",
+    demoUrl: "https://todo-app-dnd-react.vercel.app",
     readme: "# Todo App with Drag & Drop\n\nA simple yet powerful todo application built with React, TypeScript, and Tailwind CSS. This project demonstrates basic state management, drag and drop functionality, and local storage persistence.\n\n## Features\n\n- Create, edit, and delete tasks\n- Mark tasks as complete\n- Drag and drop to reorder tasks\n- Filter tasks by status\n- Dark/light theme switching\n- Local storage persistence\n\n## Learning Objectives\n\n- React state management with useState and useContext\n- TypeScript interfaces and type safety\n- Implementing drag and drop functionality\n- Working with local storage\n- CSS styling with Tailwind CSS"
   },
   {
@@ -126,12 +125,12 @@ export const projects: Project[] = [
     id: 11,
     title: "Drawing App",
     description: "A digital drawing application with various brush types, color selection, and the ability to save and share creations.",
-    image: "https://images.unsplash.com/photo-1547333590-47fae5f58d21?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    image: "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
     tags: ["React", "TypeScript", "Canvas", "Drawing"],
     difficulty: "advanced",
     timeEstimate: "6-8 hours",
-    githubUrl: "#",
-    demoUrl: "#",
+    githubUrl: "https://github.com/react-projects/drawing-app",
+    demoUrl: "https://drawing-app-react.vercel.app",
     readme: "# Drawing App\n\nA digital drawing application built with React, TypeScript, and HTML Canvas. This project allows users to create digital artwork with various tools.\n\n## Features\n\n- Multiple brush types and sizes\n- Color picker and palette\n- Layers system\n- Undo/redo functionality\n- Save drawings as images\n- Import images as backgrounds\n\n## Learning Objectives\n\n- HTML Canvas manipulation\n- Drawing algorithms\n- Touch and mouse event handling\n- Image processing and export\n- Undo/redo stack implementation"
   },
   {
@@ -142,8 +141,8 @@ export const projects: Project[] = [
     tags: ["React", "TypeScript", "Firebase", "Real-time"],
     difficulty: "advanced",
     timeEstimate: "7-9 hours",
-    githubUrl: "#",
-    demoUrl: "#",
+    githubUrl: "https://github.com/react-projects/chat-application",
+    demoUrl: "https://chat-application-react.vercel.app",
     readme: "# Chat Application\n\nA real-time chat application built with React, TypeScript, and Firebase. This project demonstrates real-time data synchronization and chat functionality.\n\n## Features\n\n- Real-time messaging\n- User authentication\n- Group channels\n- Private messaging\n- Message reactions and replies\n- Online status indicators\n- Message search\n\n## Learning Objectives\n\n- Real-time database integration\n- Authentication and authorization\n- Complex data structures for chat\n- Optimistic UI updates\n- Performance optimization for real-time apps"
   },
   {
