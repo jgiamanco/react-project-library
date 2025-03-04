@@ -66,6 +66,12 @@ const ProjectGrid = ({ projects }: ProjectGridProps) => {
     return () => clearTimeout(timer);
   }, []);
 
+  const clearFilters = () => {
+    setSelectedDifficulty("");
+    setSelectedTag("");
+    setSearchQuery("");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
@@ -90,7 +96,7 @@ const ProjectGrid = ({ projects }: ProjectGridProps) => {
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Difficulties</SelectItem>
+              <SelectItem value="all">All Difficulties</SelectItem>
               <SelectItem value="beginner">Beginner</SelectItem>
               <SelectItem value="intermediate">Intermediate</SelectItem>
               <SelectItem value="advanced">Advanced</SelectItem>
@@ -104,7 +110,7 @@ const ProjectGrid = ({ projects }: ProjectGridProps) => {
               <SelectValue placeholder="Tag" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Tags</SelectItem>
+              <SelectItem value="all">All Tags</SelectItem>
               {allTags.map((tag) => (
                 <SelectItem key={tag} value={tag}>
                   {tag}
@@ -115,11 +121,7 @@ const ProjectGrid = ({ projects }: ProjectGridProps) => {
           {(selectedDifficulty || selectedTag || searchQuery) && (
             <Button
               variant="outline"
-              onClick={() => {
-                setSelectedDifficulty("");
-                setSelectedTag("");
-                setSearchQuery("");
-              }}
+              onClick={clearFilters}
             >
               Clear
             </Button>
@@ -134,13 +136,7 @@ const ProjectGrid = ({ projects }: ProjectGridProps) => {
           <p className="text-muted-foreground mb-6">
             Try adjusting your search or filter criteria
           </p>
-          <Button
-            onClick={() => {
-              setSelectedDifficulty("");
-              setSelectedTag("");
-              setSearchQuery("");
-            }}
-          >
+          <Button onClick={clearFilters}>
             Clear all filters
           </Button>
         </div>
