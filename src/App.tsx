@@ -28,6 +28,7 @@ const App = () => (
           <Route path="/dashboard" element={<Layout requireAuth><Dashboard /></Layout>} />
           <Route path="/projects/:id" element={<Layout requireAuth><ProjectDetail /></Layout>} />
           <Route path="/projects/:id/demo" element={<ProjectDemo />} />
+          <Route path="/projects/:id/demo/code" element={<ProjectDemo />} />
           <Route path="*" element={<Layout><NotFound /></Layout>} />
         </Routes>
       </BrowserRouter>

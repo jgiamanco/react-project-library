@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { projects } from "@/data/projects";
@@ -6,7 +5,7 @@ import { Project } from "@/types/Project";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Clock, Github, ExternalLink, Code, Play } from "lucide-react";
+import { ArrowLeft, Clock, Code, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 const ProjectDetail = () => {
@@ -99,18 +98,10 @@ const ProjectDetail = () => {
             <div className="flex flex-wrap gap-4 mb-10">
               <Button 
                 className="flex items-center"
-                onClick={() => window.open(project.githubUrl, "_blank")}
+                onClick={() => navigate(`/projects/${project.id}/demo/code`)}
               >
-                <Github className="mr-2 h-4 w-4" />
+                <Code className="mr-2 h-4 w-4" />
                 View Code
-              </Button>
-              <Button 
-                variant="outline" 
-                className="flex items-center"
-                onClick={() => window.open(project.demoUrl, "_blank")}
-              >
-                <ExternalLink className="mr-2 h-4 w-4" />
-                External Demo
               </Button>
               <Button 
                 variant="secondary"
@@ -159,7 +150,6 @@ const ProjectDetail = () => {
           <TabsList className="mb-6">
             <TabsTrigger value="readme">README</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
-            <TabsTrigger value="code">Code Examples</TabsTrigger>
             <TabsTrigger value="resources">Resources</TabsTrigger>
           </TabsList>
           <TabsContent value="readme" className="prose prose-blue max-w-none">
@@ -185,65 +175,11 @@ const ProjectDetail = () => {
                 </Button>
                 <Button 
                   variant="outline"
-                  onClick={() => window.open(project.demoUrl, "_blank")}
+                  onClick={() => navigate(`/projects/${project.id}/demo/code`)}
                   className="flex items-center"
                 >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  External Demo
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
-          <TabsContent value="code">
-            <div className="bg-white rounded-xl p-6 border min-h-[400px]">
-              <h2 className="text-xl font-semibold mb-4">Code Repository</h2>
-              <p className="text-muted-foreground mb-6">
-                Access the complete source code for this project on GitHub. The repository includes:
-              </p>
-              <ul className="space-y-3 mb-6">
-                <li className="flex items-start">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-0.5">
-                    <span className="text-blue-700 text-xs font-medium">1</span>
-                  </div>
-                  <div>
-                    <p className="font-medium">Full Source Code</p>
-                    <p className="text-sm text-muted-foreground">Complete React TypeScript implementation</p>
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-0.5">
-                    <span className="text-blue-700 text-xs font-medium">2</span>
-                  </div>
-                  <div>
-                    <p className="font-medium">Setup Instructions</p>
-                    <p className="text-sm text-muted-foreground">Step-by-step guide to run the project locally</p>
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-0.5">
-                    <span className="text-blue-700 text-xs font-medium">3</span>
-                  </div>
-                  <div>
-                    <p className="font-medium">Documentation</p>
-                    <p className="text-sm text-muted-foreground">Detailed explanation of components and architecture</p>
-                  </div>
-                </li>
-              </ul>
-              <div className="flex space-x-4">
-                <Button 
-                  onClick={() => window.open(project.githubUrl, "_blank")}
-                  className="flex items-center"
-                >
-                  <Github className="mr-2 h-4 w-4" />
-                  View Code Repository
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => navigate(`/projects/${project.id}/demo`)}
-                  className="flex items-center"
-                >
-                  <Play className="mr-2 h-4 w-4" />
-                  View Demo
+                  <Code className="mr-2 h-4 w-4" />
+                  View Code
                 </Button>
               </div>
             </div>

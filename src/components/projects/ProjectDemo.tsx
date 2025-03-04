@@ -1,16 +1,20 @@
 
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { projects } from "@/data/projects";
 import { TodoApp } from "@/projects";
+import CodeViewer from "./CodeViewer";
+import todoAppCode from "@/projects/todo-app/code";
 
 const ProjectDemo = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const projectId = parseInt(id || "0");
   const project = projects.find(p => p.id === projectId);
+  const isCodeView = location.pathname.endsWith('/code');
   
   if (!project) {
     return (
@@ -24,6 +28,33 @@ const ProjectDemo = () => {
           Back to Dashboard
         </Button>
       </div>
+    );
+  }
+
+  // Get code files based on project ID
+  const getProjectCode = () => {
+    switch (projectId) {
+      case 1:
+        return todoAppCode;
+      // Add more cases as more projects are implemented
+      default:
+        return [
+          {
+            name: "Example.tsx",
+            content: "// This project's code is not available yet",
+            language: "typescript"
+          }
+        ];
+    }
+  };
+
+  if (isCodeView) {
+    return (
+      <CodeViewer 
+        files={getProjectCode()} 
+        onBack={() => navigate(`/projects/${project.id}`)}
+        title={project.title}
+      />
     );
   }
 
