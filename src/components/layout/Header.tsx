@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,8 @@ const Header = () => {
   const location = useLocation();
   const isAuthenticated = localStorage.getItem("authenticated") === "true";
 
-  const isAuthPage = location.pathname === "/signin" || location.pathname === "/signup";
+  const isAuthPage =
+    location.pathname === "/signin" || location.pathname === "/signup";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -41,15 +41,15 @@ const Header = () => {
   if (isAuthPage) return null;
 
   return (
-    <header 
+    <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
       }`}
     >
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center">
-          <a 
-            href="/" 
+          <a
+            href="/"
             className="flex items-center space-x-2 text-xl font-bold"
             onClick={(e) => {
               e.preventDefault();
@@ -67,8 +67,8 @@ const Header = () => {
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="relative h-10 w-10 rounded-full"
                 >
                   <Avatar className="h-10 w-10">
@@ -78,22 +78,22 @@ const Header = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={() => navigate("/profile")}
                   className="cursor-pointer"
                 >
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => navigate("/settings")}
+                <DropdownMenuItem
+                  onClick={() => navigate("/profile?tab=account")}
                   className="cursor-pointer"
                 >
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={handleSignOut}
                   className="cursor-pointer text-red-500 focus:text-red-500"
                 >
@@ -104,17 +104,10 @@ const Header = () => {
             </DropdownMenu>
           ) : (
             <>
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate("/signin")}
-              >
+              <Button variant="ghost" onClick={() => navigate("/signin")}>
                 Sign in
               </Button>
-              <Button 
-                onClick={() => navigate("/signup")}
-              >
-                Sign up
-              </Button>
+              <Button onClick={() => navigate("/signup")}>Sign up</Button>
             </>
           )}
         </div>
