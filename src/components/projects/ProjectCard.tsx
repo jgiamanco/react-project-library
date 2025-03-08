@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Project } from "@/types/Project";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, Github } from "lucide-react";
+import projectComponents from "@/projects";
 
 interface ProjectCardProps {
   project: Project;
@@ -14,7 +14,21 @@ interface ProjectCardProps {
 const ProjectCard = ({ project, index }: ProjectCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
-  
+
+  // Check if the project has code implementation
+  const hasImplementation =
+    !!projectComponents[
+      `${
+        project.id === 1
+          ? "todoApp"
+          : project.id === 2
+          ? "weatherDashboard"
+          : project.id === 3
+          ? "markdownEditor"
+          : ""
+      }`
+    ];
+
   const difficultyColor = {
     beginner: "bg-emerald-100 text-emerald-800",
     intermediate: "bg-amber-100 text-amber-800",
@@ -24,7 +38,7 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
   const staggerDelay = `${index * 0.1}s`;
 
   return (
-    <div 
+    <div
       className="group relative overflow-hidden rounded-xl border bg-card text-card-foreground transition-all duration-300 hover-scale hover:shadow-md"
       style={{ animationDelay: staggerDelay }}
       onMouseEnter={() => setIsHovered(true)}
@@ -32,16 +46,26 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
     >
       <div className="relative aspect-video overflow-hidden">
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/60 via-black/0 to-black/0" />
-        <img 
-          src={project.image} 
+        <img
+          src={project.image}
           alt={project.title}
           className="h-full w-full object-cover transition-transform duration-500 ease-apple group-hover:scale-105"
         />
+        {!hasImplementation && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70">
+            <div className="rounded-lg bg-black/80 px-4 py-2 text-lg font-bold text-white">
+              Coming Soon
+            </div>
+          </div>
+        )}
         <div className="absolute bottom-3 left-3 z-20 flex flex-wrap gap-1.5">
           <Badge className={difficultyColor + " capitalize"}>
             {project.difficulty}
           </Badge>
-          <Badge variant="secondary" className="flex items-center gap-1 bg-black/70 text-white">
+          <Badge
+            variant="secondary"
+            className="flex items-center gap-1 bg-black/70 text-white"
+          >
             <Clock className="h-3 w-3" />
             {project.timeEstimate}
           </Badge>
@@ -65,19 +89,21 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
           )}
         </div>
         <div className="mt-4 flex justify-between gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             className="w-1/2"
             onClick={() => window.open(project.githubUrl, "_blank")}
+            disabled={!hasImplementation}
           >
             <Github className="mr-1 h-4 w-4" />
             Code
           </Button>
-          <Button 
+          <Button
             size="sm"
             className="w-1/2"
             onClick={() => navigate(`/projects/${project.id}`)}
+            disabled={!hasImplementation}
           >
             Details
             <ArrowRight className="ml-1 h-4 w-4" />

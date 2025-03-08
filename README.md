@@ -1,3 +1,57 @@
+# React Project Library
+
+A collection of React projects built with TypeScript and modern tools.
+
+## Projects
+
+### 1. Todo App
+
+A feature-rich todo application with drag-and-drop functionality, dark mode, and local storage persistence.
+
+### 2. Weather Dashboard
+
+A beautiful weather dashboard that displays current weather conditions and forecasts using the OpenWeatherMap API.
+
+Features:
+
+- Search for locations worldwide
+- Display current weather conditions
+- Show 7-day forecast with temperature trends
+- Save favorite locations
+- Responsive design with dark mode support
+- Interactive temperature charts using Chart.js
+
+## Setup
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create a `.env` file in the root directory and add your OpenWeatherMap API key:
+
+   ```
+   VITE_OPENWEATHERMAP_API_KEY=your_api_key_here
+   ```
+
+   You can get an API key by signing up at [OpenWeatherMap](https://openweathermap.org/api).
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+## Technologies Used
+
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- shadcn/ui
+- Chart.js
+- React Beautiful DND
+- OpenWeatherMap API
+
 # Welcome to your Lovable project
 
 ## Project info

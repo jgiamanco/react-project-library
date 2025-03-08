@@ -1,0 +1,324 @@
+/* Base weather styles */
+.weather-overlay {
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Clear weather - Day */
+.weather-clear-day {
+  background: linear-gradient(180deg, #64b5f6 0%, #1e88e5 100%);
+}
+
+.weather-clear-day .weather-overlay {
+  background: radial-gradient(circle at 50% -20%, #ffd54f, transparent 75%);
+  animation: sunshine 8s infinite;
+}
+
+.weather-clear-day .weather-overlay::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  right: -50%;
+  bottom: -50%;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.2) 0%,
+    transparent 70%
+  );
+  animation: sunrays 20s infinite linear;
+}
+
+/* Clear weather - Night */
+.weather-clear-night {
+  background: linear-gradient(180deg, #1a237e 0%, #0d47a1 100%);
+}
+
+.weather-clear-night .weather-overlay {
+  background: radial-gradient(circle at 75% 25%, #ffffff 0%, transparent 15%);
+}
+
+.weather-clear-night .weather-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+      2px 2px at 50px 160px,
+      #ffffff 100%,
+      transparent
+    ),
+    radial-gradient(2px 2px at 40px 200px, #ffffff 100%, transparent),
+    radial-gradient(2px 2px at 130px 80px, #ffffff 100%, transparent),
+    radial-gradient(2px 2px at 160px 120px, #ffffff 100%, transparent);
+  animation: twinkle 4s infinite alternate;
+}
+
+/* Cloudy weather - Day */
+.weather-cloudy-day {
+  background: linear-gradient(180deg, #90a4ae 0%, #546e7a 100%);
+}
+
+.weather-cloudy-day .weather-overlay::before,
+.weather-cloudy-day .weather-overlay::after {
+  content: "";
+  position: absolute;
+  height: 40px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.3);
+  animation: float 20s infinite linear;
+}
+
+.weather-cloudy-day .weather-overlay::before {
+  width: 100px;
+  top: 20%;
+  left: -20%;
+}
+
+.weather-cloudy-day .weather-overlay::after {
+  width: 160px;
+  top: 40%;
+  left: -10%;
+  animation-delay: -10s;
+}
+
+/* Cloudy weather - Night */
+.weather-cloudy-night {
+  background: linear-gradient(180deg, #37474f 0%, #263238 100%);
+}
+
+.weather-cloudy-night .weather-overlay::before,
+.weather-cloudy-night .weather-overlay::after {
+  content: "";
+  position: absolute;
+  height: 40px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  animation: float 20s infinite linear;
+}
+
+/* Rainy weather - Day */
+.weather-rainy-day {
+  background: linear-gradient(180deg, #546e7a 0%, #37474f 100%);
+}
+
+.weather-rainy-day .weather-overlay {
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 97%,
+    rgba(255, 255, 255, 0.3) 97%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  background-size: 3px 8px;
+  animation: rain 0.8s infinite linear;
+}
+
+/* Rainy weather - Night */
+.weather-rainy-night {
+  background: linear-gradient(180deg, #263238 0%, #1a1a1a 100%);
+}
+
+.weather-rainy-night .weather-overlay {
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 97%,
+    rgba(255, 255, 255, 0.2) 97%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  background-size: 3px 8px;
+  animation: rain 0.8s infinite linear;
+}
+
+/* Snowy weather - Day */
+.weather-snowy-day {
+  background: linear-gradient(180deg, #78909c 0%, #546e7a 100%);
+}
+
+.weather-snowy-day .weather-overlay {
+  mask-image: radial-gradient(circle at center, white 1px, transparent 1px);
+  mask-size: 8px 8px;
+  background: white;
+  animation: snow 8s infinite linear;
+}
+
+/* Snowy weather - Night */
+.weather-snowy-night {
+  background: linear-gradient(180deg, #37474f 0%, #263238 100%);
+}
+
+.weather-snowy-night .weather-overlay {
+  mask-image: radial-gradient(circle at center, white 1px, transparent 1px);
+  mask-size: 8px 8px;
+  background: rgba(255, 255, 255, 0.7);
+  animation: snow 8s infinite linear;
+}
+
+/* Storm weather - Day */
+.weather-storm-day {
+  background: linear-gradient(180deg, #37474f 0%, #263238 100%);
+}
+
+.weather-storm-day .weather-overlay {
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 97%,
+    rgba(255, 255, 255, 0.2) 97%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  background-size: 3px 8px;
+  animation: rain 0.5s infinite linear;
+}
+
+.weather-storm-day .weather-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  animation: lightning 6s infinite;
+}
+
+/* Storm weather - Night */
+.weather-storm-night {
+  background: linear-gradient(180deg, #1a1a1a 0%, #000000 100%);
+}
+
+.weather-storm-night .weather-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  animation: lightning 6s infinite;
+}
+
+/* Misty weather - Day */
+.weather-misty-day {
+  background: linear-gradient(180deg, #b0bec5 0%, #90a4ae 100%);
+}
+
+.weather-misty-day .weather-overlay {
+  background: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.1) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.1) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 100px 100px;
+  animation: mist 15s infinite linear;
+  opacity: 0.5;
+}
+
+/* Misty weather - Night */
+.weather-misty-night {
+  background: linear-gradient(180deg, #37474f 0%, #263238 100%);
+}
+
+.weather-misty-night .weather-overlay {
+  background: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.05) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 100px 100px;
+  animation: mist 15s infinite linear;
+  opacity: 0.3;
+}
+
+/* Default weather */
+.weather-default-day {
+  background: linear-gradient(180deg, #64b5f6 0%, #1e88e5 100%);
+}
+
+.weather-default-night {
+  background: linear-gradient(180deg, #1a237e 0%, #0d47a1 100%);
+}
+
+/* Animations */
+@keyframes sunshine {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes sunrays {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes float {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(400%);
+  }
+}
+
+@keyframes rain {
+  from {
+    transform: translateY(-8px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes snow {
+  from {
+    transform: translateY(-8px) translateX(-8px);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateY(0) translateX(8px);
+    opacity: 0.4;
+  }
+}
+
+@keyframes lightning {
+  0%,
+  85%,
+  95% {
+    background: transparent;
+  }
+  90%,
+  100% {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+@keyframes mist {
+  from {
+    transform: translateX(-100px) translateY(-100px);
+  }
+  to {
+    transform: translateX(0) translateY(0);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}

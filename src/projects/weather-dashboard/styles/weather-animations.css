@@ -1,0 +1,75 @@
+/* Weather animations and styles */
+.weather-overlay {
+  background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2));
+  pointer-events: none;
+}
+
+/* Clear Day */
+.weather-clear-day {
+  background: linear-gradient(to bottom right, #87ceeb, #4a90e2);
+}
+
+/* Clear Night */
+.weather-clear-night {
+  background: linear-gradient(to bottom right, #1a1a2e, #16213e);
+}
+
+/* Cloudy Day */
+.weather-cloudy-day {
+  background: linear-gradient(to bottom right, #b8c6db, #8795a7);
+}
+
+/* Cloudy Night */
+.weather-cloudy-night {
+  background: linear-gradient(to bottom right, #2c3e50, #3a4b5c);
+}
+
+/* Rainy Day */
+.weather-rainy-day {
+  background: linear-gradient(to bottom right, #6b7280, #4b5563);
+}
+
+/* Rainy Night */
+.weather-rainy-night {
+  background: linear-gradient(to bottom right, #1f2937, #374151);
+}
+
+/* Snowy Day */
+.weather-snowy-day {
+  background: linear-gradient(to bottom right, #e5e7eb, #d1d5db);
+}
+
+/* Snowy Night */
+.weather-snowy-night {
+  background: linear-gradient(to bottom right, #4b5563, #374151);
+}
+
+/* Storm Day */
+.weather-storm-day {
+  background: linear-gradient(to bottom right, #4b5563, #1f2937);
+}
+
+/* Storm Night */
+.weather-storm-night {
+  background: linear-gradient(to bottom right, #111827, #1f2937);
+}
+
+/* Misty Day */
+.weather-misty-day {
+  background: linear-gradient(to bottom right, #9ca3af, #6b7280);
+}
+
+/* Misty Night */
+.weather-misty-night {
+  background: linear-gradient(to bottom right, #374151, #1f2937);
+}
+
+/* Default Day */
+.weather-default-day {
+  background: linear-gradient(to bottom right, #e5e7eb, #9ca3af);
+}
+
+/* Default Night */
+.weather-default-night {
+  background: linear-gradient(to bottom right, #4b5563, #374151);
+}

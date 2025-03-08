@@ -16,7 +16,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../../components/ui";
+} from "@/components/ui";
 import { Plus, Trash2, Check, Sun, Moon } from "lucide-react";
 
 // Define the Todo type
@@ -26,7 +26,7 @@ interface Todo {
   completed: boolean;
 }
 
-const TodoApp = () => {
+const TodoApp: React.FC = () => {
   // State
   const [todos, setTodos] = useState<Todo[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -153,6 +153,11 @@ const TodoApp = () => {
               variant={filter === "all" ? "default" : "outline"}
               size="sm"
               onClick={() => setFilter("all")}
+              className={`${
+                filter === "all"
+                  ? ""
+                  : "bg-white text-gray-900 border-gray-200 hover:bg-gray-100 hover:text-gray-900"
+              }`}
             >
               All
             </Button>
@@ -160,6 +165,11 @@ const TodoApp = () => {
               variant={filter === "active" ? "default" : "outline"}
               size="sm"
               onClick={() => setFilter("active")}
+              className={`${
+                filter === "active"
+                  ? ""
+                  : "bg-white text-gray-900 border-gray-200 hover:bg-gray-100 hover:text-gray-900"
+              }`}
             >
               Active
             </Button>
@@ -167,6 +177,11 @@ const TodoApp = () => {
               variant={filter === "completed" ? "default" : "outline"}
               size="sm"
               onClick={() => setFilter("completed")}
+              className={`${
+                filter === "completed"
+                  ? ""
+                  : "bg-white text-gray-900 border-gray-200 hover:bg-gray-100 hover:text-gray-900"
+              }`}
             >
               Completed
             </Button>
@@ -208,10 +223,12 @@ const TodoApp = () => {
                           >
                             <div className="flex items-center">
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="icon"
                                 className={`mr-2 ${
-                                  todo.completed ? "text-green-500" : ""
+                                  todo.completed
+                                    ? "bg-blue-500 text-white border-blue-500"
+                                    : "border-blue-500 text-blue-500 hover:bg-blue-50"
                                 }`}
                                 onClick={() => toggleTodo(todo.id)}
                               >
@@ -222,11 +239,13 @@ const TodoApp = () => {
                                 />
                               </Button>
                               <span
-                                className={
+                                className={`${
                                   todo.completed
                                     ? "line-through text-gray-500"
-                                    : ""
-                                }
+                                    : darkMode
+                                    ? "text-gray-100"
+                                    : "text-gray-900"
+                                }`}
                               >
                                 {todo.text}
                               </span>
@@ -273,6 +292,7 @@ const TodoApp = () => {
               variant="outline"
               size="sm"
               onClick={() => setTodos(todos.filter((t) => !t.completed))}
+              className="bg-white text-gray-900 border-gray-200 hover:bg-gray-100 hover:text-gray-900"
             >
               Clear completed
             </Button>
