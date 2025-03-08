@@ -1,4 +1,3 @@
-
 import { ReactNode } from "react";
 import Header from "./Header";
 import Footer from "./Footer";
@@ -13,9 +12,9 @@ const Layout = ({ children, requireAuth = false }: LayoutProps) => {
   const content = requireAuth ? <AuthGuard>{children}</AuthGuard> : children;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="flex-grow">{content}</main>
+      <main className="flex-1">{content}</main>
       <Footer />
     </div>
   );

@@ -12,57 +12,60 @@ import ProjectDetail from "./pages/ProjectDetail";
 import NotFound from "./pages/NotFound";
 import ProjectDemo from "./components/projects/ProjectDemo";
 import ProfilePage from "./pages/ProfilePage";
+import { AuthProvider } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Layout>
-                <Index />
-              </Layout>
-            }
-          />
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route
-            path="/dashboard"
-            element={
-              <Layout requireAuth>
-                <Dashboard />
-              </Layout>
-            }
-          />
-          <Route
-            path="/projects/:id"
-            element={
-              <Layout requireAuth>
-                <ProjectDetail />
-              </Layout>
-            }
-          />
-          <Route path="/projects/:id/demo" element={<ProjectDemo />} />
-          <Route path="/projects/:id/demo/code" element={<ProjectDemo />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route
-            path="*"
-            element={
-              <Layout>
-                <NotFound />
-              </Layout>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <Layout>
+                  <Index />
+                </Layout>
+              }
+            />
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route
+              path="/dashboard"
+              element={
+                <Layout requireAuth>
+                  <Dashboard />
+                </Layout>
+              }
+            />
+            <Route
+              path="/projects/:id"
+              element={
+                <Layout requireAuth>
+                  <ProjectDetail />
+                </Layout>
+              }
+            />
+            <Route path="/projects/:id/demo" element={<ProjectDemo />} />
+            <Route path="/projects/:id/demo/code" element={<ProjectDemo />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route
+              path="*"
+              element={
+                <Layout>
+                  <NotFound />
+                </Layout>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </AuthProvider>
 );
 
 export default App;
