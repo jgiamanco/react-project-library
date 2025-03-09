@@ -1,6 +1,7 @@
 import { Project } from "@/types/Project";
 
 export const projects: Project[] = [
+  // Implemented projects first
   {
     id: "todo-app",
     title: "Todo App with Drag & Drop",
@@ -379,6 +380,171 @@ npm run dev
     ],
   },
   {
+    id: "pomodoro-timer",
+    title: "Pomodoro Timer",
+    description:
+      "A customizable pomodoro timer application with task tracking, statistics, and sound notifications.",
+    image:
+      "https://images.unsplash.com/photo-1516031190212-da133013de50?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "Timer", "Productivity"],
+    difficulty: "beginner",
+    readme: `# Pomodoro Timer
+
+A customizable pomodoro timer application built with React and TypeScript. This project helps users implement the pomodoro technique for productivity.
+
+## Features
+
+- Customizable work and break intervals
+- Task tracking for each pomodoro session
+- Sound notifications
+- Session statistics
+- Dark/light theme support
+- Progress tracking
+
+## Technical Stack
+
+- React 18 with TypeScript
+- Tailwind CSS for styling
+- Howler.js for audio
+- Chart.js for statistics
+- Local storage for data persistence
+
+## Getting Started
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/pomodoro-timer.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/pomodoro-timer/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/pomodoro-timer/demo/code",
+        internal: true,
+      },
+    ],
+  },
+  {
+    id: "calculator",
+    title: "Calculator",
+    description:
+      "A sleek calculator app with basic and advanced mathematical operations and a responsive design.",
+    image:
+      "https://images.unsplash.com/photo-1587145820266-a5951ee6f620?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "Math", "UI"],
+    difficulty: "beginner",
+    readme: `# Calculator
+
+A sleek calculator application built with React and TypeScript. This project demonstrates state management and mathematical operations.
+
+## Features
+
+- Basic arithmetic operations
+- Memory functions
+- History log
+- Responsive design
+- Keyboard support
+- Scientific mode
+
+## Technical Stack
+
+- React 18 with TypeScript
+- Custom hooks for calculator logic
+- Tailwind CSS for styling
+
+## Getting Started
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/calculator.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/calculator/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/calculator/demo/code",
+        internal: true,
+      },
+    ],
+  },
+  {
+    id: "recipe-finder",
+    title: "Recipe Finder App",
+    description:
+      "A recipe search application that pulls from a culinary API. Includes filters, favorites, and detailed cooking instructions.",
+    image:
+      "https://images.unsplash.com/photo-1556911220-bff31c812dba?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "API", "Filters"],
+    difficulty: "intermediate",
+    readme: `# Recipe Finder App
+
+A recipe search application built with React and TypeScript. This project allows users to search and filter recipes from a culinary API.
+
+## Features
+
+- Search recipes by ingredients or name
+- Filter by dietary restrictions
+- Save favorite recipes
+- Detailed cooking instructions
+- Nutritional information
+- Shopping list generation
+
+## Technical Stack
+
+- React 18 with TypeScript
+- TanStack Query for API calls
+- Tailwind CSS for styling
+- Zustand for state management
+- React Hook Form for search
+- Local storage for favorites
+
+## Getting Started
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/recipe-finder.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/recipe-finder/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/recipe-finder/demo/code",
+        internal: true,
+      },
+    ],
+  },
+  // Non-implemented projects below
+  {
     id: "ecommerce-product",
     title: "E-Commerce Product Page",
     description:
@@ -486,117 +652,6 @@ npm run dev
       {
         title: "View Code",
         url: "/projects/job-tracker/demo/code",
-        internal: true,
-      },
-    ],
-  },
-  {
-    id: "pomodoro-timer",
-    title: "Pomodoro Timer",
-    description:
-      "A customizable pomodoro timer application with task tracking, statistics, and sound notifications.",
-    image:
-      "https://images.unsplash.com/photo-1516031190212-da133013de50?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
-    tags: ["React", "TypeScript", "Timer", "Productivity"],
-    difficulty: "beginner",
-    readme: `# Pomodoro Timer
-
-A customizable pomodoro timer application built with React and TypeScript. This project helps users implement the pomodoro technique for productivity.
-
-## Features
-
-- Customizable work and break intervals
-- Task tracking for each pomodoro session
-- Sound notifications
-- Session statistics
-- Dark/light theme support
-- Progress tracking
-
-## Technical Stack
-
-- React 18 with TypeScript
-- Tailwind CSS for styling
-- Howler.js for audio
-- Chart.js for statistics
-- Local storage for data persistence
-
-## Getting Started
-
-\`\`\`bash
-# Clone the repository
-git clone https://github.com/your-username/pomodoro-timer.git
-
-# Install dependencies
-npm install
-
-# Start the development server
-npm run dev
-\`\`\``,
-    resources: [
-      {
-        title: "View Demo",
-        url: "/projects/pomodoro-timer/demo",
-        internal: true,
-      },
-      {
-        title: "View Code",
-        url: "/projects/pomodoro-timer/demo/code",
-        internal: true,
-      },
-    ],
-  },
-  {
-    id: "recipe-finder",
-    title: "Recipe Finder App",
-    description:
-      "A recipe search application that pulls from a culinary API. Includes filters, favorites, and detailed cooking instructions.",
-    image:
-      "https://images.unsplash.com/photo-1556911220-bff31c812dba?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
-    tags: ["React", "TypeScript", "API", "Filters"],
-    difficulty: "intermediate",
-    readme: `# Recipe Finder App
-
-A recipe search application built with React and TypeScript. This project allows users to search and filter recipes from a culinary API.
-
-## Features
-
-- Search recipes by ingredients or name
-- Filter by dietary restrictions
-- Save favorite recipes
-- Detailed cooking instructions
-- Nutritional information
-- Shopping list generation
-
-## Technical Stack
-
-- React 18 with TypeScript
-- TanStack Query for API calls
-- Tailwind CSS for styling
-- Zustand for state management
-- React Hook Form for search
-- Local storage for favorites
-
-## Getting Started
-
-\`\`\`bash
-# Clone the repository
-git clone https://github.com/your-username/recipe-finder.git
-
-# Install dependencies
-npm install
-
-# Start the development server
-npm run dev
-\`\`\``,
-    resources: [
-      {
-        title: "View Demo",
-        url: "/projects/recipe-finder/demo",
-        internal: true,
-      },
-      {
-        title: "View Code",
-        url: "/projects/recipe-finder/demo/code",
         internal: true,
       },
     ],
