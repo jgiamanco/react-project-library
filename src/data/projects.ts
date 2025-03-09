@@ -543,6 +543,887 @@ npm run dev
       },
     ],
   },
+  // New AI/LLM Projects
+  {
+    id: "ai-chatbot",
+    title: "AI-Powered Conversational Chatbot",
+    description:
+      "A responsive chatbot that leverages large language models to provide contextual responses, answer questions, and assist users.",
+    image:
+      "https://images.unsplash.com/photo-1531746790731-6c087fecd65a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "AI/LLM", "API Integration"],
+    difficulty: "advanced",
+    readme: `# AI-Powered Conversational Chatbot
+
+A sophisticated AI chatbot application built with React and TypeScript. This project demonstrates how to integrate with modern LLM APIs.
+
+## Features
+
+- Natural language understanding and generation
+- Context-aware conversations
+- Message history management
+- Streaming responses for real-time feedback
+- Multiple AI model support
+- Custom prompt templates
+- Responsive chat interface
+- Dark/light theme support
+
+## Technical Stack
+
+- React 18 with TypeScript
+- OpenAI API or similar LLM integration
+- TanStack Query for API handling
+- Tailwind CSS for styling
+- React Hook Form for user input
+- Local storage for conversation history
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── ChatInterface.tsx
+│   ├── MessageList.tsx
+│   ├── MessageItem.tsx
+│   ├── InputForm.tsx
+│   └── ModelSelector.tsx
+├── hooks/
+│   ├── useChat.ts
+│   └── useStreamingResponse.ts
+├── services/
+│   └── aiService.ts
+└── utils/
+    └── formatMessages.ts
+\`\`\`
+
+## Getting Started
+
+To run the project locally:
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/ai-chatbot.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/ai-chatbot/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/ai-chatbot/demo/code",
+        internal: true,
+      },
+    ],
+  },
+  {
+    id: "ai-image-generator",
+    title: "AI Image Generator",
+    description:
+      "A creative tool that utilizes generative AI to transform text prompts into unique images with various style options.",
+    image:
+      "https://images.unsplash.com/photo-1634986666676-ec9f89ab95fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "Generative AI", "Stable Diffusion"],
+    difficulty: "advanced",
+    readme: `# AI Image Generator
+
+A powerful image generation application built with React and TypeScript. This project demonstrates integration with state-of-the-art AI image generation models.
+
+## Features
+
+- Text-to-image generation
+- Style customization options
+- Prompt history management
+- Gallery of generated images
+- Image download and sharing
+- Advanced prompt engineering interface
+- Response time optimization
+- Authentication and user galleries
+
+## Technical Stack
+
+- React 18 with TypeScript
+- OpenAI DALL-E or Stable Diffusion API integration
+- TanStack Query for API handling
+- Tailwind CSS for styling
+- React Hook Form for prompts
+- Local storage for history
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── PromptInput.tsx
+│   ├── StyleOptions.tsx
+│   ├── ImageGallery.tsx
+│   ├── ImageCard.tsx
+│   └── PromptHistory.tsx
+├── hooks/
+│   ├── useImageGeneration.ts
+│   └── usePromptHistory.ts
+├── services/
+│   └── imageGenerationService.ts
+└── utils/
+    └── formatPrompts.ts
+\`\`\`
+
+## Getting Started
+
+To run the project locally:
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/ai-image-generator.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/ai-image-generator/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/ai-image-generator/demo/code",
+        internal: true,
+      },
+    ],
+  },
+  {
+    id: "ai-content-summarizer",
+    title: "AI Content Summarizer",
+    description:
+      "A tool that uses AI to analyze and summarize articles, documents, and web pages into concise, readable summaries.",
+    image:
+      "https://images.unsplash.com/photo-1456324504439-367cee3b3c32?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "NLP", "Document Processing"],
+    difficulty: "intermediate",
+    readme: `# AI Content Summarizer
+
+A content summarization application built with React and TypeScript. This project demonstrates how to process and condense long-form content using AI.
+
+## Features
+
+- URL content extraction
+- Document upload and processing
+- Adjustable summary length
+- Key points extraction
+- Multiple summary styles (bullet points, paragraphs)
+- Reading time estimation
+- History of summarized content
+- Content sharing options
+
+## Technical Stack
+
+- React 18 with TypeScript
+- OpenAI API or similar AI summarization integration
+- TanStack Query for API handling
+- Tailwind CSS for styling
+- React Hook Form for input
+- File handling for document uploads
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── InputForm.tsx
+│   ├── SummarySettings.tsx
+│   ├── SummaryOutput.tsx
+│   ├── DocumentUploader.tsx
+│   └── SummaryHistory.tsx
+├── hooks/
+│   ├── useSummarizer.ts
+│   └── useContentExtractor.ts
+├── services/
+│   └── summarizerService.ts
+└── utils/
+    ├── extractContent.ts
+    └── formatSummary.ts
+\`\`\`
+
+## Getting Started
+
+To run the project locally:
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/ai-summarizer.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/ai-content-summarizer/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/ai-content-summarizer/demo/code",
+        internal: true,
+      },
+    ],
+  },
+  // Interactive API Projects
+  {
+    id: "crypto-dashboard",
+    title: "Cryptocurrency Dashboard",
+    description:
+      "A real-time cryptocurrency tracking dashboard that visualizes price movements, trends, and portfolio performance.",
+    image:
+      "https://images.unsplash.com/photo-1621761191319-c6fb62004040?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "WebSockets", "Financial API"],
+    difficulty: "advanced",
+    readme: `# Cryptocurrency Dashboard
+
+A comprehensive cryptocurrency tracking dashboard built with React and TypeScript. This project demonstrates real-time data handling using WebSockets.
+
+## Features
+
+- Real-time price tracking for cryptocurrencies
+- Interactive price charts with time frame options
+- Portfolio tracker for assets
+- Market overview with key metrics
+- Price alerts and notifications
+- News feed for crypto-related updates
+- Watchlist functionality
+- Market depth visualization
+
+## Technical Stack
+
+- React 18 with TypeScript
+- CoinGecko API or similar crypto data API
+- WebSockets for real-time updates
+- Recharts for data visualization
+- TanStack Query for data handling
+- Tailwind CSS for styling
+- Local storage for saved preferences
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── Dashboard.tsx
+│   ├── PriceChart.tsx
+│   ├── AssetList.tsx
+│   ├── Portfolio.tsx
+│   └── MarketStats.tsx
+├── hooks/
+│   ├── useCryptoData.ts
+│   └── useWebSocket.ts
+├── services/
+│   └── cryptoService.ts
+└── utils/
+    └── formatCurrency.ts
+\`\`\`
+
+## Getting Started
+
+To run the project locally:
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/crypto-dashboard.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/crypto-dashboard/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/crypto-dashboard/demo/code",
+        internal: true,
+      },
+    ],
+  },
+  {
+    id: "real-time-collab",
+    title: "Real-Time Collaborative Editor",
+    description:
+      "A collaborative document editor that enables multiple users to edit text, code, or diagrams simultaneously.",
+    image:
+      "https://images.unsplash.com/photo-1531403009284-440f080d1e12?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "WebRTC", "CRDT"],
+    difficulty: "advanced",
+    readme: `# Real-Time Collaborative Editor
+
+A real-time collaborative document editing application built with React and TypeScript. This project demonstrates how to implement concurrent document editing.
+
+## Features
+
+- Real-time collaborative text editing
+- Cursor presence indicators
+- User authentication and permissions
+- Document version history
+- Chat functionality for collaborators
+- Export to multiple formats
+- Offline editing with synchronization
+- Rich text formatting options
+
+## Technical Stack
+
+- React 18 with TypeScript
+- WebSockets or WebRTC for real-time communication
+- Yjs for conflict-free document merging
+- CodeMirror or Slate.js for the editor
+- TanStack Query for state management
+- Tailwind CSS for styling
+- Secure authentication
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── Editor.tsx
+│   ├── Toolbar.tsx
+│   ├── CollaboratorsList.tsx
+│   ├── CursorOverlay.tsx
+│   └── ChatSidebar.tsx
+├── hooks/
+│   ├── useCollaboration.ts
+│   └── useDocumentState.ts
+├── services/
+│   └── collaborationService.ts
+└── utils/
+    └── syncDocument.ts
+\`\`\`
+
+## Getting Started
+
+To run the project locally:
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/real-time-collab.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/real-time-collab/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/real-time-collab/demo/code",
+        internal: true,
+      },
+    ],
+  },
+  {
+    id: "map-explorer",
+    title: "Interactive Map Explorer",
+    description:
+      "An interactive map application that showcases custom data visualizations, geolocation services, and point-of-interest discovery.",
+    image:
+      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "Maps API", "Geolocation"],
+    difficulty: "intermediate",
+    readme: `# Interactive Map Explorer
+
+An interactive map exploration application built with React and TypeScript. This project demonstrates integration with mapping APIs and geospatial data.
+
+## Features
+
+- Interactive map navigation
+- Custom data layer visualization
+- Location search functionality
+- Points of interest discovery
+- Geolocation tracking
+- Route planning and directions
+- Custom map markers and overlays
+- Offline map caching
+
+## Technical Stack
+
+- React 18 with TypeScript
+- Mapbox GL or Google Maps API
+- TanStack Query for data handling
+- Tailwind CSS for styling
+- React Hook Form for search
+- Geolocation API integration
+- Local storage for saved locations
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── Map.tsx
+│   ├── SearchBar.tsx
+│   ├── LocationMarker.tsx
+│   ├── DataLayer.tsx
+│   └── InfoPanel.tsx
+├── hooks/
+│   ├── useMapData.ts
+│   └── useGeolocation.ts
+├── services/
+│   └── mapService.ts
+└── utils/
+    └── formatGeoData.ts
+\`\`\`
+
+## Getting Started
+
+To run the project locally:
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/map-explorer.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/map-explorer/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/map-explorer/demo/code",
+        internal: true,
+      },
+    ],
+  },
+  // Advanced Web Technologies
+  {
+    id: "3d-product-viewer",
+    title: "3D Product Viewer",
+    description:
+      "An interactive 3D product visualization tool that allows users to view, rotate, and explore products in three dimensions.",
+    image:
+      "https://images.unsplash.com/photo-1582845512747-e42001c95638?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "Three.js", "WebGL"],
+    difficulty: "advanced",
+    readme: `# 3D Product Viewer
+
+An interactive 3D product visualization application built with React and TypeScript. This project demonstrates how to create immersive 3D experiences on the web.
+
+## Features
+
+- Interactive 3D model viewing
+- Product rotation and zoom
+- Material and color customization
+- Product feature annotations
+- Exploded view for complex products
+- AR view on compatible devices
+- Model measurement tools
+- Cross-section viewing
+
+## Technical Stack
+
+- React 18 with TypeScript
+- Three.js or React Three Fiber for 3D rendering
+- GLTF/GLB model loading
+- Framer Motion for animations
+- TanStack Query for data handling
+- Tailwind CSS for UI components
+- WebGL and WebXR support
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── Viewer3D.tsx
+│   ├── ControlPanel.tsx
+│   ├── ModelLoader.tsx
+│   ├── ColorPicker.tsx
+│   └── AnnotationLayer.tsx
+├── hooks/
+│   ├── useThreeJS.ts
+│   └── useModelControls.ts
+├── services/
+│   └── modelService.ts
+└── utils/
+    └── optimizeModel.ts
+\`\`\`
+
+## Getting Started
+
+To run the project locally:
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/3d-product-viewer.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/3d-product-viewer/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/3d-product-viewer/demo/code",
+        internal: true,
+      },
+    ],
+  },
+  {
+    id: "voice-assistant",
+    title: "Voice Assistant Web App",
+    description:
+      "A voice-controlled web assistant that can perform tasks, answer questions, and provide information using speech recognition and synthesis.",
+    image:
+      "https://images.unsplash.com/photo-1589254065878-42c9da997008?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "Speech API", "AI"],
+    difficulty: "advanced",
+    readme: `# Voice Assistant Web App
+
+A voice-controlled assistant application built with React and TypeScript. This project demonstrates speech recognition and synthesis technologies.
+
+## Features
+
+- Voice command recognition
+- Natural language understanding
+- Voice response synthesis
+- Task automation (timers, reminders, etc.)
+- Web search integration
+- Hands-free operation
+- Multi-language support
+- Visual feedback for voice interactions
+
+## Technical Stack
+
+- React 18 with TypeScript
+- Web Speech API (SpeechRecognition and SpeechSynthesis)
+- Natural language processing with AI models
+- TanStack Query for data handling
+- Tailwind CSS for UI components
+- Browser APIs for device control
+- Local storage for preferences
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── VoiceInterface.tsx
+│   ├── CommandVisualizer.tsx
+│   ├── ResponseDisplay.tsx
+│   ├── WakeWordDetector.tsx
+│   └── SettingsPanel.tsx
+├── hooks/
+│   ├── useSpeechRecognition.ts
+│   └── useSpeechSynthesis.ts
+├── services/
+│   └── commandProcessor.ts
+└── utils/
+    └── naturalLanguage.ts
+\`\`\`
+
+## Getting Started
+
+To run the project locally:
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/voice-assistant.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/voice-assistant/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/voice-assistant/demo/code",
+        internal: true,
+      },
+    ],
+  },
+  {
+    id: "ar-business-card",
+    title: "AR Business Card",
+    description:
+      "An augmented reality business card application that transforms a physical card into an interactive digital experience.",
+    image:
+      "https://images.unsplash.com/photo-1596558450255-7c0b7be9d56a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "WebXR", "Augmented Reality"],
+    difficulty: "advanced",
+    readme: `# AR Business Card
+
+An augmented reality business card application built with React and TypeScript. This project demonstrates how to create AR experiences for the web.
+
+## Features
+
+- Marker-based AR recognition
+- Interactive 3D elements
+- Social media profile links
+- Portfolio showcase in AR
+- Contact information integration
+- Video playback in AR space
+- QR code generation for sharing
+- Custom AR business card builder
+
+## Technical Stack
+
+- React 18 with TypeScript
+- WebXR API for AR capabilities
+- AR.js or 8th Wall for marker recognition
+- Three.js for 3D rendering
+- TanStack Query for data handling
+- Tailwind CSS for UI components
+- Device camera access
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── ARViewer.tsx
+│   ├── BusinessCardDesigner.tsx
+│   ├── MarkerDetector.tsx
+│   ├── ARControls.tsx
+│   └── ProfileContent.tsx
+├── hooks/
+│   ├── useARSession.ts
+│   └── useMarkerTracking.ts
+├── services/
+│   └── arService.ts
+└── utils/
+    └── createARContent.ts
+\`\`\`
+
+## Getting Started
+
+To run the project locally:
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/ar-business-card.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/ar-business-card/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/ar-business-card/demo/code",
+        internal: true,
+      },
+    ],
+  },
+  {
+    id: "web-audio-visualizer",
+    title: "Web Audio Visualizer",
+    description:
+      "A dynamic audio visualization application that creates stunning visual representations of music and sound in real-time.",
+    image:
+      "https://images.unsplash.com/photo-1557672172-298e090bd0f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "Web Audio API", "Canvas"],
+    difficulty: "intermediate",
+    readme: `# Web Audio Visualizer
+
+A dynamic audio visualization application built with React and TypeScript. This project demonstrates creative uses of the Web Audio API and canvas rendering.
+
+## Features
+
+- Audio file playback
+- Microphone input visualization
+- Multiple visualization styles
+- Real-time frequency analysis
+- Color theme customization
+- Responsive design for all screen sizes
+- Audio controls (play, pause, volume)
+- Audio effects processing
+
+## Technical Stack
+
+- React 18 with TypeScript
+- Web Audio API for audio processing
+- Canvas API for visualization rendering
+- File API for audio uploads
+- MediaStream API for microphone access
+- Tailwind CSS for UI components
+- Local storage for preferences
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── AudioPlayer.tsx
+│   ├── Visualizer.tsx
+│   ├── VisualizerControls.tsx
+│   ├── FileUploader.tsx
+│   └── MicrophoneInput.tsx
+├── hooks/
+│   ├── useAudioProcessor.ts
+│   └── useVisualization.ts
+├── services/
+│   └── audioService.ts
+└── utils/
+    └── drawWaveform.ts
+\`\`\`
+
+## Getting Started
+
+To run the project locally:
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/audio-visualizer.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/web-audio-visualizer/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/web-audio-visualizer/demo/code",
+        internal: true,
+      },
+    ],
+  },
+  {
+    id: "web-game",
+    title: "Browser-Based Game",
+    description:
+      "A fully-featured browser game with physics, animations, and multiplayer capabilities, showcasing modern web gaming technologies.",
+    image:
+      "https://images.unsplash.com/photo-1579373903781-fd5c0c30c4cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
+    tags: ["React", "TypeScript", "Canvas", "Game Development"],
+    difficulty: "advanced",
+    readme: `# Browser-Based Game
+
+A modern browser-based game built with React and TypeScript. This project demonstrates game development concepts using web technologies.
+
+## Features
+
+- Interactive gameplay
+- Physics-based mechanics
+- Score tracking and leaderboards
+- Sound effects and background music
+- Level progression system
+- Responsive controls for desktop and mobile
+- Local multiplayer support
+- Game state persistence
+
+## Technical Stack
+
+- React 18 with TypeScript
+- Canvas API or WebGL for rendering
+- Matter.js for physics
+- Howler.js for audio
+- TanStack Query for data handling
+- Tailwind CSS for UI components
+- Local storage for game saves
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── Game.tsx
+│   ├── GameCanvas.tsx
+│   ├── Controls.tsx
+│   ├── ScoreBoard.tsx
+│   └── GameMenu.tsx
+├── hooks/
+│   ├── useGameLoop.ts
+│   └── useGameState.ts
+├── services/
+│   └── gameService.ts
+└── utils/
+    └── physics.ts
+\`\`\`
+
+## Getting Started
+
+To run the project locally:
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/your-username/web-game.git
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+\`\`\``,
+    resources: [
+      {
+        title: "View Demo",
+        url: "/projects/web-game/demo",
+        internal: true,
+      },
+      {
+        title: "View Code",
+        url: "/projects/web-game/demo/code",
+        internal: true,
+      },
+    ],
+  },
   // Non-implemented projects below
   {
     id: "ecommerce-product",
