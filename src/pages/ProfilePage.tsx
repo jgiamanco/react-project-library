@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/auth-hooks";
 import {
   Card,
   CardContent,
@@ -27,10 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 
 interface UserProfile {
-  id: string;
   name: string;
-  email: string;
-  avatar: string;
   bio: string;
   location: string;
   website: string;
@@ -45,6 +43,7 @@ interface UserProfile {
 const ProfilePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, updateUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   // Get the tab from the URL query parameters
@@ -52,20 +51,9 @@ const ProfilePage = () => {
   const tabFromUrl = queryParams.get("tab");
   const [activeTab, setActiveTab] = useState(tabFromUrl || "profile");
 
-  // Update the URL when the tab changes
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    navigate(`/profile${value !== "profile" ? `?tab=${value}` : ""}`, {
-      replace: true,
-    });
-  };
-
-  // Mock user data - in a real app, this would come from an API or auth context
+  // Mock user data - in a real app, this would come from an API
   const [profile, setProfile] = useState<UserProfile>({
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    avatar: "https://github.com/shadcn.png",
+    name: user?.displayName || "",
     bio: "Full-stack developer passionate about React and TypeScript.",
     location: "San Francisco, CA",
     website: "https://johndoe.dev",
@@ -77,15 +65,25 @@ const ProfilePage = () => {
     pushNotifications: false,
   });
 
+  // Update the URL when the tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    navigate(`/profile${value !== "profile" ? `?tab=${value}` : ""}`, {
+      replace: true,
+    });
+  };
+
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // In a real app, this would be an API call to update the user profile
+      // Update auth context with new display name
+      updateUser({ displayName: profile.name });
+
+      // Simulate API call delay
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Simulate successful update
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
@@ -126,9 +124,9 @@ const ProfilePage = () => {
   };
 
   const handleAvatarChange = (newAvatarUrl: string) => {
-    setProfile({ ...profile, avatar: newAvatarUrl });
+    // Update auth context with new photo URL
+    updateUser({ photoURL: newAvatarUrl });
 
-    // Show success toast
     toast({
       title: "Avatar updated",
       description: "Your profile picture has been updated successfully.",
@@ -169,7 +167,7 @@ const ProfilePage = () => {
                 <form onSubmit={handleProfileUpdate} className="space-y-6">
                   <div className="flex items-center space-x-4">
                     <AvatarUpload
-                      currentAvatar={profile.avatar}
+                      currentAvatar={user?.photoURL || ""}
                       onAvatarChange={handleAvatarChange}
                       name={profile.name}
                     />
@@ -189,27 +187,6 @@ const ProfilePage = () => {
                         value={profile.name}
                         onChange={(e) =>
                           setProfile({ ...profile, name: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={profile.email}
-                        onChange={(e) =>
-                          setProfile({ ...profile, email: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="role">Role</Label>
-                      <Input
-                        id="role"
-                        value={profile.role}
-                        onChange={(e) =>
-                          setProfile({ ...profile, role: e.target.value })
                         }
                       />
                     </div>

@@ -1,11 +1,11 @@
-
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthForm from "@/components/auth/AuthForm";
+import { useAuth } from "@/contexts/auth-hooks";
 
 const SignUp = () => {
   const navigate = useNavigate();
-  const isAuthenticated = localStorage.getItem("authenticated") === "true";
+  const { isAuthenticated } = useAuth();
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
@@ -29,7 +29,7 @@ const SignUp = () => {
             <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
               <span className="text-white font-medium text-sm">RT</span>
             </div>
-            <span>ReactTyper</span>
+            <span>React Project Library</span>
           </a>
         </div>
 

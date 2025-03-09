@@ -1,41 +1,31 @@
-
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/auth-hooks";
 import AuthForm from "@/components/auth/AuthForm";
 
 const SignIn = () => {
+  const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
-  const isAuthenticated = localStorage.getItem("authenticated") === "true";
 
-  // Redirect to dashboard if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isLoading) {
       navigate("/dashboard");
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12 bg-gray-50">
-      <div className="w-full animate-fade-in">
-        <div className="flex justify-center mb-6">
-          <a
-            href="/"
-            className="flex items-center space-x-2 text-xl font-bold"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate("/");
-            }}
-          >
-            <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-white font-medium text-sm">RT</span>
-            </div>
-            <span>ReactTyper</span>
-          </a>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Sign in to your account
+          </h2>
         </div>
-
-        <div className="flex justify-center">
-          <AuthForm mode="signin" />
-        </div>
+        <AuthForm mode="signin" />
       </div>
     </div>
   );

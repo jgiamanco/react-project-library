@@ -1,50 +1,40 @@
-
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/auth-hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 
 interface AuthFormProps {
   mode: "signin" | "signup";
 }
 
-const AuthForm = ({ mode }: AuthFormProps) => {
+export default function AuthForm({ mode }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (!email || !password) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please fill in all fields",
+      });
+      return;
+    }
 
+    setIsSubmitting(true);
     try {
-      // Simulate authentication
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      if (mode === "signin") {
-        // In a real app, you would validate the credentials here
-        if (email === "demo@example.com" && password === "password") {
-          localStorage.setItem("authenticated", "true");
-          toast.success("Welcome back!");
-          navigate("/dashboard");
-        } else {
-          toast.error("Invalid credentials. Try with demo@example.com / password");
-        }
-      } else {
-        // Simulate signup
-        localStorage.setItem("authenticated", "true");
-        toast.success("Account created successfully!");
-        navigate("/dashboard");
-      }
+      await login(email, password);
     } catch (error) {
-      toast.error("An error occurred. Please try again.");
+      console.error("Auth error:", error);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -55,8 +45,8 @@ const AuthForm = ({ mode }: AuthFormProps) => {
           {mode === "signin" ? "Welcome back" : "Create an account"}
         </h2>
         <p className="text-muted-foreground">
-          {mode === "signin" 
-            ? "Enter your credentials to access your account" 
+          {mode === "signin"
+            ? "Enter your credentials to access your account"
             : "Enter your details to create your account"}
         </p>
       </div>
@@ -80,8 +70,8 @@ const AuthForm = ({ mode }: AuthFormProps) => {
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Password</Label>
               {mode === "signin" && (
-                <a 
-                  href="#" 
+                <a
+                  href="#"
                   className="text-sm text-primary hover:underline"
                   onClick={(e) => {
                     e.preventDefault();
@@ -113,12 +103,12 @@ const AuthForm = ({ mode }: AuthFormProps) => {
           </div>
         </div>
 
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           className="w-full h-12 font-medium"
-          disabled={loading}
+          disabled={isSubmitting}
         >
-          {loading ? (
+          {isSubmitting ? (
             <div className="flex items-center justify-center">
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
               {mode === "signin" ? "Signing in..." : "Creating account..."}
@@ -136,13 +126,9 @@ const AuthForm = ({ mode }: AuthFormProps) => {
         {mode === "signin" ? (
           <p>
             Don't have an account?{" "}
-            <a 
-              href="/signup" 
+            <a
+              href="/signup"
               className="text-primary font-medium hover:underline"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/signup");
-              }}
             >
               Sign up
             </a>
@@ -150,13 +136,9 @@ const AuthForm = ({ mode }: AuthFormProps) => {
         ) : (
           <p>
             Already have an account?{" "}
-            <a 
-              href="/signin" 
+            <a
+              href="/signin"
               className="text-primary font-medium hover:underline"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/signin");
-              }}
             >
               Sign in
             </a>
@@ -171,6 +153,4 @@ const AuthForm = ({ mode }: AuthFormProps) => {
       )}
     </div>
   );
-};
-
-export default AuthForm;
+}

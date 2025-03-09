@@ -1,39 +1,80 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useEffect, useReducer } from "react";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
 
 interface User {
-  id: string;
-  name: string;
   email: string;
-  avatar: string;
+  displayName: string;
+  photoURL?: string;
 }
 
-interface AuthContextType {
+interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+interface AuthContextType extends AuthState {
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  updateUser: (updates: Partial<User>) => void;
+}
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+type AuthAction =
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_USER"; payload: User | null }
+  | { type: "LOGOUT" };
 
-  // Check if user is already logged in on mount
+const initialState: AuthState = {
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
+};
+
+const authReducer = (state: AuthState, action: AuthAction): AuthState => {
+  switch (action.type) {
+    case "SET_LOADING":
+      return { ...state, isLoading: action.payload };
+    case "SET_USER":
+      return {
+        ...state,
+        user: action.payload,
+        isAuthenticated: !!action.payload,
+        isLoading: false,
+      };
+    case "LOGOUT":
+      return { ...initialState, isLoading: false };
+    default:
+      return state;
+  }
+};
+
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined
+);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [state, dispatch] = useReducer(authReducer, initialState);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Check for stored user data on mount
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // In a real app, this would be an API call to check the session
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
+    const checkAuth = () => {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          dispatch({ type: "SET_USER", payload: user });
+        } catch (error) {
+          console.error("Error parsing stored user:", error);
+          localStorage.removeItem("user");
+          dispatch({ type: "LOGOUT" });
         }
-      } catch (error) {
-        console.error("Authentication error:", error);
-      } finally {
-        setIsLoading(false);
+      } else {
+        dispatch({ type: "SET_LOADING", payload: false });
       }
     };
 
@@ -41,53 +82,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
     try {
-      // In a real app, this would be an API call to authenticate
-      // For demo purposes, we'll just simulate a successful login
-      const mockUser: User = {
-        id: "1",
-        name: "John Doe",
-        email: email,
-        avatar: "https://github.com/shadcn.png",
+      dispatch({ type: "SET_LOADING", payload: true });
+
+      // Simulate API call delay
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const user: User = {
+        email,
+        displayName: email.split("@")[0],
+        photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
       };
 
-      // Store user in localStorage for persistence
-      localStorage.setItem("user", JSON.stringify(mockUser));
-      setUser(mockUser);
+      // Store user data first
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // Update state
+      dispatch({ type: "SET_USER", payload: user });
+
+      // Wait for state to update
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in.",
+      });
+
+      // Navigate after state update
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       console.error("Login error:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
+      localStorage.removeItem("user");
+      dispatch({ type: "LOGOUT" });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to sign in. Please try again.",
+      });
     }
   };
 
   const logout = () => {
-    // Clear user from localStorage
     localStorage.removeItem("user");
-    setUser(null);
+    dispatch({ type: "LOGOUT" });
+    toast({
+      title: "Signed out",
+      description: "You have been successfully signed out.",
+    });
+    navigate("/");
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        logout,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-}
+  const updateUser = (updates: Partial<User>) => {
+    if (!state.user) return;
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-}
+    const updatedUser = { ...state.user, ...updates };
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+    dispatch({ type: "SET_USER", payload: updatedUser });
+  };
+
+  const value = {
+    ...state,
+    login,
+    logout,
+    updateUser,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
