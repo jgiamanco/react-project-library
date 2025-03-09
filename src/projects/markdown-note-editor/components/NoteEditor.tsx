@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import ReactMarkdown from "react-markdown";
 import { Input } from "@/components/ui/input";
 import { PreBlock } from "../SyntaxHighlighterPlugin";
@@ -18,6 +18,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   updateNoteTitle,
   updateNoteContent
 }) => {
+  // Memoize the preview to prevent unnecessary re-renders
+  const markdownPreview = useMemo(() => (
+    <ReactMarkdown components={{ pre: PreBlock }}>
+      {currentNote.content}
+    </ReactMarkdown>
+  ), [currentNote.content]);
+  
   return (
     <div className="grid grid-cols-2 gap-4">
       <div>
@@ -46,12 +53,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
             : "bg-white border-gray-200 text-gray-900"
         }`}
       >
-        <ReactMarkdown components={{ pre: PreBlock }}>
-          {currentNote.content}
-        </ReactMarkdown>
+        {markdownPreview}
       </div>
     </div>
   );
 };
 
-export default NoteEditor;
+export default React.memo(NoteEditor);

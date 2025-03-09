@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Line } from "react-chartjs-2";
 import { 
   Card, 
@@ -15,12 +15,13 @@ interface WeatherChartProps {
   celsiusToFahrenheit: (celsius: number) => number;
 }
 
-const WeatherChart: React.FC<WeatherChartProps> = ({ 
+const WeatherChart: React.FC<WeatherChartProps> = React.memo(({ 
   forecast, 
   useMetric,
   celsiusToFahrenheit
 }) => {
-  const chartData = {
+  // Memoize the chart data to prevent unnecessary calculations
+  const chartData = useMemo(() => ({
     labels: forecast.map((day) => day.date) || [],
     datasets: [
       {
@@ -42,9 +43,9 @@ const WeatherChart: React.FC<WeatherChartProps> = ({
         backgroundColor: "rgba(53, 162, 235, 0.5)",
       },
     ],
-  };
+  }), [forecast, useMetric, celsiusToFahrenheit]);
 
-  const chartOptions = {
+  const chartOptions = useMemo(() => ({
     responsive: true,
     plugins: {
       legend: {
@@ -55,18 +56,21 @@ const WeatherChart: React.FC<WeatherChartProps> = ({
         text: "7-Day Temperature Forecast",
       },
     },
-  };
+    maintainAspectRatio: false,
+  }), []);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Temperature Trend</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="h-[300px]">
         <Line options={chartOptions} data={chartData} />
       </CardContent>
     </Card>
   );
-};
+});
+
+WeatherChart.displayName = "WeatherChart";
 
 export default WeatherChart;

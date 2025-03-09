@@ -1,5 +1,6 @@
 
 import * as React from "react";
+import { memo } from "react";
 import { Draggable } from "react-beautiful-dnd";
 import { Button, Badge } from "@/components/ui";
 import { Trash2, Check } from "lucide-react";
@@ -16,13 +17,22 @@ interface TodoItemProps {
   darkMode: boolean;
 }
 
-const TodoItem: React.FC<TodoItemProps> = ({
+// Using memo to prevent unnecessary re-renders
+const TodoItem: React.FC<TodoItemProps> = memo(({
   todo,
   index,
   toggleTodo,
   deleteTodoItem,
   darkMode,
 }) => {
+  const handleToggle = React.useCallback(() => {
+    toggleTodo(todo.id);
+  }, [toggleTodo, todo.id]);
+
+  const handleDelete = React.useCallback(() => {
+    deleteTodoItem(todo.id);
+  }, [deleteTodoItem, todo.id]);
+
   return (
     <Draggable key={todo.id} draggableId={todo.id} index={index}>
       {(provided) => (
@@ -43,7 +53,7 @@ const TodoItem: React.FC<TodoItemProps> = ({
                   ? "bg-blue-500 text-white border-blue-500"
                   : "border-blue-500 text-blue-500 hover:bg-blue-50"
               }`}
-              onClick={() => toggleTodo(todo.id)}
+              onClick={handleToggle}
             >
               <Check
                 className={`h-5 w-5 ${!todo.completed && "opacity-0"}`}
@@ -73,7 +83,7 @@ const TodoItem: React.FC<TodoItemProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => deleteTodoItem(todo.id)}
+              onClick={handleDelete}
               className="text-red-500 hover:text-red-700"
             >
               <Trash2 className="h-4 w-4" />
@@ -83,6 +93,8 @@ const TodoItem: React.FC<TodoItemProps> = ({
       )}
     </Draggable>
   );
-};
+});
+
+TodoItem.displayName = "TodoItem";
 
 export default TodoItem;

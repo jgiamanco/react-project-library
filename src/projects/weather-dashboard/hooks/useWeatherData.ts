@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   WeatherData, 
   FavoriteLocation, 
@@ -36,20 +36,20 @@ export const useWeatherData = (API_KEY: string) => {
     localStorage.setItem("weatherFavorites", JSON.stringify(favorites));
   }, [favorites]);
 
-  const celsiusToFahrenheit = (celsius: number) => (celsius * 9) / 5 + 32;
+  const celsiusToFahrenheit = useCallback((celsius: number) => (celsius * 9) / 5 + 32, []);
 
-  const isZipCode = (query: string) => {
+  const formatTemp = useCallback((celsius: number) => {
+    const temp = useMetric ? celsius : celsiusToFahrenheit(celsius);
+    return `${Math.round(temp)}°${useMetric ? "C" : "F"}`;
+  }, [useMetric, celsiusToFahrenheit]);
+
+  const isZipCode = useCallback((query: string) => {
     // Match common zip code formats (US, UK, etc.)
     const zipRegex = /^\d{5}(-\d{4})?$|^\d{4,6}$/;
     return zipRegex.test(query.trim());
-  };
+  }, []);
 
-  const formatTemp = (celsius: number) => {
-    const temp = useMetric ? celsius : celsiusToFahrenheit(celsius);
-    return `${Math.round(temp)}°${useMetric ? "C" : "F"}`;
-  };
-
-  const fetchWeatherData = async (lat: number, lon: number) => {
+  const fetchWeatherData = useCallback(async (lat: number, lon: number) => {
     try {
       setLoading(true);
       setError(null);
@@ -132,9 +132,9 @@ export const useWeatherData = (API_KEY: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_KEY, API_BASE_URL, GEO_API_URL]);
 
-  const searchLocations = async (query: string) => {
+  const searchLocations = useCallback(async (query: string) => {
     if (!query.trim() || query.length < 2) {
       setSuggestions([]);
       return;
@@ -193,7 +193,7 @@ export const useWeatherData = (API_KEY: string) => {
       console.error("Error fetching suggestions:", err);
       setSuggestions([]);
     }
-  };
+  }, [API_KEY, GEO_API_URL, isZipCode]);
 
   // Debounce search to avoid too many API calls
   useEffect(() => {
@@ -202,9 +202,9 @@ export const useWeatherData = (API_KEY: string) => {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, searchLocations]);
 
-  const handleLocationSelect = async (location: LocationSuggestion) => {
+  const handleLocationSelect = useCallback(async (location: LocationSuggestion) => {
     setSearchQuery(
       `${location.name}${location.state ? `, ${location.state}` : ""}, ${
         location.country
@@ -212,9 +212,9 @@ export const useWeatherData = (API_KEY: string) => {
     );
     setIsSearchOpen(false);
     await fetchWeatherData(location.lat, location.lon);
-  };
+  }, [fetchWeatherData]);
 
-  const toggleFavorite = () => {
+  const toggleFavorite = useCallback(() => {
     if (!weatherData) return;
 
     const isFavorite = favorites.some(
@@ -242,7 +242,17 @@ export const useWeatherData = (API_KEY: string) => {
         },
       ]);
     }
-  };
+  }, [weatherData, favorites]);
+
+  // Memoize values that should not trigger re-renders
+  const isFavorite = useMemo(() => {
+    if (!weatherData) return false;
+    return favorites.some(
+      fav => 
+        fav.lat === weatherData.location.lat && 
+        fav.lon === weatherData.location.lon
+    );
+  }, [weatherData, favorites]);
 
   return {
     searchQuery,
@@ -260,7 +270,8 @@ export const useWeatherData = (API_KEY: string) => {
     handleLocationSelect,
     toggleFavorite,
     formatTemp,
-    celsiusToFahrenheit
+    celsiusToFahrenheit,
+    isFavorite
   };
 };
 
