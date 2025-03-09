@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-hooks";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { toast as sonnerToast } from "sonner";
 
 interface AuthFormProps {
   mode: "signin" | "signup";
@@ -75,7 +77,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                   className="text-sm text-primary hover:underline"
                   onClick={(e) => {
                     e.preventDefault();
-                    toast.info("Demo mode: Use password 'password'");
+                    sonnerToast("Demo mode: Use password 'password'");
                   }}
                 >
                   Forgot password?

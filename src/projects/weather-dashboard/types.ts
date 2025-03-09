@@ -1,3 +1,4 @@
+
 export interface WeatherData {
   location: {
     name: string;
@@ -16,22 +17,40 @@ export interface WeatherData {
       icon: string;
     };
   };
-  forecast: Array<{
-    date: string;
-    temp: {
-      min: number;
-      max: number;
-    };
-    weather: {
-      main: string;
-      description: string;
-      icon: string;
-    };
-  }>;
+  forecast: DailyForecast[];
 }
 
 export interface FavoriteLocation {
   name: string;
+  country: string;
+  lat: number;
+  lon: number;
+}
+
+export interface DailyForecast {
+  date: string;
+  temp: {
+    min: number;
+    max: number;
+  };
+  weather: {
+    main: string;
+    description: string;
+    icon: string;
+  };
+}
+
+export interface LocationSuggestion {
+  name: string;
+  state?: string;
+  country: string;
+  lat: number;
+  lon: number;
+}
+
+export interface GeocodingResponse {
+  name: string;
+  state?: string;
   country: string;
   lat: number;
   lon: number;
