@@ -1,3 +1,4 @@
+
 import React, { createContext, useEffect, useReducer } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -68,12 +69,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         try {
           const user = JSON.parse(storedUser);
           dispatch({ type: "SET_USER", payload: user });
+          // Also set the authenticated flag for compatibility
+          localStorage.setItem("authenticated", "true");
         } catch (error) {
           console.error("Error parsing stored user:", error);
           localStorage.removeItem("user");
+          localStorage.removeItem("authenticated");
           dispatch({ type: "LOGOUT" });
         }
       } else {
+        localStorage.removeItem("authenticated");
         dispatch({ type: "SET_LOADING", payload: false });
       }
     };
@@ -96,6 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Store user data first
       localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("authenticated", "true");
 
       // Update state
       dispatch({ type: "SET_USER", payload: user });
@@ -113,6 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error) {
       console.error("Login error:", error);
       localStorage.removeItem("user");
+      localStorage.removeItem("authenticated");
       dispatch({ type: "LOGOUT" });
       toast({
         variant: "destructive",
@@ -124,6 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const logout = () => {
     localStorage.removeItem("user");
+    localStorage.removeItem("authenticated");
     dispatch({ type: "LOGOUT" });
     toast({
       title: "Signed out",
