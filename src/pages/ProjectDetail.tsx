@@ -5,8 +5,9 @@ import { Project } from "@/types/Project";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Clock, Code, Play } from "lucide-react";
+import { ArrowLeft, Code, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { PreBlock } from "@/projects/markdown-note-editor/SyntaxHighlighterPlugin";
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,7 +17,7 @@ const ProjectDetail = () => {
 
   useEffect(() => {
     // Find the project by ID
-    const projectId = parseInt(id || "0");
+    const projectId = id || "";
     const foundProject = projects.find((p) => p.id === projectId);
 
     if (foundProject) {
@@ -27,7 +28,7 @@ const ProjectDetail = () => {
     const timer = setTimeout(() => {
       setLoading(false);
     }, 1000);
-    
+
     return () => clearTimeout(timer);
   }, [id]);
 
@@ -66,8 +67,8 @@ const ProjectDetail = () => {
   return (
     <div className="pt-24 pb-16 animate-fade-in">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           className="mb-6"
           onClick={() => navigate("/dashboard")}
         >
@@ -78,8 +79,8 @@ const ProjectDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
           <div className="lg:col-span-2">
             <div className="relative aspect-video overflow-hidden rounded-xl border mb-6">
-              <img 
-                src={project.image} 
+              <img
+                src={project.image}
                 alt={project.title}
                 className="h-full w-full object-cover"
               />
@@ -96,14 +97,14 @@ const ProjectDetail = () => {
               ))}
             </div>
             <div className="flex flex-wrap gap-4 mb-10">
-              <Button 
+              <Button
                 className="flex items-center"
                 onClick={() => navigate(`/projects/${project.id}/demo/code`)}
               >
                 <Code className="mr-2 h-4 w-4" />
                 View Code
               </Button>
-              <Button 
+              <Button
                 variant="secondary"
                 className="flex items-center"
                 onClick={() => navigate(`/projects/${project.id}/demo`)}
@@ -119,17 +120,12 @@ const ProjectDetail = () => {
               <h2 className="text-xl font-semibold mb-4">Project Details</h2>
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Difficulty</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Difficulty
+                  </p>
                   <Badge className={`${difficultyColor} capitalize`}>
                     {project.difficulty}
                   </Badge>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Estimated Time</p>
-                  <div className="flex items-center">
-                    <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                    <span>{project.timeEstimate}</span>
-                  </div>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Skills</p>
@@ -150,30 +146,33 @@ const ProjectDetail = () => {
           <TabsList className="mb-6">
             <TabsTrigger value="readme">README</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
-            <TabsTrigger value="resources">Resources</TabsTrigger>
           </TabsList>
           <TabsContent value="readme" className="prose prose-blue max-w-none">
-            <div className="bg-white rounded-xl p-6 border">
-              <ReactMarkdown>{project.readme}</ReactMarkdown>
+            <div className="bg-white rounded-xl p-6 border markdown-body">
+              <ReactMarkdown components={{ pre: PreBlock }}>
+                {project.readme}
+              </ReactMarkdown>
             </div>
           </TabsContent>
           <TabsContent value="preview">
             <div className="bg-white rounded-xl p-6 border min-h-[400px] flex flex-col items-center justify-center">
               <div className="mb-6 text-center">
-                <h2 className="text-xl font-semibold mb-2">Live Project Demo</h2>
+                <h2 className="text-xl font-semibold mb-2">
+                  Live Project Demo
+                </h2>
                 <p className="text-muted-foreground text-center mb-6">
                   Experience the project in action with our interactive demo.
                 </p>
               </div>
               <div className="flex space-x-4">
-                <Button 
+                <Button
                   onClick={() => navigate(`/projects/${project.id}/demo`)}
                   className="flex items-center"
                 >
                   <Play className="mr-2 h-4 w-4" />
                   View Demo
                 </Button>
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => navigate(`/projects/${project.id}/demo/code`)}
                   className="flex items-center"
@@ -182,41 +181,6 @@ const ProjectDetail = () => {
                   View Code
                 </Button>
               </div>
-            </div>
-          </TabsContent>
-          <TabsContent value="resources">
-            <div className="bg-white rounded-xl p-6 border min-h-[400px]">
-              <h2 className="text-xl font-semibold mb-4">Additional Resources</h2>
-              <p className="text-muted-foreground mb-6">Here are some helpful resources for this project:</p>
-              <ul className="space-y-3">
-                <li className="flex items-start">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-0.5">
-                    <span className="text-blue-700 text-xs font-medium">1</span>
-                  </div>
-                  <div>
-                    <a href="#" className="text-blue-600 hover:underline font-medium">Official Documentation</a>
-                    <p className="text-sm text-muted-foreground">Reference the official React and TypeScript documentation</p>
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-0.5">
-                    <span className="text-blue-700 text-xs font-medium">2</span>
-                  </div>
-                  <div>
-                    <a href="#" className="text-blue-600 hover:underline font-medium">Tutorial Video</a>
-                    <p className="text-sm text-muted-foreground">Step-by-step video guide for this project</p>
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-0.5">
-                    <span className="text-blue-700 text-xs font-medium">3</span>
-                  </div>
-                  <div>
-                    <a href="#" className="text-blue-600 hover:underline font-medium">Community Forum</a>
-                    <p className="text-sm text-muted-foreground">Get help from other developers working on this project</p>
-                  </div>
-                </li>
-              </ul>
             </div>
           </TabsContent>
         </Tabs>

@@ -17,10 +17,10 @@ export default function Header() {
           <nav className="hidden md:flex gap-6">
             {isAuthenticated && (
               <Link
-                to="/projects"
+                to="/dashboard"
                 className="text-sm font-medium transition-colors hover:text-primary"
               >
-                Projects
+                Dashboard
               </Link>
             )}
           </nav>

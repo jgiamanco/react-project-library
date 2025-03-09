@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Project } from "@/types/Project";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, Github } from "lucide-react";
+import { ArrowRight, Github } from "lucide-react";
 import projectComponents from "@/projects";
 
 interface ProjectCardProps {
@@ -18,15 +18,13 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
   // Check if the project has code implementation
   const hasImplementation =
     !!projectComponents[
-      `${
-        project.id === 1
-          ? "todoApp"
-          : project.id === 2
-          ? "weatherDashboard"
-          : project.id === 3
-          ? "markdownEditor"
-          : ""
-      }`
+      project.id === "todo-app"
+        ? "todoApp"
+        : project.id === "weather-dashboard"
+        ? "weatherDashboard"
+        : project.id === "markdown-editor"
+        ? "markdownEditor"
+        : ""
     ];
 
   const difficultyColor = {
@@ -36,6 +34,9 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
   }[project.difficulty];
 
   const staggerDelay = `${index * 0.1}s`;
+
+  const demoUrl = project.resources.find((r) => r.title === "Live Demo")?.url;
+  const codeUrl = project.resources.find((r) => r.title === "View Code")?.url;
 
   return (
     <div
@@ -62,13 +63,6 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
           <Badge className={difficultyColor + " capitalize"}>
             {project.difficulty}
           </Badge>
-          <Badge
-            variant="secondary"
-            className="flex items-center gap-1 bg-black/70 text-white"
-          >
-            <Clock className="h-3 w-3" />
-            {project.timeEstimate}
-          </Badge>
         </div>
       </div>
       <div className="p-5">
@@ -93,7 +87,7 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
             variant="outline"
             size="sm"
             className="w-1/2"
-            onClick={() => window.open(project.githubUrl, "_blank")}
+            onClick={() => navigate(`/projects/${project.id}/demo/code`)}
             disabled={!hasImplementation}
           >
             <Github className="mr-1 h-4 w-4" />

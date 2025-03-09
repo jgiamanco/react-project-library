@@ -9,7 +9,7 @@ const ProjectDemo = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const projectId = parseInt(id || "0");
+  const projectId = id || "";
   const project = projects.find((p) => p.id === projectId);
   const isCodeView = location.pathname.endsWith("/code");
 
@@ -30,11 +30,11 @@ const ProjectDemo = () => {
 
   const getProjectComponent = () => {
     switch (projectId) {
-      case 1:
+      case "todo-app":
         return projectComponents.todoApp;
-      case 2:
+      case "weather-dashboard":
         return projectComponents.weatherDashboard;
-      case 3:
+      case "markdown-editor":
         return projectComponents.markdownEditor;
       default:
         return null;

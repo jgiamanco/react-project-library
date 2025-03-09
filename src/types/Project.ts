@@ -1,13 +1,14 @@
-
 export interface Project {
-  id: number;
+  id: string;
   title: string;
   description: string;
   image: string;
-  tags: string[];
   difficulty: "beginner" | "intermediate" | "advanced";
-  timeEstimate: string;
-  githubUrl: string;
-  demoUrl: string;
+  tags: string[];
   readme: string;
+  resources: {
+    title: string;
+    url: string;
+    internal?: boolean;
+  }[];
 }
