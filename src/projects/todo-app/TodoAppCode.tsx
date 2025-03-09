@@ -1,3 +1,4 @@
+
 import CodeViewer from "@/components/CodeViewer";
 
 const TodoAppCode = () => {
@@ -36,7 +37,7 @@ const Task: React.FC<TaskProps> = ({ task, index, toggleTodo, removeTodo }) => (
           />
           <label
             htmlFor={\`todo-\${task.id}\`}
-            className={\`ml-2 text-sm cursor-pointer ${
+            className={\`ml-2 text-sm cursor-pointer \${
               task.completed ? 'line-through text-muted-foreground' : ''
             }\`}
           >
@@ -123,8 +124,8 @@ const TodoList: React.FC<TodoListProps> = ({ todos, toggleTodo, removeTodo }) =>
   <Droppable droppableId="todos">
     {(provided) => (
       <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-        {todos.map((task, index) => (
-          <Task key={task.id} task={task} index={index} toggleTodo={toggleTodo} removeTodo={removeTodo} />
+        {todos.map((todo, index) => (
+          <Task key={todo.id} task={todo} index={index} toggleTodo={toggleTodo} removeTodo={removeTodo} />
         ))}
         {provided.placeholder}
       </div>
@@ -192,7 +193,7 @@ export default TodoApp;
 }
 
 export type TodoFilter = 'all' | 'active' | 'completed';`,
-    "hooks/useTodoState.tsx": `import { useState, useCallback } from 'react';
+    "hooks/useTodoState.tsx": `import { useState, useCallback, useMemo } from 'react';
 import { Todo, TodoFilter } from '../types';
 
 export const useTodoState = () => {
@@ -206,27 +207,23 @@ export const useTodoState = () => {
       completed: false,
       createdAt: new Date(),
     };
-    setTodos([...todos, newTodo]);
-  }, [todos]);
+    setTodos(prev => [...prev, newTodo]);
+  }, []);
 
   const toggleTodo = useCallback((id: string) => {
-    setTodos(
-      todos.map((todo) =>
+    setTodos(prev =>
+      prev.map((todo) =>
         todo.id === id ? { ...todo, completed: !todo.completed } : todo
       )
     );
-  }, [todos]);
+  }, []);
 
   const removeTodo = useCallback((id: string) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
-  }, [todos]);
+    setTodos(prev => prev.filter((todo) => todo.id !== id));
+  }, []);
 
   const clearCompleted = useCallback(() => {
-    setTodos(todos.filter((todo) => !todo.completed));
-  }, [todos]);
-
-  const setFilter = useCallback((filter: TodoFilter) => {
-    setFilter(filter);
+    setTodos(prev => prev.filter((todo) => !todo.completed));
   }, []);
 
   const filteredTodos = useMemo(() => {

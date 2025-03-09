@@ -4,6 +4,8 @@ import type { ComponentType } from "react";
 import TodoApp from "./todo-app";
 import WeatherDashboard from "./weather-dashboard";
 import MarkdownEditor from "./markdown-note-editor";
+import PomodoroTimer from "./pomodoro-timer";
+import Calculator from "./calculator";
 
 export interface ProjectImplementation {
   app: ComponentType;
@@ -30,6 +32,18 @@ const projects: Record<string, ProjectImplementation> = {
     code: MarkdownEditor.code,
     title: MarkdownEditor.title,
     description: MarkdownEditor.description
+  },
+  pomodoroTimer: {
+    app: PomodoroTimer.app,
+    code: PomodoroTimer.code,
+    title: PomodoroTimer.title,
+    description: PomodoroTimer.description
+  },
+  calculator: {
+    app: Calculator.app,
+    code: Calculator.code,
+    title: Calculator.title,
+    description: Calculator.description
   },
 };
 
