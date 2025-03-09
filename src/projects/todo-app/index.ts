@@ -1,12 +1,11 @@
-import * as React from "react";
 import type { Project } from "@/types/Project";
 import type { ProjectImplementation } from "../index";
-import TodoApp from "./index.tsx";
-import { CodeViewer } from "./components/CodeViewer";
+import TodoApp from "./TodoApp";
+import { TodoAppCode } from "./components/TodoAppCode";
 
 const implementation: ProjectImplementation = {
   app: TodoApp,
-  code: CodeViewer,
+  code: TodoAppCode,
   title: "Todo App with Drag & Drop",
   description:
     "A sleek todo application with drag and drop functionality to reorder tasks. Includes local storage persistence and theme switching.",

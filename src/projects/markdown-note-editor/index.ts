@@ -1,7 +1,7 @@
 import type { Project } from "@/types/Project";
 import type { ProjectImplementation } from "../index";
 import MarkdownEditor from "./MarkdownEditor";
-import MarkdownEditorCode from "./MarkdownEditorCode";
+import { MarkdownEditorCode } from "./components/MarkdownEditorCode";
 
 const implementation: ProjectImplementation = {
   app: MarkdownEditor,
@@ -20,10 +20,10 @@ const project: Project = {
   tags: ["React", "TypeScript", "Markdown", "LocalStorage"],
   difficulty: "intermediate",
   timeEstimate: "4-6 hours",
-  githubUrl: "#",
-  demoUrl: "#",
+  githubUrl: "https://github.com/react-projects/markdown-editor",
+  demoUrl: "https://markdown-editor-react.vercel.app",
   readme:
-    "# Markdown Note Editor\n\nA sleek, minimalist markdown note-taking application built with React and TypeScript. This project offers a distraction-free writing experience with real-time preview.\n\n## Features\n\n- Real-time markdown preview\n- Note organization with folders\n- Syntax highlighting\n- Search functionality\n- Export notes to various formats\n- Local storage persistence\n\n## Learning Objectives\n\n- Working with markdown parsers\n- Text editor implementation\n- File system-like structure in frontend\n- Search and filter algorithms\n- Local storage strategies for larger data",
+    "# Markdown Note Editor\n\nA sleek, minimalist markdown note-taking application built with React and TypeScript. This project offers a distraction-free writing experience with real-time preview.\n\n## Features\n\n- Real-time markdown preview\n- Note organization\n- Local storage persistence\n- Dark/light theme support\n- Responsive design\n\n## Learning Objectives\n\n- Working with markdown parsers\n- React state management\n- Local storage strategies\n- Theme switching with CSS variables\n- Responsive design patterns",
 };
 
 export default { ...project, ...implementation };

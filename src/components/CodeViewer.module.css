@@ -1,0 +1,35 @@
+.codeViewer {
+  @apply p-4;
+}
+
+.header {
+  @apply mb-4;
+}
+
+.title {
+  @apply text-xl font-bold;
+}
+
+.fileList {
+  @apply flex space-x-2 mb-4;
+}
+
+.fileButton {
+  @apply px-3 py-1.5 rounded-md transition-colors;
+}
+
+.fileButtonActive {
+  @apply bg-primary text-primary-foreground;
+}
+
+.fileButtonInactive {
+  @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+}
+
+.codeContainer {
+  @apply relative rounded-md overflow-hidden;
+}
+
+.code {
+  @apply m-0 text-sm;
+}

@@ -13,6 +13,9 @@ import NotFound from "./pages/NotFound";
 import ProjectDemo from "./components/projects/ProjectDemo";
 import ProfilePage from "./pages/ProfilePage";
 import { AuthProvider } from "./contexts/AuthContext";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import Contact from "./pages/Contact";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +56,30 @@ const App = () => (
             <Route path="/projects/:id/demo" element={<ProjectDemo />} />
             <Route path="/projects/:id/demo/code" element={<ProjectDemo />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route
+              path="/terms"
+              element={
+                <Layout>
+                  <Terms />
+                </Layout>
+              }
+            />
+            <Route
+              path="/privacy"
+              element={
+                <Layout>
+                  <Privacy />
+                </Layout>
+              }
+            />
+            <Route
+              path="/contact"
+              element={
+                <Layout>
+                  <Contact />
+                </Layout>
+              }
+            />
             <Route
               path="*"
               element={
