@@ -1,37 +1,24 @@
+
 import React from "react";
 import CodeViewer from "@/components/CodeViewer";
 
 export const WeatherDashboardCode = () => {
-  const files = [
-    {
-      name: "WeatherDashboard.tsx",
-      content: `import React, { useState, useEffect } from 'react';
+  const files = {
+    "WeatherDashboard.tsx": `import React, { useState, useEffect } from 'react';
 import { Input, Button, Card } from '@/components/ui';
 import { WeatherDisplay } from './components/WeatherDisplay';
 import { ForecastList } from './components/ForecastList';
 import { WeatherData, Forecast } from './types';
 // ... Rest of WeatherDashboard.tsx code ...`,
-      language: "typescript",
-    },
-    {
-      name: "components/WeatherDisplay.tsx",
-      content: `import React from 'react';
+    "components/WeatherDisplay.tsx": `import React from 'react';
 import { Card } from '@/components/ui';
 import { WeatherData } from '../types';
 // ... Rest of WeatherDisplay.tsx code ...`,
-      language: "typescript",
-    },
-    {
-      name: "components/ForecastList.tsx",
-      content: `import React from 'react';
+    "components/ForecastList.tsx": `import React from 'react';
 import { Card } from '@/components/ui';
 import { Forecast } from '../types';
 // ... Rest of ForecastList.tsx code ...`,
-      language: "typescript",
-    },
-    {
-      name: "types.ts",
-      content: `export interface WeatherData {
+    "types.ts": `export interface WeatherData {
   temperature: number;
   condition: string;
   humidity: number;
@@ -44,11 +31,7 @@ export interface Forecast {
   temperature: number;
   condition: string;
 }`,
-      language: "typescript",
-    },
-    {
-      name: "styles/weather-animations.css",
-      content: `/* Weather condition animations */
+    "styles/weather-animations.css": `/* Weather condition animations */
 .sunny {
   background: linear-gradient(120deg, #f6d365 0%, #fda085 100%);
 }
@@ -59,10 +42,8 @@ export interface Forecast {
 
 .cloudy {
   background: linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%);
-}`,
-      language: "css",
-    },
-  ];
+}`
+  };
 
   return <CodeViewer files={files} title="Weather Dashboard Code" />;
 };

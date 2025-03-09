@@ -2,10 +2,8 @@ import React from "react";
 import CodeViewer from "@/components/CodeViewer";
 
 export const TodoAppCode = () => {
-  const files = [
-    {
-      name: "TodoApp.tsx",
-      content: `import React, { useState } from 'react';
+  const files = {
+    "TodoApp.tsx": `import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Button, Input } from '@/components/ui';
 import { Todo } from './types';
@@ -24,20 +22,12 @@ const TodoApp = () => {
 };
 
 export default TodoApp;`,
-      language: "typescript",
-    },
-    {
-      name: "types.ts",
-      content: `export interface Todo {
+    "types.ts": `export interface Todo {
   id: string;
   text: string;
   completed: boolean;
 }`,
-      language: "typescript",
-    },
-    {
-      name: "components/TodoList.tsx",
-      content: `import React from 'react';
+    "components/TodoList.tsx": `import React from 'react';
 import { Droppable, Draggable } from 'react-beautiful-dnd';
 import { Todo } from '../types';
 
@@ -58,11 +48,7 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, onToggle, onDelete })
     </Droppable>
   );
 };`,
-      language: "typescript",
-    },
-    {
-      name: "components/TodoItem.tsx",
-      content: `import React from 'react';
+    "components/TodoItem.tsx": `import React from 'react';
 import { Draggable } from 'react-beautiful-dnd';
 import { Button } from '@/components/ui';
 import { Todo } from '../types';
@@ -88,10 +74,8 @@ export const TodoItem: React.FC<TodoItemProps> = ({ todo, index, onToggle, onDel
       )}
     </Draggable>
   );
-};`,
-      language: "typescript",
-    },
-  ];
+};`
+  };
 
   return <CodeViewer files={files} title="Todo App Code" />;
 };
