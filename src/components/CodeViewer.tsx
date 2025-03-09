@@ -1,72 +1,47 @@
-import React, { useState } from "react";
+
+import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-} from "@/components/ui";
+import { Button } from "@/components/ui/button";
 import styles from "./CodeViewer.module.css";
 
 interface CodeViewerProps {
-  files: Array<{
-    name: string;
-    content: string;
-    language: string;
-  }>;
-  title?: string;
+  files: Record<string, string>;
+  filename?: string;
 }
 
-const CodeViewer = ({ files, title = "Project Code" }: CodeViewerProps) => {
-  const [activeFile, setActiveFile] = useState(files[0]?.name);
-
-  const activeFileContent =
-    files.find((file) => file.name === activeFile)?.content || "";
-  const activeFileLanguage =
-    files.find((file) => file.name === activeFile)?.language || "typescript";
+const CodeViewer = ({ files, filename }: CodeViewerProps) => {
+  const [activeFile, setActiveFile] = useState<string>(filename || Object.keys(files)[0] || "");
 
   return (
     <div className={styles.codeViewer}>
-      <Card>
-        <CardHeader className={styles.header}>
-          <CardTitle className={styles.title}>{title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={styles.fileList}>
-            {files.map((file) => (
-              <Button
-                key={file.name}
-                variant="ghost"
-                className={`${styles.fileButton} ${
-                  activeFile === file.name
-                    ? styles.fileButtonActive
-                    : styles.fileButtonInactive
-                }`}
-                onClick={() => setActiveFile(file.name)}
-              >
-                {file.name}
-              </Button>
-            ))}
-          </div>
-          <div className={styles.codeContainer}>
-            <SyntaxHighlighter
-              language={activeFileLanguage}
-              style={vscDarkPlus}
-              customStyle={{
-                margin: 0,
-                borderRadius: "0.5rem",
-                fontSize: "0.9rem",
-              }}
-              showLineNumbers
-              className={styles.code}
-            >
-              {activeFileContent}
-            </SyntaxHighlighter>
-          </div>
-        </CardContent>
-      </Card>
+      <div className={styles.fileList}>
+        {Object.keys(files).map((fileName) => (
+          <Button
+            key={fileName}
+            onClick={() => setActiveFile(fileName)}
+            className={`${styles.fileButton} ${
+              activeFile === fileName ? styles.fileButtonActive : styles.fileButtonInactive
+            }`}
+          >
+            {fileName}
+          </Button>
+        ))}
+      </div>
+      <div className={styles.codeContainer}>
+        <SyntaxHighlighter
+          language={activeFile.endsWith(".css") ? "css" : "typescript"}
+          style={vscDarkPlus}
+          showLineNumbers
+          customStyle={{
+            margin: 0,
+            borderRadius: "0.375rem",
+          }}
+          className={styles.code}
+        >
+          {files[activeFile] || ""}
+        </SyntaxHighlighter>
+      </div>
     </div>
   );
 };

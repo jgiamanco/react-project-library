@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -62,7 +63,7 @@ const ProjectDemo = () => {
     const CodeComponent = projectComponent.code;
     return (
       <div className="min-h-screen">
-        <div className="bg-background py-4 px-6 fixed top-0 w-full z-10 shadow-sm">
+        <div className="bg-background py-4 px-6 border-b shadow-sm mb-6">
           <Button
             variant="ghost"
             className="mb-2"
@@ -73,7 +74,7 @@ const ProjectDemo = () => {
           </Button>
           <h1 className="text-xl font-bold">{project.title} - Code</h1>
         </div>
-        <div className="pt-20 pb-10">
+        <div className="px-6 py-4">
           <CodeComponent />
         </div>
       </div>

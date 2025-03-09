@@ -1,11 +1,6 @@
-import { useState } from "react";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Button } from "@/components/ui/button";
+import CodeViewer from "@/components/CodeViewer";
 
 export const WeatherDashboardCode = () => {
-  const [activeFile, setActiveFile] = useState<string>("WeatherDashboard.tsx");
-
   const files = {
     "WeatherDashboard.tsx": `import { useState, useEffect } from "react";
 import { Line } from "react-chartjs-2";
@@ -76,35 +71,7 @@ export interface FavoriteLocation {
 /* Additional weather animations... */`,
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        {Object.keys(files).map((fileName) => (
-          <Button
-            key={fileName}
-            variant={activeFile === fileName ? "default" : "outline"}
-            onClick={() => setActiveFile(fileName)}
-          >
-            {fileName}
-          </Button>
-        ))}
-      </div>
-      <div className="p-4 bg-gray-900 rounded-lg">
-        <SyntaxHighlighter
-          language={activeFile.endsWith(".css") ? "css" : "typescript"}
-          style={vscDarkPlus}
-          showLineNumbers
-          customStyle={{
-            margin: 0,
-            padding: "1rem",
-            backgroundColor: "transparent",
-          }}
-        >
-          {files[activeFile]}
-        </SyntaxHighlighter>
-      </div>
-    </div>
-  );
+  return <CodeViewer files={files} />;
 };
 
 export default WeatherDashboardCode;
