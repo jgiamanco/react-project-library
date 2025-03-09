@@ -110,7 +110,7 @@ const CalculatorKeypad: React.FC<CalculatorKeypadProps> = ({
         <Delete className="h-4 w-4" />
       </Button>
       <Button
-        variant="primary"
+        variant="default"
         onClick={onEqualClick}
         className="col-span-1 bg-primary text-primary-foreground hover:bg-primary/90"
       >

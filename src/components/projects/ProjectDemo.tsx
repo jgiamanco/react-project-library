@@ -37,6 +37,12 @@ const ProjectDemo = () => {
         return projectComponents.weatherDashboard;
       case "markdown-editor":
         return projectComponents.markdownEditor;
+      case "pomodoro-timer":
+        return projectComponents.pomodoroTimer;
+      case "calculator":
+        return projectComponents.calculator;
+      case "recipe-finder":
+        return projectComponents.recipeFinder;
       default:
         return null;
     }

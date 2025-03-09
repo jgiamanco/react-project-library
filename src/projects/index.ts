@@ -6,6 +6,7 @@ import WeatherDashboard from "./weather-dashboard";
 import MarkdownEditor from "./markdown-note-editor";
 import PomodoroTimer from "./pomodoro-timer";
 import Calculator from "./calculator";
+import RecipeFinder from "./recipe-finder";
 
 export interface ProjectImplementation {
   app: ComponentType;
@@ -45,6 +46,12 @@ const projects: Record<string, ProjectImplementation> = {
     title: Calculator.title,
     description: Calculator.description
   },
+  recipeFinder: {
+    app: RecipeFinder.app,
+    code: RecipeFinder.code,
+    title: RecipeFinder.title,
+    description: RecipeFinder.description
+  }
 };
 
 export default projects;
