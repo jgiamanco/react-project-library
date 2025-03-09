@@ -45,7 +45,7 @@ export interface Forecast {
 }`
   };
 
-  return <CodeViewer files={files} title="Weather Dashboard Code" />;
+  return <CodeViewer files={files} />;
 };
 
 export default WeatherDashboardCode;

@@ -44,7 +44,7 @@ export const createExcerpt = (content: string, length: number = 100): string => 
 };`
   };
 
-  return <CodeViewer files={files} title="Markdown Editor Code" />;
+  return <CodeViewer files={files} />;
 };
 
 export default MarkdownEditorCode;
