@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Project } from "@/types/Project";
@@ -16,16 +17,17 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
   const navigate = useNavigate();
 
   // Check if the project has code implementation
-  const hasImplementation =
-    !!projectComponents[
-      project.id === "todo-app"
-        ? "todoApp"
-        : project.id === "weather-dashboard"
-        ? "weatherDashboard"
-        : project.id === "markdown-editor"
-        ? "markdownEditor"
-        : ""
+  const hasImplementation = () => {
+    const implementedProjects = [
+      "todo-app",
+      "weather-dashboard", 
+      "markdown-editor",
+      "pomodoro-timer",
+      "calculator",
+      "recipe-finder"
     ];
+    return implementedProjects.includes(project.id);
+  };
 
   const difficultyColor = {
     beginner: "bg-emerald-100 text-emerald-800",
@@ -52,7 +54,7 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
           alt={project.title}
           className="h-full w-full object-cover transition-transform duration-500 ease-apple group-hover:scale-105"
         />
-        {!hasImplementation && (
+        {!hasImplementation() && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70">
             <div className="rounded-lg bg-black/80 px-4 py-2 text-lg font-bold text-white">
               Coming Soon
@@ -88,7 +90,7 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
             size="sm"
             className="w-1/2"
             onClick={() => navigate(`/projects/${project.id}/demo/code`)}
-            disabled={!hasImplementation}
+            disabled={!hasImplementation()}
           >
             <Github className="mr-1 h-4 w-4" />
             Code
@@ -97,7 +99,7 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
             size="sm"
             className="w-1/2"
             onClick={() => navigate(`/projects/${project.id}`)}
-            disabled={!hasImplementation}
+            disabled={!hasImplementation()}
           >
             Details
             <ArrowRight className="ml-1 h-4 w-4" />

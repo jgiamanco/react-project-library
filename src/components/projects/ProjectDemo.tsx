@@ -30,22 +30,16 @@ const ProjectDemo = () => {
   }
 
   const getProjectComponent = () => {
-    switch (projectId) {
-      case "todo-app":
-        return projectComponents.todoApp;
-      case "weather-dashboard":
-        return projectComponents.weatherDashboard;
-      case "markdown-editor":
-        return projectComponents.markdownEditor;
-      case "pomodoro-timer":
-        return projectComponents.pomodoroTimer;
-      case "calculator":
-        return projectComponents.calculator;
-      case "recipe-finder":
-        return projectComponents.recipeFinder;
-      default:
-        return null;
-    }
+    const projectMap = {
+      "todo-app": projectComponents.todoApp,
+      "weather-dashboard": projectComponents.weatherDashboard,
+      "markdown-editor": projectComponents.markdownEditor,
+      "pomodoro-timer": projectComponents.pomodoroTimer,
+      "calculator": projectComponents.calculator,
+      "recipe-finder": projectComponents.recipeFinder
+    };
+    
+    return projectMap[projectId as keyof typeof projectMap] || null;
   };
 
   const projectComponent = getProjectComponent();
