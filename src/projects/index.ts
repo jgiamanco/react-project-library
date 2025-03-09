@@ -15,19 +15,19 @@ export interface ProjectImplementation {
 const projects: Record<string, ProjectImplementation> = {
   todoApp: {
     app: TodoApp.app,
-    code: TodoApp.code as unknown as ComponentType,
+    code: TodoApp.code,
     title: TodoApp.title,
     description: TodoApp.description
   },
   weatherDashboard: {
     app: WeatherDashboard.app,
-    code: WeatherDashboard.code as unknown as ComponentType,
+    code: WeatherDashboard.code,
     title: WeatherDashboard.title,
     description: WeatherDashboard.description
   },
   markdownEditor: {
     app: MarkdownEditor.app,
-    code: MarkdownEditor.code as unknown as ComponentType,
+    code: MarkdownEditor.code,
     title: MarkdownEditor.title,
     description: MarkdownEditor.description
   },
