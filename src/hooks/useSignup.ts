@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -35,7 +36,7 @@ export const useSignup = () => {
           };
           
           // Store the user in our custom table
-          // Wrap this in a try/catch to handle potential database errors separately
+          // This now gracefully handles database errors
           const userProfile = await storeUser(newUser);
           
           // Update local storage
@@ -66,16 +67,27 @@ export const useSignup = () => {
           console.error("Error creating user profile:", dbError);
           
           // Even if there's an error with the profile creation, the auth was successful
-          // We can let the user continue with limited functionality
+          // We can let the user continue with a local profile
+          const fallbackProfile = {
+            email: data.user.email || '',
+            displayName: data.user.email?.split("@")[0] || 'User',
+            photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+          };
+          
+          // Save to localStorage even if DB saving failed
+          localStorage.setItem("user", JSON.stringify(fallbackProfile));
+          localStorage.setItem("authenticated", "true");
+          localStorage.setItem("lastLoggedInEmail", data.user.email || '');
+          
           toast({
-            variant: "destructive",
-            title: "Partial Success",
-            description: "Your account was created but there was an issue setting up your profile. Some features may be limited.",
+            variant: "default",
+            title: "Account created",
+            description: "Your account was created successfully. Some profile features may be limited.",
           });
           
           // Navigate to dashboard anyway as the authentication succeeded
           navigate("/dashboard", { replace: true });
-          return null;
+          return fallbackProfile;
         }
       }
       return null;
