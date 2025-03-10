@@ -64,11 +64,20 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
       display_name: userData.displayName,
       photo_url: userData.photoURL,
       updated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'email'
     })
-    .select()
+    .select('*')
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error storing user:', error);
+    throw error;
+  }
+
+  if (!data) {
+    throw new Error('No data returned from user creation');
+  }
 
   return {
     email: data.email,

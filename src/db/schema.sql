@@ -1,11 +1,30 @@
--- Create users table
-CREATE TABLE IF NOT EXISTS users (
+-- Create users table if it doesn't exist (this was missing)
+CREATE TABLE IF NOT EXISTS public.users (
   email VARCHAR PRIMARY KEY,
   display_name VARCHAR NOT NULL,
   photo_url VARCHAR,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
+
+-- Enable RLS
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for users table
+CREATE POLICY "Users can read own data"
+  ON public.users
+  FOR SELECT
+  USING (auth.uid()::text = email);
+
+CREATE POLICY "Users can insert own data"
+  ON public.users
+  FOR INSERT
+  WITH CHECK (auth.uid()::text = email);
+
+CREATE POLICY "Users can update own data"
+  ON public.users
+  FOR UPDATE
+  USING (auth.uid()::text = email);
 
 -- Create user profiles table
 CREATE TABLE IF NOT EXISTS user_profiles (
@@ -84,4 +103,4 @@ CREATE POLICY "Users can view their own todos" ON todos
   FOR SELECT USING (auth.uid()::text = user_id);
 
 CREATE POLICY "Users can manage their own todos" ON todos
-  FOR ALL USING (auth.uid()::text = user_id); 
+  FOR ALL USING (auth.uid()::text = user_id);
