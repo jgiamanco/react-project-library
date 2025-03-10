@@ -5,6 +5,7 @@ import { useSignup } from "./useSignup";
 import { useLogout } from "./useLogout";
 import { useUpdateUser } from "./useUpdateUser";
 import { User } from "@/contexts/auth-types";
+import { toast } from "sonner";
 
 export const useAuthOperations = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,6 +21,11 @@ export const useAuthOperations = () => {
     setIsLoading(true);
     try {
       return await performLogin(email, password);
+    } catch (error: any) {
+      toast.error("Login failed", {
+        description: error.message || "Please check your credentials and try again"
+      });
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -29,6 +35,11 @@ export const useAuthOperations = () => {
     setIsLoading(true);
     try {
       return await performSignup(email, password, profileData);
+    } catch (error: any) {
+      toast.error("Signup failed", {
+        description: error.message || "Please try again or contact support"
+      });
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -38,6 +49,14 @@ export const useAuthOperations = () => {
     setIsLoading(true);
     try {
       await performLogout();
+    } catch (error: any) {
+      toast.error("Logout failed", {
+        description: "Your session may have already expired"
+      });
+      // Still clear local storage even if server logout fails
+      localStorage.removeItem("authenticated");
+      localStorage.removeItem("user");
+      localStorage.removeItem("lastLoggedInEmail");
     } finally {
       setIsLoading(false);
     }
@@ -47,6 +66,11 @@ export const useAuthOperations = () => {
     setIsLoading(true);
     try {
       return await performUpdateUser(user, updates);
+    } catch (error: any) {
+      toast.error("Profile update failed", {
+        description: error.message || "Please try again"
+      });
+      throw error;
     } finally {
       setIsLoading(false);
     }

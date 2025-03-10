@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { storeUser, updateUserProfile } from "@/services/db-service";
 import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
 import { toast as sonnerToast } from "sonner";
@@ -11,6 +10,50 @@ export const useSignup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const createUserInSupabase = async (userData: User) => {
+    try {
+      // First, try to directly create a user using SQL to ensure the table exists
+      const { data: tableData, error: tableError } = await supabase.rpc('exec_sql', {
+        sql: `
+          CREATE TABLE IF NOT EXISTS users (
+            email VARCHAR PRIMARY KEY,
+            display_name VARCHAR NOT NULL,
+            photo_url VARCHAR,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+          );
+        `
+      });
+      
+      if (tableError) {
+        console.error("Error creating users table:", tableError);
+        return false;
+      }
+      
+      // Now try to insert the user
+      const { error: insertError } = await supabase
+        .from("users")
+        .upsert({
+          email: userData.email,
+          display_name: userData.displayName,
+          photo_url: userData.photoURL,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'email'
+        });
+        
+      if (insertError) {
+        console.error("Error inserting user:", insertError);
+        return false;
+      }
+      
+      return true;
+    } catch (err) {
+      console.error("Error in createUserInSupabase:", err);
+      return false;
+    }
+  };
 
   const signup = async (email: string, password: string, profileData: Partial<User> = {}) => {
     try {
@@ -58,17 +101,12 @@ export const useSignup = () => {
             pushNotifications: profileData.pushNotifications !== undefined ? profileData.pushNotifications : false,
           };
           
-          // Store the user in our custom table
-          const basicUserProfile = await storeUser(newUser);
+          // Store local copy regardless of database success
+          localStorage.setItem("user", JSON.stringify(newUser));
           
-          // Also store extended profile fields
-          const fullUserProfile = await updateUserProfile(newUser.email, newUser);
-          
-          // Use the profile with more fields if available
-          const userProfile = fullUserProfile || basicUserProfile;
-          
-          // Store in localStorage for later persistence
-          localStorage.setItem("user", JSON.stringify(userProfile));
+          // Try to store in database, but don't fail if it doesn't work
+          const dbStored = await createUserInSupabase(newUser);
+          console.log("User stored in database:", dbStored);
           
           // If email confirmation is required (which is the default for Supabase)
           const needsEmailConfirmation = !data.user.email_confirmed_at;
@@ -88,7 +126,7 @@ export const useSignup = () => {
             
             // Navigate to signin page to wait for verification
             navigate("/signin", { replace: true });
-            return userProfile;
+            return newUser;
           }
           
           // If email doesn't need confirmation (unusual for Supabase)
@@ -101,7 +139,7 @@ export const useSignup = () => {
           });
 
           navigate("/dashboard", { replace: true });
-          return userProfile;
+          return newUser;
         } catch (dbError: any) {
           console.error("Error creating user profile:", dbError);
           

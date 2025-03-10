@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { getUser, storeUser, ensureUsersTable } from "@/services/db-service";
 import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
 
@@ -9,8 +8,26 @@ export const useAuthInit = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Create a minimal fallback user profile from email
+  const createBasicUserProfile = (email: string): User => {
+    return {
+      email,
+      displayName: email.split("@")[0] || 'User',
+      photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+      location: '',
+      bio: '',
+      website: '',
+      github: '',
+      twitter: '',
+      role: 'User',
+      theme: 'system',
+      emailNotifications: true,
+      pushNotifications: false,
+    };
+  };
+
   useEffect(() => {
-    // To prevent infinite loading, set a timeout - reduced from 5000ms to 2000ms
+    // To prevent infinite loading, set a timeout
     const loadingTimeout = setTimeout(() => {
       if (isLoading) {
         console.log("Auth check is taking too long, stopping loading state");
@@ -28,73 +45,41 @@ export const useAuthInit = () => {
         if (sessionData?.session) {
           const { data: userData } = await supabase.auth.getUser();
           
-          if (userData.user) {
+          if (userData?.user) {
             console.log("Active session found for:", userData.user.email);
             
+            // We'll use a basic profile first, which we can enrich later if possible
+            const email = userData.user.email || '';
+            const basicProfile = createBasicUserProfile(email);
+            
+            // Try to get a stored profile from localStorage
             try {
-              // Ensure the users table exists in the database
-              await ensureUsersTable();
-              
-              // Get the user's profile from our custom table
-              let userProfile = await getUser(userData.user.email || '');
-              
-              if (!userProfile) {
-                console.log("No profile found in database, creating one with stored data");
-                
-                // Try to get profile data from localStorage
-                const storedUser = localStorage.getItem("user");
-                let parsedUser: User | null = null;
-                
-                try {
-                  if (storedUser) {
-                    parsedUser = JSON.parse(storedUser) as User;
-                    console.log("Found stored user data:", parsedUser);
+              const storedUser = localStorage.getItem("user");
+              if (storedUser) {
+                const parsedProfile = JSON.parse(storedUser) as User;
+                // Use the stored profile with the basic profile as a fallback
+                Object.keys(basicProfile).forEach((key) => {
+                  if (!parsedProfile[key as keyof User]) {
+                    parsedProfile[key as keyof User] = basicProfile[key as keyof User];
                   }
-                } catch (e) {
-                  console.error("Error parsing stored user:", e);
-                }
-                
-                // Create new user profile with basic info + any stored data
-                const newUser: User = {
-                  email: userData.user.email || '',
-                  displayName: parsedUser?.displayName || userData.user.email?.split("@")[0] || 'User',
-                  photoURL: parsedUser?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.user.email}`,
-                  location: parsedUser?.location || '',
-                  bio: parsedUser?.bio || '',
-                  website: parsedUser?.website || '',
-                  github: parsedUser?.github || '',
-                  twitter: parsedUser?.twitter || '',
-                  role: parsedUser?.role || 'User',
-                  theme: parsedUser?.theme || 'system',
-                  emailNotifications: parsedUser?.emailNotifications !== undefined ? parsedUser.emailNotifications : true,
-                  pushNotifications: parsedUser?.pushNotifications !== undefined ? parsedUser.pushNotifications : false,
-                };
-                
-                console.log("Creating new user profile:", newUser);
-                userProfile = await storeUser(newUser);
-                console.log("New profile created:", userProfile);
+                });
+                setUser(parsedProfile);
               } else {
-                console.log("Found user profile in database:", userProfile);
+                setUser(basicProfile);
               }
-              
-              // Update localStorage for backwards compatibility
-              localStorage.setItem("user", JSON.stringify(userProfile));
-              localStorage.setItem("authenticated", "true");
-              localStorage.setItem("lastLoggedInEmail", userData.user.email || '');
-              
-              setUser(userProfile);
-              setIsAuthenticated(true);
-            } catch (error) {
-              console.error("Error while processing user profile:", error);
-              // Despite the error, we still have an authenticated user from Supabase
-              // Let's create a basic profile from the auth data
-              const basicUser: User = {
-                email: userData.user.email || '',
-                displayName: userData.user.email?.split("@")[0] || 'User',
-                photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.user.email}`,
-              };
-              setUser(basicUser);
-              setIsAuthenticated(true);
+            } catch (e) {
+              // If there's an error parsing, just use the basic profile
+              setUser(basicProfile);
+            }
+            
+            // Set authenticated state
+            setIsAuthenticated(true);
+            localStorage.setItem("authenticated", "true");
+            localStorage.setItem("lastLoggedInEmail", email);
+            
+            // Always save the current user to localStorage
+            if (user) {
+              localStorage.setItem("user", JSON.stringify(user));
             }
           } else {
             // Clear auth state since there's no valid user
@@ -122,15 +107,7 @@ export const useAuthInit = () => {
               
               if (session) {
                 console.log("Valid session found, setting user");
-                // Check if we need to update from database
-                const dbUser = await getUser(parsedUser.email);
-                if (dbUser) {
-                  console.log("Updated user data from database:", dbUser);
-                  setUser(dbUser);
-                  localStorage.setItem("user", JSON.stringify(dbUser));
-                } else {
-                  setUser(parsedUser);
-                }
+                setUser(parsedUser);
                 setIsAuthenticated(true);
               } else {
                 // Try to refresh the session
@@ -139,15 +116,7 @@ export const useAuthInit = () => {
                 
                 if (!error) {
                   console.log("Session refreshed successfully");
-                  // Check if we need to update from database
-                  const dbUser = await getUser(parsedUser.email);
-                  if (dbUser) {
-                    console.log("Updated user data from database:", dbUser);
-                    setUser(dbUser);
-                    localStorage.setItem("user", JSON.stringify(dbUser));
-                  } else {
-                    setUser(parsedUser);
-                  }
+                  setUser(parsedUser);
                   setIsAuthenticated(true);
                 } else {
                   console.log("Session couldn't be refreshed:", error);

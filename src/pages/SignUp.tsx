@@ -1,30 +1,35 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthForm from "@/components/auth/AuthForm";
-import { useAuth } from "@/contexts/auth-hooks";
+import { toast } from "sonner";
 
 const SignUp = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading } = useAuth();
+  const [authError, setAuthError] = useState<string | null>(null);
+  
+  // Try using a separate approach to check authentication to avoid circular dependencies
+  const storedAuth = localStorage.getItem("authenticated") === "true";
+  const storedUser = localStorage.getItem("user");
 
-  // Redirect to dashboard if already authenticated
   useEffect(() => {
-    if (isAuthenticated && !isLoading) {
+    // Redirect if we have stored authentication data
+    if (storedAuth && storedUser) {
       navigate("/dashboard");
     }
-  }, [isAuthenticated, isLoading, navigate]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-lg font-medium text-gray-700">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+    
+    // Check URL for error parameters
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get("error");
+    const errorDescription = params.get("error_description");
+    
+    if (error) {
+      setAuthError(errorDescription || error);
+      toast.error("Authentication Error", {
+        description: errorDescription || error
+      });
+    }
+  }, [storedAuth, storedUser, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12 bg-gray-50">
@@ -44,6 +49,12 @@ const SignUp = () => {
             <span>React Project Library</span>
           </a>
         </div>
+
+        {authError && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
+            {authError}
+          </div>
+        )}
 
         <div className="flex justify-center">
           <AuthForm mode="signup" />
