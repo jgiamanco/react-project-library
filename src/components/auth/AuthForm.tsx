@@ -21,6 +21,10 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent multiple submissions
+    if (isSubmitting || isLoading) return;
+    
     if (!email || !password) {
       toast({
         variant: "destructive",
@@ -44,10 +48,16 @@ export default function AuthForm({ mode }: AuthFormProps) {
       if (mode === "signin") {
         await login(email, password);
       } else {
+        // Show a loading toast for signup to improve UX
+        sonnerToast.loading("Creating your account...");
         await signup(email, password);
+        sonnerToast.dismiss();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Auth error:", error);
+      sonnerToast.error("Authentication failed", {
+        description: error.message || "Please try again"
+      });
     } finally {
       setIsSubmitting(false);
     }

@@ -139,42 +139,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (error) throw error;
 
       if (data && data.user) {
-        // Create user profile only if user was created successfully
-        const newUser: User = {
-          email: data.user.email || '',
-          displayName: data.user.email?.split("@")[0] || 'User',
-          photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
-        };
-        
-        // Store the user in our custom table
-        const userProfile = await storeUser(newUser);
-        
-        // Update local storage
-        localStorage.setItem("user", JSON.stringify(userProfile));
-        localStorage.setItem("authenticated", "true");
-        localStorage.setItem("lastLoggedInEmail", data.user.email || '');
+        try {
+          // Create user profile
+          const newUser: User = {
+            email: data.user.email || '',
+            displayName: data.user.email?.split("@")[0] || 'User',
+            photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+          };
+          
+          // Store the user in our custom table
+          // Wrap this in a try/catch to handle potential database errors separately
+          const userProfile = await storeUser(newUser);
+          
+          // Update local storage
+          localStorage.setItem("user", JSON.stringify(userProfile));
+          localStorage.setItem("authenticated", "true");
+          localStorage.setItem("lastLoggedInEmail", data.user.email || '');
 
-        // Update state
-        dispatch({ type: "SET_USER", payload: userProfile });
+          // Update state
+          dispatch({ type: "SET_USER", payload: userProfile });
 
-        // Check if email confirmation is required
-        if (data.user.identities && data.user.identities.length === 0) {
+          // Check if email confirmation is required
+          if (data.user.identities && data.user.identities.length === 0) {
+            toast({
+              title: "Verification email sent",
+              description: "Please check your email to verify your account before signing in.",
+            });
+            
+            // Stay on the same page for verification
+            dispatch({ type: "SET_LOADING", payload: false });
+            return;
+          }
+
           toast({
-            title: "Verification email sent",
-            description: "Please check your email to verify your account before signing in.",
+            title: "Account created!",
+            description: "Your account has been successfully created.",
+          });
+
+          navigate("/dashboard", { replace: true });
+        } catch (dbError: any) {
+          console.error("Error creating user profile:", dbError);
+          
+          // Even if there's an error with the profile creation, the auth was successful
+          // We can let the user continue with limited functionality
+          toast({
+            variant: "destructive",
+            title: "Partial Success",
+            description: "Your account was created but there was an issue setting up your profile. Some features may be limited.",
           });
           
-          // Stay on the same page for verification
-          dispatch({ type: "SET_LOADING", payload: false });
-          return;
+          // Navigate to dashboard anyway as the authentication succeeded
+          navigate("/dashboard", { replace: true });
         }
-
-        toast({
-          title: "Account created!",
-          description: "Your account has been successfully created.",
-        });
-
-        navigate("/dashboard", { replace: true });
       }
     } catch (error: any) {
       console.error("Signup error:", error);
@@ -251,4 +267,3 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
