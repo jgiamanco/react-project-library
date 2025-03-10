@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -15,12 +14,16 @@ export const useSignup = () => {
     try {
       setIsLoading(true);
 
+      // Get the current site URL for redirection
+      const siteUrl = window.location.origin;
+      console.log("Using redirect URL:", siteUrl + '/dashboard');
+
       // Create new user with Supabase
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: window.location.origin + '/dashboard'
+          emailRedirectTo: siteUrl + '/dashboard'
         }
       });
 

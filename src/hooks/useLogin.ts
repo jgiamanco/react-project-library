@@ -23,19 +23,31 @@ export const useLogin = () => {
 
       if (error) {
         // Special handling for email_not_confirmed error
-        if (error.message === "Email not confirmed" || error.code === "email_not_confirmed") {
+        if (error.message.includes("Email not confirmed") || error.code === "email_not_confirmed") {
+          console.log("Email not confirmed error detected, sending new verification email");
+          
+          // Get the current site URL for redirection
+          const siteUrl = window.location.origin;
+          
           // Resend confirmation email
-          await supabase.auth.resend({
+          const { error: resendError } = await supabase.auth.resend({
             type: 'signup',
             email,
+            options: {
+              emailRedirectTo: siteUrl + '/dashboard'
+            }
           });
+
+          if (resendError) {
+            console.error("Error resending verification email:", resendError);
+          }
           
           toast({
             title: "Email verification required",
-            description: "Please check your inbox for verification email. We've sent a new one just now.",
+            description: "Please check your inbox for a verification email. We've sent a new one just now.",
           });
           
-          throw new Error("Email not confirmed. Please check your inbox for verification link.");
+          throw new Error("Email not confirmed. Please check your inbox for the verification link.");
         }
         throw error;
       }
@@ -74,7 +86,7 @@ export const useLogin = () => {
       console.error("Login error:", error);
       
       // Don't clear user data for email confirmation errors
-      if (!error.message.includes("Email not confirmed")) {
+      if (error.message && !error.message.includes("Email not confirmed")) {
         localStorage.removeItem("user");
         localStorage.removeItem("authenticated");
         localStorage.removeItem("lastLoggedInEmail");
