@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -22,7 +23,7 @@ export const useLogin = () => {
 
       if (error) throw error;
 
-      if (data.user) {
+      if (data && data.user) {
         // Get or create user profile
         let userProfile = await getUser(data.user.email || '');
         

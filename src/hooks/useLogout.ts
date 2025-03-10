@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -11,21 +12,34 @@ export const useLogout = () => {
   const logout = async () => {
     try {
       setIsLoading(true);
+      
       // Sign out from Supabase
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Error signing out:", error);
+        throw error;
+      }
       
       // Clean up local storage
       localStorage.removeItem("user");
       localStorage.removeItem("authenticated");
+      localStorage.removeItem("lastLoggedInEmail");
       
       toast({
         title: "Signed out",
         description: "You have been successfully signed out.",
       });
       
-      navigate("/");
+      // Ensure we navigate to home page
+      navigate("/", { replace: true });
     } catch (error) {
       console.error("Logout error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error signing out",
+        description: "There was a problem signing you out. Please try again.",
+      });
     } finally {
       setIsLoading(false);
     }

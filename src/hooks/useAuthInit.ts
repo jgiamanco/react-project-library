@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { getUser, storeUser } from "@/services/db-service";
 import { User } from "@/contexts/auth-types";
@@ -42,12 +43,14 @@ export const useAuthInit = () => {
         } else {
           // No active session
           localStorage.removeItem("authenticated");
+          localStorage.removeItem("user");
           setUser(null);
           setIsAuthenticated(false);
         }
       } catch (error) {
         console.error("Auth check error:", error);
         localStorage.removeItem("authenticated");
+        localStorage.removeItem("user");
         setUser(null);
         setIsAuthenticated(false);
       } finally {
@@ -55,7 +58,26 @@ export const useAuthInit = () => {
       }
     };
 
+    // Set up auth state change listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, session ? "Session exists" : "No session");
+      
+      if (event === 'SIGNED_IN' && session) {
+        await checkAuth();
+      } else if (event === 'SIGNED_OUT') {
+        localStorage.removeItem("authenticated");
+        localStorage.removeItem("user");
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    });
+
     checkAuth();
+
+    // Cleanup listener on unmount
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   return {

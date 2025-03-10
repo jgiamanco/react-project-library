@@ -3,6 +3,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-hooks";
+import { supabase } from "@/services/supabase-client";
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -15,14 +16,29 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   const { isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        // Get the current session
+        const { data } = await supabase.auth.getSession();
+        
+        // If no session and we're not in loading state, redirect
+        if (!data.session && !isLoading && !isAuthenticated) {
+          toast.error("Please sign in to access this page");
+          navigate("/signin", { replace: true });
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+        toast.error("Authentication error occurred");
+        navigate("/signin", { replace: true });
+      } finally {
+        setIsChecking(false);
+      }
+    };
+    
     // Short delay to ensure proper check and context is fully loaded
     const timer = setTimeout(() => {
-      if (!isLoading && !isAuthenticated) {
-        toast.error("Please sign in to access this page");
-        navigate("/signin", { replace: true });
-      }
-      setIsChecking(false);
-    }, 200);
+      checkAuth();
+    }, 300);
     
     return () => clearTimeout(timer);
   }, [isAuthenticated, isLoading, navigate, location.pathname]);
