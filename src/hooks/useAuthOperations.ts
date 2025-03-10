@@ -25,10 +25,10 @@ export const useAuthOperations = () => {
     }
   }, [performLogin]);
 
-  const signup = useCallback(async (email: string, password: string) => {
+  const signup = useCallback(async (email: string, password: string, profileData: Partial<User> = {}) => {
     setIsLoading(true);
     try {
-      return await performSignup(email, password);
+      return await performSignup(email, password, profileData);
     } finally {
       setIsLoading(false);
     }

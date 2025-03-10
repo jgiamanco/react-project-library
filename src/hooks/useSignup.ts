@@ -15,6 +15,10 @@ export const useSignup = () => {
   const signup = async (email: string, password: string, profileData: Partial<User> = {}) => {
     try {
       setIsLoading(true);
+      sonnerToast.dismiss(); // Clear any existing toasts
+
+      // Show loading toast
+      const loadingToastId = sonnerToast.loading("Creating your account...");
 
       // Get the current site URL for redirection
       const siteUrl = window.location.origin;
@@ -29,7 +33,10 @@ export const useSignup = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        sonnerToast.dismiss(loadingToastId);
+        throw error;
+      }
 
       if (data && data.user) {
         try {
@@ -66,10 +73,11 @@ export const useSignup = () => {
           // If email confirmation is required (which is the default for Supabase)
           const needsEmailConfirmation = !data.user.email_confirmed_at;
           
+          // Dismiss the loading toast
+          sonnerToast.dismiss(loadingToastId);
+          
           if (needsEmailConfirmation) {
-            // Make sure to dismiss any loading toasts before showing the verification message
-            sonnerToast.dismiss();
-            
+            // Show verification email sent toast
             toast({
               title: "Verification email sent",
               description: "Please check your email to verify your account before signing in.",
@@ -86,9 +94,6 @@ export const useSignup = () => {
           // If email doesn't need confirmation (unusual for Supabase)
           localStorage.setItem("authenticated", "true");
           localStorage.setItem("lastLoggedInEmail", data.user.email || '');
-
-          // Make sure to dismiss any loading toasts
-          sonnerToast.dismiss();
           
           toast({
             title: "Account created!",
@@ -100,8 +105,8 @@ export const useSignup = () => {
         } catch (dbError: any) {
           console.error("Error creating user profile:", dbError);
           
-          // Make sure to dismiss any loading toasts
-          sonnerToast.dismiss();
+          // Dismiss the loading toast
+          sonnerToast.dismiss(loadingToastId);
           
           // Even if there's an error with the profile creation, the auth was successful
           // We can let the user continue with a local profile
@@ -146,12 +151,14 @@ export const useSignup = () => {
           return fallbackProfile;
         }
       }
-      sonnerToast.dismiss(); // Ensure toast is dismissed if we reach this point
+      
+      // If we get here, no user was created, dismiss loading toast
+      sonnerToast.dismiss(loadingToastId);
       return null;
     } catch (error: any) {
       console.error("Signup error:", error);
       
-      // Make sure to dismiss any loading toasts
+      // Make sure any loading toasts are dismissed
       sonnerToast.dismiss();
       
       toast({

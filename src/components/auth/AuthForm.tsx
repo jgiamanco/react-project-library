@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Eye, EyeOff, ArrowRight, ChevronRight, ChevronLeft } from "lucide-react";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/services/supabase-client";
@@ -26,6 +25,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
   const [signupStep, setSignupStep] = useState(1);
+  const { toast } = useToast();
   
   const validateStep1 = () => {
     if (!email || !password) {
@@ -122,25 +122,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
             photoURL: avatarUrl,
           };
           
-          // Show a loading toast for signup to improve UX
-          const toastId = sonnerToast.loading("Creating your account...");
+          await signup(email, password, userProfile);
           
-          try {
-            await signup(email, password, userProfile);
-            // The signup function will dismiss the toast
-          } catch (error) {
-            // If there's an error, manually dismiss the toast
-            sonnerToast.dismiss(toastId);
-            throw error;
-          }
-          
-          // After signup, they need to verify email
+          // Set needs verification flag to show the verification screen
           setNeedsVerification(true);
         } catch (error: any) {
           console.error("Auth error:", error);
-          sonnerToast.error("Account creation failed", {
-            description: error.message || "Please try again"
-          });
+          // The error toast is already handled in the signup hook
         } finally {
           setIsSubmitting(false);
         }

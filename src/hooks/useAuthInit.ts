@@ -10,13 +10,13 @@ export const useAuthInit = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // To prevent infinite loading, set a timeout - reduced from 5000ms to 3000ms
+    // To prevent infinite loading, set a timeout - reduced from 5000ms to 2000ms
     const loadingTimeout = setTimeout(() => {
       if (isLoading) {
         console.log("Auth check is taking too long, stopping loading state");
         setIsLoading(false);
       }
-    }, 3000);
+    }, 2000);
 
     const checkAuth = async () => {
       try {
