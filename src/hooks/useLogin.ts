@@ -15,13 +15,48 @@ export const useLogin = () => {
     try {
       setIsLoading(true);
 
+      // Check if email might need confirmation first
+      const { data: userData } = await supabase.auth.admin.getUserByEmail(email);
+      
+      if (userData && !userData.user.email_confirmed_at) {
+        // Email isn't confirmed yet
+        await supabase.auth.resend({
+          type: 'signup',
+          email,
+        });
+        
+        toast({
+          title: "Email verification required",
+          description: "Please check your inbox for verification email. We've sent a new one just now.",
+        });
+        
+        throw new Error("Email not confirmed. Please check your inbox for verification link.");
+      }
+
       // Sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Special handling for email_not_confirmed error
+        if (error.message === "Email not confirmed" || error.code === "email_not_confirmed") {
+          // Resend confirmation email
+          await supabase.auth.resend({
+            type: 'signup',
+            email,
+          });
+          
+          toast({
+            title: "Email verification required",
+            description: "Please check your inbox for verification email. We've sent a new one just now.",
+          });
+          
+          throw new Error("Email not confirmed. Please check your inbox for verification link.");
+        }
+        throw error;
+      }
 
       if (data && data.user) {
         // Get or create user profile
@@ -55,15 +90,21 @@ export const useLogin = () => {
       return null;
     } catch (error: any) {
       console.error("Login error:", error);
-      localStorage.removeItem("user");
-      localStorage.removeItem("authenticated");
-      localStorage.removeItem("lastLoggedInEmail");
       
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to sign in. Please try again.",
-      });
+      // Don't clear user data for email confirmation errors
+      if (!error.message.includes("Email not confirmed")) {
+        localStorage.removeItem("user");
+        localStorage.removeItem("authenticated");
+        localStorage.removeItem("lastLoggedInEmail");
+      }
+      
+      if (!error.message.includes("Email not confirmed")) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "Failed to sign in. Please try again.",
+        });
+      }
       
       throw error;
     } finally {

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-hooks";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { toast as sonnerToast } from "sonner";
+import { supabase } from "@/services/supabase-client";
 
 interface AuthFormProps {
   mode: "signin" | "signup";
@@ -18,6 +18,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, signup, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,16 +53,69 @@ export default function AuthForm({ mode }: AuthFormProps) {
         sonnerToast.loading("Creating your account...");
         await signup(email, password);
         sonnerToast.dismiss();
+        // After signup, they need to verify email
+        setNeedsVerification(true);
       }
     } catch (error: any) {
       console.error("Auth error:", error);
-      sonnerToast.error("Authentication failed", {
-        description: error.message || "Please try again"
-      });
+      
+      // Check if error is related to email confirmation
+      if (error.message && error.message.includes("Email not confirmed")) {
+        setNeedsVerification(true);
+      } else {
+        sonnerToast.error("Authentication failed", {
+          description: error.message || "Please try again"
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // If we're waiting for email verification
+  if (needsVerification) {
+    return (
+      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-glass-lg">
+        <div className="text-center space-y-4">
+          <h2 className="text-3xl font-bold tracking-tight">Check your email</h2>
+          <p className="text-muted-foreground">
+            We've sent a verification link to <strong>{email}</strong>
+          </p>
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg text-amber-800 text-sm">
+            <p>Please check your inbox and click the verification link to complete your account setup.</p>
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={() => setNeedsVerification(false)}
+          >
+            Use a different email
+          </Button>
+          
+          <Button
+            variant="link"
+            className="w-full"
+            onClick={async () => {
+              try {
+                await supabase.auth.resend({
+                  type: 'signup',
+                  email,
+                });
+                sonnerToast.success("Verification email resent");
+              } catch (error) {
+                sonnerToast.error("Could not resend verification email");
+              }
+            }}
+          >
+            Resend verification email
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Determine if the button should be in a loading state
   const buttonLoading = isSubmitting || isLoading;

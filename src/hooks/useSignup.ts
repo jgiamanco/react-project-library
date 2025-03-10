@@ -39,22 +39,27 @@ export const useSignup = () => {
           // This now gracefully handles database errors
           const userProfile = await storeUser(newUser);
           
-          // Update local storage
-          localStorage.setItem("user", JSON.stringify(userProfile));
-          localStorage.setItem("authenticated", "true");
-          localStorage.setItem("lastLoggedInEmail", data.user.email || '');
-
-          // Check if email confirmation is required
-          if (data.user.identities && data.user.identities.length === 0) {
+          // If email confirmation is required (which is the default for Supabase)
+          const needsEmailConfirmation = !data.user.email_confirmed_at;
+          
+          if (needsEmailConfirmation) {
             toast({
               title: "Verification email sent",
               description: "Please check your email to verify your account before signing in.",
             });
             
-            // Stay on the same page for verification
-            setIsLoading(false);
+            // Explicitly sign them out so they need to verify first
+            await supabase.auth.signOut();
+            
+            // Navigate to signin page to wait for verification
+            navigate("/signin", { replace: true });
             return userProfile;
           }
+          
+          // If email doesn't need confirmation (unusual for Supabase)
+          localStorage.setItem("user", JSON.stringify(userProfile));
+          localStorage.setItem("authenticated", "true");
+          localStorage.setItem("lastLoggedInEmail", data.user.email || '');
 
           toast({
             title: "Account created!",
@@ -73,6 +78,22 @@ export const useSignup = () => {
             displayName: data.user.email?.split("@")[0] || 'User',
             photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
           };
+          
+          // If email confirmation is required
+          if (!data.user.email_confirmed_at) {
+            toast({
+              variant: "default",
+              title: "Verification email sent",
+              description: "Please check your email to verify your account before signing in.",
+            });
+            
+            // Explicitly sign them out so they need to verify first
+            await supabase.auth.signOut();
+            
+            // Navigate to signin page to wait for verification
+            navigate("/signin", { replace: true });
+            return fallbackProfile;
+          }
           
           // Save to localStorage even if DB saving failed
           localStorage.setItem("user", JSON.stringify(fallbackProfile));
