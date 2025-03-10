@@ -15,24 +15,6 @@ export const useLogin = () => {
     try {
       setIsLoading(true);
 
-      // Check if email might need confirmation first
-      const { data: userData } = await supabase.auth.admin.getUserByEmail(email);
-      
-      if (userData && !userData.user.email_confirmed_at) {
-        // Email isn't confirmed yet
-        await supabase.auth.resend({
-          type: 'signup',
-          email,
-        });
-        
-        toast({
-          title: "Email verification required",
-          description: "Please check your inbox for verification email. We've sent a new one just now.",
-        });
-        
-        throw new Error("Email not confirmed. Please check your inbox for verification link.");
-      }
-
       // Sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
