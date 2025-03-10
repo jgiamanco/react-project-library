@@ -1,8 +1,9 @@
+
 import { supabase } from "./supabase-client";
 import { UserData, UserProfile } from "./types";
 
 // Helper function to ensure the users table exists
-const ensureUsersTable = async () => {
+export const ensureUsersTable = async (): Promise<boolean> => {
   try {
     // Check if users table exists by attempting to get its schema
     const { error } = await supabase
@@ -13,10 +14,23 @@ const ensureUsersTable = async () => {
     // If no error, table exists
     if (!error) return true;
     
-    // If table doesn't exist, we'll log this for debugging
-    console.log("Users table doesn't exist or is not accessible:", error.message);
+    // If table doesn't exist, create it
+    if (error.message.includes("relation") && error.message.includes("does not exist")) {
+      console.log("Users table doesn't exist, creating it now");
+      
+      // Create the users table
+      const { error: createError } = await supabase.rpc('create_users_table');
+      
+      if (createError) {
+        console.error("Error creating users table:", createError);
+        return false;
+      }
+      
+      console.log("Users table created successfully");
+      return true;
+    }
     
-    // We'll return false and handle the error more gracefully
+    console.log("Users table doesn't exist or is not accessible:", error.message);
     return false;
   } catch (err) {
     console.error("Error checking users table:", err);
@@ -33,7 +47,6 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
     if (!tableExists) {
       // If table doesn't exist, fallback to storing in localStorage only
       console.log("Users table not available, storing user in localStorage only");
-      // Return the userData as-is since we can't store it in the database
       return userData;
     }
 

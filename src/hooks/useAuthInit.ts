@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { getUser, storeUser } from "@/services/db-service";
+import { getUser, storeUser, ensureUsersTable } from "@/services/db-service";
 import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
 
@@ -14,6 +14,9 @@ export const useAuthInit = () => {
       try {
         setIsLoading(true);
         
+        // Ensure the users table exists in the database
+        await ensureUsersTable();
+        
         // Check if there's an active Supabase session
         const { data: sessionData } = await supabase.auth.getSession();
         
@@ -22,12 +25,9 @@ export const useAuthInit = () => {
           
           if (userData.user) {
             // Get the user's profile from our custom table
-            const userProfile = await getUser(userData.user.email || '');
+            let userProfile = await getUser(userData.user.email || '');
             
-            if (userProfile) {
-              setUser(userProfile);
-              setIsAuthenticated(true);
-            } else {
+            if (!userProfile) {
               // If no profile exists yet, create one with basic info
               const newUser: User = {
                 email: userData.user.email || '',
@@ -35,17 +35,64 @@ export const useAuthInit = () => {
                 photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.user.email}`,
               };
               
-              await storeUser(newUser);
-              setUser(newUser);
-              setIsAuthenticated(true);
+              userProfile = await storeUser(newUser);
             }
+            
+            // Update localStorage for backwards compatibility
+            localStorage.setItem("user", JSON.stringify(userProfile));
+            localStorage.setItem("authenticated", "true");
+            localStorage.setItem("lastLoggedInEmail", userData.user.email || '');
+            
+            setUser(userProfile);
+            setIsAuthenticated(true);
           }
         } else {
-          // No active session
-          localStorage.removeItem("authenticated");
-          localStorage.removeItem("user");
-          setUser(null);
-          setIsAuthenticated(false);
+          // No active session, check localStorage as fallback
+          const storedAuth = localStorage.getItem("authenticated");
+          const storedUser = localStorage.getItem("user");
+          
+          if (storedAuth === "true" && storedUser) {
+            try {
+              // Try to restore the session
+              const parsedUser = JSON.parse(storedUser) as User;
+              
+              // Attempt to retrieve the session
+              const { data: { session } } = await supabase.auth.getSession();
+              
+              if (session) {
+                // Valid session found, set the user
+                setUser(parsedUser);
+                setIsAuthenticated(true);
+              } else {
+                // Try to refresh the session
+                const { error } = await supabase.auth.refreshSession();
+                
+                if (!error) {
+                  // Session refreshed successfully
+                  setUser(parsedUser);
+                  setIsAuthenticated(true);
+                } else {
+                  // Clear cached auth as session couldn't be refreshed
+                  localStorage.removeItem("authenticated");
+                  localStorage.removeItem("user");
+                  setUser(null);
+                  setIsAuthenticated(false);
+                }
+              }
+            } catch (e) {
+              // Invalid stored user data
+              localStorage.removeItem("authenticated");
+              localStorage.removeItem("user");
+              setUser(null);
+              setIsAuthenticated(false);
+            }
+          } else {
+            // No stored auth
+            localStorage.removeItem("authenticated");
+            localStorage.removeItem("user");
+            setUser(null);
+            setIsAuthenticated(false);
+          }
         }
       } catch (error) {
         console.error("Auth check error:", error);
