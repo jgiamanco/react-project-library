@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -10,7 +11,7 @@ export const useSignup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const signup = async (email: string, password: string) => {
+  const signup = async (email: string, password: string, profileData: Partial<User> = {}) => {
     try {
       setIsLoading(true);
 
@@ -31,11 +32,20 @@ export const useSignup = () => {
 
       if (data && data.user) {
         try {
-          // Create user profile
+          // Create user profile with additional data provided
           const newUser: User = {
             email: data.user.email || '',
-            displayName: data.user.email?.split("@")[0] || 'User',
-            photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+            displayName: profileData.displayName || data.user.email?.split("@")[0] || 'User',
+            photoURL: profileData.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+            location: profileData.location,
+            bio: profileData.bio,
+            website: profileData.website,
+            github: profileData.github,
+            twitter: profileData.twitter,
+            role: profileData.role || 'User',
+            theme: profileData.theme || 'system',
+            emailNotifications: profileData.emailNotifications !== undefined ? profileData.emailNotifications : true,
+            pushNotifications: profileData.pushNotifications !== undefined ? profileData.pushNotifications : false,
           };
           
           // Store the user in our custom table
@@ -78,8 +88,9 @@ export const useSignup = () => {
           // We can let the user continue with a local profile
           const fallbackProfile = {
             email: data.user.email || '',
-            displayName: data.user.email?.split("@")[0] || 'User',
-            photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+            displayName: profileData.displayName || data.user.email?.split("@")[0] || 'User',
+            photoURL: profileData.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+            location: profileData.location,
           };
           
           // If email confirmation is required

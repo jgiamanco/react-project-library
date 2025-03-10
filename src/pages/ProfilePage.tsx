@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-hooks";
@@ -26,19 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
-
-interface UserProfile {
-  name: string;
-  bio: string;
-  location: string;
-  website: string;
-  github: string;
-  twitter: string;
-  role: string;
-  theme: "light" | "dark" | "system";
-  emailNotifications: boolean;
-  pushNotifications: boolean;
-}
+import { User } from "@/contexts/auth-types";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -51,19 +40,41 @@ const ProfilePage = () => {
   const tabFromUrl = queryParams.get("tab");
   const [activeTab, setActiveTab] = useState(tabFromUrl || "profile");
 
-  // Mock user data - in a real app, this would come from an API
-  const [profile, setProfile] = useState<UserProfile>({
-    name: user?.displayName || "",
-    bio: "Full-stack developer passionate about React and TypeScript.",
-    location: "San Francisco, CA",
-    website: "https://johndoe.dev",
-    github: "johndoe",
-    twitter: "johndoe",
-    role: "Developer",
-    theme: "system",
-    emailNotifications: true,
-    pushNotifications: false,
+  // User profile state
+  const [profile, setProfile] = useState<User>({
+    email: user?.email || "",
+    displayName: user?.displayName || "",
+    photoURL: user?.photoURL || "",
+    bio: user?.bio || "Tell us about yourself...",
+    location: user?.location || "",
+    website: user?.website || "",
+    github: user?.github || "",
+    twitter: user?.twitter || "",
+    role: user?.role || "Developer",
+    theme: user?.theme || "system",
+    emailNotifications: user?.emailNotifications !== undefined ? user.emailNotifications : true,
+    pushNotifications: user?.pushNotifications !== undefined ? user.pushNotifications : false,
   });
+
+  // Update profile state when user data changes
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL || "",
+        bio: user.bio || "Tell us about yourself...",
+        location: user.location || "",
+        website: user.website || "",
+        github: user.github || "",
+        twitter: user.twitter || "",
+        role: user.role || "Developer",
+        theme: user.theme || "system",
+        emailNotifications: user.emailNotifications !== undefined ? user.emailNotifications : true,
+        pushNotifications: user.pushNotifications !== undefined ? user.pushNotifications : false,
+      });
+    }
+  }, [user]);
 
   // Update the URL when the tab changes
   const handleTabChange = (value: string) => {
@@ -78,11 +89,17 @@ const ProfilePage = () => {
     setIsLoading(true);
 
     try {
-      // Update auth context with new display name
-      updateUser({ displayName: profile.name });
-
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Update auth context with all profile data
+      await updateUser({
+        displayName: profile.displayName,
+        photoURL: profile.photoURL,
+        bio: profile.bio,
+        location: profile.location,
+        website: profile.website,
+        github: profile.github,
+        twitter: profile.twitter,
+        role: profile.role,
+      });
 
       toast({
         title: "Profile updated",
@@ -104,10 +121,11 @@ const ProfilePage = () => {
     setIsLoading(true);
 
     try {
-      // In a real app, this would be an API call to update account settings
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Update theme preference in user profile
+      await updateUser({
+        theme: profile.theme,
+      });
 
-      // Simulate successful update
       toast({
         title: "Account settings updated",
         description: "Your account settings have been updated successfully.",
@@ -123,7 +141,39 @@ const ProfilePage = () => {
     }
   };
 
+  const handleNotificationsUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      // Update notification preferences
+      await updateUser({
+        emailNotifications: profile.emailNotifications,
+        pushNotifications: profile.pushNotifications,
+      });
+
+      toast({
+        title: "Notification settings updated",
+        description: "Your notification preferences have been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update notification settings. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAvatarChange = (newAvatarUrl: string) => {
+    // Update local state
+    setProfile({
+      ...profile,
+      photoURL: newAvatarUrl,
+    });
+    
     // Update auth context with new photo URL
     updateUser({ photoURL: newAvatarUrl });
 
@@ -167,9 +217,9 @@ const ProfilePage = () => {
                 <form onSubmit={handleProfileUpdate} className="space-y-6">
                   <div className="flex items-center space-x-4">
                     <AvatarUpload
-                      currentAvatar={user?.photoURL || ""}
+                      currentAvatar={profile.photoURL || ""}
                       onAvatarChange={handleAvatarChange}
-                      name={profile.name}
+                      name={profile.displayName}
                     />
                     <div>
                       <p className="text-sm font-medium">Profile Picture</p>
@@ -184,9 +234,9 @@ const ProfilePage = () => {
                       <Label htmlFor="name">Full Name</Label>
                       <Input
                         id="name"
-                        value={profile.name}
+                        value={profile.displayName}
                         onChange={(e) =>
-                          setProfile({ ...profile, name: e.target.value })
+                          setProfile({ ...profile, displayName: e.target.value })
                         }
                       />
                     </div>
@@ -335,7 +385,7 @@ const ProfilePage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form className="space-y-6">
+                <form onSubmit={handleNotificationsUpdate} className="space-y-6">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>

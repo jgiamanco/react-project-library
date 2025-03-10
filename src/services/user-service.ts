@@ -74,10 +74,24 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
       return userData;
     }
 
+    // Also store extended profile data if available
+    if (userData.location || userData.bio || userData.website || 
+        userData.github || userData.twitter || userData.role || 
+        userData.theme || userData.emailNotifications !== undefined || 
+        userData.pushNotifications !== undefined) {
+      
+      try {
+        await updateUserProfile(userData.email, userData);
+      } catch (profileError) {
+        console.error('Error storing extended profile data:', profileError);
+      }
+    }
+
     return {
       email: data.email,
       displayName: data.display_name,
       photoURL: data.photo_url,
+      ...userData, // Keep any additional profile fields that might not be in the users table
     };
   } catch (err) {
     console.error('Unexpected error storing user:', err);
@@ -87,21 +101,54 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
 };
 
 export const getUser = async (email: string): Promise<UserData | null> => {
-  const { data, error } = await supabase
-    .from("users")
-    .select()
-    .eq("email", email)
-    .single();
+  try {
+    // First try to get basic user data
+    const { data, error } = await supabase
+      .from("users")
+      .select()
+      .eq("email", email)
+      .single();
 
-  if (error) return null;
+    if (error) {
+      console.log("Error fetching user:", error.message);
+      return null;
+    }
 
-  return data
-    ? {
-        email: data.email,
-        displayName: data.display_name,
-        photoURL: data.photo_url,
+    // Base user data
+    const userData: UserData = {
+      email: data.email,
+      displayName: data.display_name,
+      photoURL: data.photo_url,
+    };
+
+    // Try to get extended profile data
+    try {
+      const profile = await getUserProfile(email);
+      if (profile) {
+        // Merge profile data with user data
+        return {
+          ...userData,
+          bio: profile.bio,
+          location: profile.location,
+          website: profile.website,
+          github: profile.github,
+          twitter: profile.twitter,
+          role: profile.role,
+          theme: profile.theme,
+          emailNotifications: profile.emailNotifications,
+          pushNotifications: profile.pushNotifications,
+        };
       }
-    : null;
+    } catch (profileError) {
+      console.error('Error fetching profile data:', profileError);
+      // Continue with basic user data
+    }
+
+    return userData;
+  } catch (err) {
+    console.error("Unexpected error getting user:", err);
+    return null;
+  }
 };
 
 export const deleteUser = async (email: string): Promise<void> => {

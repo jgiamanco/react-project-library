@@ -1,15 +1,7 @@
 
 // Common types for services
-export interface UserData {
-  email: string;
-  displayName: string;
-  photoURL?: string;
-}
-
-export interface User extends UserData {}
-
 export interface UserProfile {
-  id: string;
+  id?: string;
   email: string;
   displayName: string;
   photoURL?: string;
@@ -25,6 +17,9 @@ export interface UserProfile {
   createdAt?: string;
   updatedAt?: string;
 }
+
+// UserData is now an alias of UserProfile for backward compatibility
+export type UserData = UserProfile;
 
 export interface ProjectSession {
   id: string;

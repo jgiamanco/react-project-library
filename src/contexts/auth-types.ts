@@ -1,9 +1,8 @@
 
-export interface User {
-  email: string;
-  displayName: string;
-  photoURL?: string;
-}
+import { UserProfile } from '@/services/types';
+
+// User is now just an alias to UserProfile 
+export type User = UserProfile;
 
 export interface AuthState {
   user: User | null;
@@ -13,7 +12,7 @@ export interface AuthState {
 
 export interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, profile: Partial<User>) => Promise<void>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
 }
