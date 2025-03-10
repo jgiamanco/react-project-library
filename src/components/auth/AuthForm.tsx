@@ -16,7 +16,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, signup } = useAuth();
+  const { login, signup, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,6 +26,15 @@ export default function AuthForm({ mode }: AuthFormProps) {
         variant: "destructive",
         title: "Error",
         description: "Please fill in all fields",
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        variant: "destructive",
+        title: "Password too short",
+        description: "Password must be at least 6 characters long",
       });
       return;
     }
@@ -43,6 +52,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
       setIsSubmitting(false);
     }
   };
+
+  // Determine if the button should be in a loading state
+  const buttonLoading = isSubmitting || isLoading;
 
   return (
     <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-glass-lg">
@@ -69,6 +81,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="h-12"
+              disabled={buttonLoading}
             />
           </div>
 
@@ -97,11 +110,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="h-12 pr-10"
+                disabled={buttonLoading}
               />
               <button
                 type="button"
                 className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={buttonLoading}
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
@@ -112,9 +127,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
         <Button
           type="submit"
           className="w-full h-12 font-medium"
-          disabled={isSubmitting}
+          disabled={buttonLoading}
         >
-          {isSubmitting ? (
+          {buttonLoading ? (
             <div className="flex items-center justify-center">
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
               {mode === "signin" ? "Signing in..." : "Creating account..."}

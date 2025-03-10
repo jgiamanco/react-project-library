@@ -47,9 +47,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               await storeUser(newUser);
               dispatch({ type: "SET_USER", payload: newUser });
             }
-          } else {
-            dispatch({ type: "SET_LOADING", payload: false });
           }
+          dispatch({ type: "SET_LOADING", payload: false });
         } else {
           // No active session
           localStorage.removeItem("authenticated");
@@ -119,6 +118,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         title: "Error",
         description: error.message || "Failed to sign in. Please try again.",
       });
+    } finally {
+      dispatch({ type: "SET_LOADING", payload: false });
     }
   };
 
@@ -130,27 +131,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: window.location.origin + '/dashboard'
+        }
       });
 
       if (error) throw error;
 
-      if (data.user) {
-        // Create user profile
+      if (data && data.user) {
+        // Create user profile only if user was created successfully
         const newUser: User = {
           email: data.user.email || '',
           displayName: data.user.email?.split("@")[0] || 'User',
           photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
         };
         
+        // Store the user in our custom table
         const userProfile = await storeUser(newUser);
         
-        // Store in localStorage for backwards compatibility
+        // Update local storage
         localStorage.setItem("user", JSON.stringify(userProfile));
         localStorage.setItem("authenticated", "true");
         localStorage.setItem("lastLoggedInEmail", data.user.email || '');
 
         // Update state
         dispatch({ type: "SET_USER", payload: userProfile });
+
+        // Check if email confirmation is required
+        if (data.user.identities && data.user.identities.length === 0) {
+          toast({
+            title: "Verification email sent",
+            description: "Please check your email to verify your account before signing in.",
+          });
+          
+          // Stay on the same page for verification
+          dispatch({ type: "SET_LOADING", payload: false });
+          return;
+        }
 
         toast({
           title: "Account created!",
@@ -168,6 +185,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         title: "Error",
         description: error.message || "Failed to create account. Please try again.",
       });
+    } finally {
+      dispatch({ type: "SET_LOADING", payload: false });
     }
   };
 
@@ -232,3 +251,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
