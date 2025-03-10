@@ -16,7 +16,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { login, signup } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,7 +32,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
     setIsSubmitting(true);
     try {
-      await login(email, password);
+      if (mode === "signin") {
+        await login(email, password);
+      } else {
+        await signup(email, password);
+      }
     } catch (error) {
       console.error("Auth error:", error);
     } finally {
@@ -77,7 +81,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                   className="text-sm text-primary hover:underline"
                   onClick={(e) => {
                     e.preventDefault();
-                    sonnerToast("Demo mode: Use password 'password'");
+                    sonnerToast("Reset password functionality coming soon");
                   }}
                 >
                   Forgot password?
@@ -147,12 +151,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
           </p>
         )}
       </div>
-
-      {mode === "signin" && (
-        <div className="text-center text-xs text-muted-foreground">
-          <p>Demo credentials: demo@example.com / password</p>
-        </div>
-      )}
     </div>
   );
 }

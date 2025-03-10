@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { storeUser, getUser } from "@/services/db-service";
 import { AuthContextType, User } from "./auth-types";
 import { authReducer, initialState } from "./auth-reducer";
+import { supabase } from "@/services/db-service";
 
 export const AuthContext = createContext<AuthContextType | undefined>(
   undefined
@@ -23,44 +24,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         dispatch({ type: "SET_LOADING", payload: true });
         
-        // First check localStorage to maintain backwards compatibility
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-          try {
-            const user = JSON.parse(storedUser);
+        // Check if there's an active Supabase session
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (sessionData?.session) {
+          const { data: userData } = await supabase.auth.getUser();
+          
+          if (userData.user) {
+            // Get the user's profile from our custom table
+            const userProfile = await getUser(userData.user.email || '');
             
-            // Store in IndexedDB for future use
-            await storeUser(user);
-            
-            // Set in state
-            dispatch({ type: "SET_USER", payload: user });
-            
-            // Set authenticated flag for compatibility
-            localStorage.setItem("authenticated", "true");
-          } catch (error) {
-            console.error("Error parsing stored user:", error);
-            localStorage.removeItem("user");
-            localStorage.removeItem("authenticated");
-            dispatch({ type: "LOGOUT" });
-          }
-        } else {
-          // Try to get from IndexedDB if not in localStorage
-          const email = localStorage.getItem("lastLoggedInEmail");
-          if (email) {
-            const user = await getUser(email);
-            if (user) {
-              // Set in state and localStorage for backwards compatibility
-              localStorage.setItem("user", JSON.stringify(user));
-              localStorage.setItem("authenticated", "true");
-              dispatch({ type: "SET_USER", payload: user });
+            if (userProfile) {
+              dispatch({ type: "SET_USER", payload: userProfile });
             } else {
-              localStorage.removeItem("authenticated");
-              dispatch({ type: "SET_LOADING", payload: false });
+              // If no profile exists yet, create one with basic info
+              const newUser: User = {
+                email: userData.user.email || '',
+                displayName: userData.user.email?.split("@")[0] || 'User',
+                photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.user.email}`,
+              };
+              
+              await storeUser(newUser);
+              dispatch({ type: "SET_USER", payload: newUser });
             }
           } else {
-            localStorage.removeItem("authenticated");
             dispatch({ type: "SET_LOADING", payload: false });
           }
+        } else {
+          // No active session
+          localStorage.removeItem("authenticated");
+          dispatch({ type: "SET_LOADING", payload: false });
         }
       } catch (error) {
         console.error("Auth check error:", error);
@@ -76,63 +69,124 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       dispatch({ type: "SET_LOADING", payload: true });
 
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const user: User = {
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        displayName: email.split("@")[0],
-        photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-      };
-
-      // Store user data in IndexedDB
-      await storeUser(user);
-      
-      // Store last logged in email
-      localStorage.setItem("lastLoggedInEmail", email);
-      
-      // Also store in localStorage for backwards compatibility
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("authenticated", "true");
-
-      // Update state
-      dispatch({ type: "SET_USER", payload: user });
-
-      // Wait for state to update
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in.",
+        password,
       });
 
-      // Navigate after state update
-      navigate("/dashboard", { replace: true });
-    } catch (error) {
+      if (error) throw error;
+
+      if (data.user) {
+        // Get or create user profile
+        let userProfile = await getUser(data.user.email || '');
+        
+        if (!userProfile) {
+          // Create user profile if it doesn't exist
+          const newUser: User = {
+            email: data.user.email || '',
+            displayName: data.user.email?.split("@")[0] || 'User',
+            photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+          };
+          
+          userProfile = await storeUser(newUser);
+        }
+        
+        // Store in localStorage for backwards compatibility
+        localStorage.setItem("user", JSON.stringify(userProfile));
+        localStorage.setItem("authenticated", "true");
+        localStorage.setItem("lastLoggedInEmail", data.user.email || '');
+
+        // Update state
+        dispatch({ type: "SET_USER", payload: userProfile });
+
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully signed in.",
+        });
+
+        navigate("/dashboard", { replace: true });
+      }
+    } catch (error: any) {
       console.error("Login error:", error);
       localStorage.removeItem("user");
       localStorage.removeItem("authenticated");
       localStorage.removeItem("lastLoggedInEmail");
       dispatch({ type: "LOGOUT" });
+      
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to sign in. Please try again.",
+        description: error.message || "Failed to sign in. Please try again.",
+      });
+    }
+  };
+
+  const signup = async (email: string, password: string) => {
+    try {
+      dispatch({ type: "SET_LOADING", payload: true });
+
+      // Create new user with Supabase
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Create user profile
+        const newUser: User = {
+          email: data.user.email || '',
+          displayName: data.user.email?.split("@")[0] || 'User',
+          photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+        };
+        
+        const userProfile = await storeUser(newUser);
+        
+        // Store in localStorage for backwards compatibility
+        localStorage.setItem("user", JSON.stringify(userProfile));
+        localStorage.setItem("authenticated", "true");
+        localStorage.setItem("lastLoggedInEmail", data.user.email || '');
+
+        // Update state
+        dispatch({ type: "SET_USER", payload: userProfile });
+
+        toast({
+          title: "Account created!",
+          description: "Your account has been successfully created.",
+        });
+
+        navigate("/dashboard", { replace: true });
+      }
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      dispatch({ type: "LOGOUT" });
+      
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to create account. Please try again.",
       });
     }
   };
 
   const logout = async () => {
     try {
-      // We don't delete the user from IndexedDB on logout
-      // just remove from local state and localStorage
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Clean up local storage
       localStorage.removeItem("user");
       localStorage.removeItem("authenticated");
+      
       dispatch({ type: "LOGOUT" });
+      
       toast({
         title: "Signed out",
         description: "You have been successfully signed out.",
       });
+      
       navigate("/");
     } catch (error) {
       console.error("Logout error:", error);
@@ -145,7 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const updatedUser = { ...state.user, ...updates };
       
-      // Update in IndexedDB
+      // Update in our custom table
       await storeUser(updatedUser);
       
       // Update in localStorage for compatibility
@@ -173,6 +227,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     login,
     logout,
     updateUser,
+    signup,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
