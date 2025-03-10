@@ -1,39 +1,121 @@
-
 import { supabase } from "./supabase-client";
 import { UserData, UserProfile } from "./types";
 
 // Helper function to ensure the users table exists
 export const ensureUsersTable = async (): Promise<boolean> => {
   try {
-    // Check if users table exists by attempting to get its schema
-    const { error } = await supabase
+    // Check if the table exists by querying for its records
+    const { error: checkError } = await supabase
       .from('users')
       .select('email')
       .limit(1);
     
-    // If no error, table exists
-    if (!error) return true;
+    // If no error, then the table exists
+    if (!checkError) return true;
     
-    // If table doesn't exist, create it
-    if (error.message.includes("relation") && error.message.includes("does not exist")) {
+    // If error indicates the table doesn't exist, create it
+    if (checkError.message.includes("relation") && checkError.message.includes("does not exist")) {
       console.log("Users table doesn't exist, creating it now");
       
-      // Create the users table
-      const { error: createError } = await supabase.rpc('create_users_table');
+      // Create the table directly with SQL
+      const { error: createError } = await supabase.rpc('exec_sql', {
+        sql: `
+          CREATE TABLE IF NOT EXISTS users (
+            email VARCHAR PRIMARY KEY,
+            display_name VARCHAR NOT NULL,
+            photo_url VARCHAR,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+          );
+          
+          -- Enable RLS
+          ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+          
+          -- Create RLS policies for users table
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_policies 
+              WHERE tablename = 'users' AND policyname = 'Users can read own data'
+            ) THEN
+              CREATE POLICY "Users can read own data" ON users
+                FOR SELECT USING (auth.uid()::text = email);
+            END IF;
+            
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_policies 
+              WHERE tablename = 'users' AND policyname = 'Users can insert own data'
+            ) THEN
+              CREATE POLICY "Users can insert own data" ON users
+                FOR INSERT WITH CHECK (auth.uid()::text = email);
+            END IF;
+            
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_policies 
+              WHERE tablename = 'users' AND policyname = 'Users can update own data'
+            ) THEN
+              CREATE POLICY "Users can update own data" ON users
+                FOR UPDATE USING (auth.uid()::text = email);
+            END IF;
+          END
+          $$;
+        `
+      });
       
       if (createError) {
-        console.error("Error creating users table:", createError);
-        return false;
+        console.error("Error creating users table with SQL:", createError);
+        
+        // Fallback: Try simpler table creation without policies
+        const { error: simpleFallbackError } = await supabase.rpc('exec_sql', {
+          sql: `CREATE TABLE IF NOT EXISTS users (
+            email VARCHAR PRIMARY KEY,
+            display_name VARCHAR NOT NULL,
+            photo_url VARCHAR,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+          )`
+        });
+        
+        if (simpleFallbackError) {
+          console.error("Error with simple table creation fallback:", simpleFallbackError);
+          return false;
+        }
       }
       
-      console.log("Users table created successfully");
+      // Also create the user_profiles table if it doesn't exist
+      const { error: profilesError } = await supabase.rpc('exec_sql', {
+        sql: `
+          CREATE TABLE IF NOT EXISTS user_profiles (
+            id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+            email VARCHAR NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+            display_name VARCHAR NOT NULL,
+            photo_url VARCHAR,
+            bio TEXT,
+            location VARCHAR,
+            website VARCHAR,
+            github VARCHAR,
+            twitter VARCHAR,
+            role VARCHAR,
+            theme VARCHAR CHECK (theme IN ('light', 'dark', 'system')),
+            email_notifications BOOLEAN DEFAULT true,
+            push_notifications BOOLEAN DEFAULT false,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+          )`
+      });
+      
+      if (profilesError) {
+        console.error("Error creating user_profiles table:", profilesError);
+      }
+      
+      console.log("Tables created successfully");
       return true;
     }
     
-    console.log("Users table doesn't exist or is not accessible:", error.message);
+    console.error("Users table doesn't exist or is not accessible:", checkError.message);
     return false;
   } catch (err) {
-    console.error("Error checking users table:", err);
+    console.error("Error checking/creating users table:", err);
     return false;
   }
 };

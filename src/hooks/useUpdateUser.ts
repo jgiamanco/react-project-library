@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { storeUser } from "@/services/db-service";
+import { updateUserProfile } from "@/services/db-service";
 import { User } from "@/contexts/auth-types";
 
 export const useUpdateUser = () => {
@@ -15,8 +15,8 @@ export const useUpdateUser = () => {
       setIsLoading(true);
       const updatedUser = { ...user, ...updates };
       
-      // Update in our custom table
-      await storeUser(updatedUser);
+      // Update in our custom table using updateUserProfile for better field handling
+      const result = await updateUserProfile(user.email, updatedUser);
       
       // Update in localStorage for compatibility
       localStorage.setItem("user", JSON.stringify(updatedUser));

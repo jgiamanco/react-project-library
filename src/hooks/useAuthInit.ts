@@ -24,15 +24,40 @@ export const useAuthInit = () => {
           const { data: userData } = await supabase.auth.getUser();
           
           if (userData.user) {
+            console.log("Active session found for:", userData.user.email);
+            
             // Get the user's profile from our custom table
             let userProfile = await getUser(userData.user.email || '');
             
             if (!userProfile) {
-              // If no profile exists yet, create one with basic info
+              console.log("No profile found, creating one with stored data");
+              
+              // Try to get profile data from localStorage
+              const storedUser = localStorage.getItem("user");
+              let parsedUser: User | null = null;
+              
+              try {
+                if (storedUser) {
+                  parsedUser = JSON.parse(storedUser) as User;
+                }
+              } catch (e) {
+                console.error("Error parsing stored user:", e);
+              }
+              
+              // Create new user profile with basic info + any stored data
               const newUser: User = {
                 email: userData.user.email || '',
-                displayName: userData.user.email?.split("@")[0] || 'User',
-                photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.user.email}`,
+                displayName: parsedUser?.displayName || userData.user.email?.split("@")[0] || 'User',
+                photoURL: parsedUser?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.user.email}`,
+                location: parsedUser?.location || '',
+                bio: parsedUser?.bio || '',
+                website: parsedUser?.website || '',
+                github: parsedUser?.github || '',
+                twitter: parsedUser?.twitter || '',
+                role: parsedUser?.role || 'User',
+                theme: parsedUser?.theme || 'system',
+                emailNotifications: parsedUser?.emailNotifications !== undefined ? parsedUser.emailNotifications : true,
+                pushNotifications: parsedUser?.pushNotifications !== undefined ? parsedUser.pushNotifications : false,
               };
               
               userProfile = await storeUser(newUser);

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { storeUser } from "@/services/db-service";
+import { storeUser, updateUserProfile } from "@/services/db-service";
 import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
 
@@ -32,16 +32,18 @@ export const useSignup = () => {
 
       if (data && data.user) {
         try {
+          console.log("Creating user profile with data:", profileData);
+          
           // Create user profile with additional data provided
           const newUser: User = {
             email: data.user.email || '',
             displayName: profileData.displayName || data.user.email?.split("@")[0] || 'User',
             photoURL: profileData.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
-            location: profileData.location,
-            bio: profileData.bio,
-            website: profileData.website,
-            github: profileData.github,
-            twitter: profileData.twitter,
+            location: profileData.location || '',
+            bio: profileData.bio || '',
+            website: profileData.website || '',
+            github: profileData.github || '',
+            twitter: profileData.twitter || '',
             role: profileData.role || 'User',
             theme: profileData.theme || 'system',
             emailNotifications: profileData.emailNotifications !== undefined ? profileData.emailNotifications : true,
@@ -50,7 +52,16 @@ export const useSignup = () => {
           
           // Store the user in our custom table
           // This now gracefully handles database errors
-          const userProfile = await storeUser(newUser);
+          const basicUserProfile = await storeUser(newUser);
+          
+          // Also store extended profile fields
+          const fullUserProfile = await updateUserProfile(newUser.email, newUser);
+          
+          // Use the profile with more fields if available
+          const userProfile = fullUserProfile || basicUserProfile;
+          
+          // Store in localStorage for later persistence
+          localStorage.setItem("user", JSON.stringify(userProfile));
           
           // If email confirmation is required (which is the default for Supabase)
           const needsEmailConfirmation = !data.user.email_confirmed_at;
@@ -70,7 +81,6 @@ export const useSignup = () => {
           }
           
           // If email doesn't need confirmation (unusual for Supabase)
-          localStorage.setItem("user", JSON.stringify(userProfile));
           localStorage.setItem("authenticated", "true");
           localStorage.setItem("lastLoggedInEmail", data.user.email || '');
 
@@ -90,8 +100,12 @@ export const useSignup = () => {
             email: data.user.email || '',
             displayName: profileData.displayName || data.user.email?.split("@")[0] || 'User',
             photoURL: profileData.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
-            location: profileData.location,
+            location: profileData.location || '',
+            bio: profileData.bio || '',
           };
+          
+          // Save to localStorage 
+          localStorage.setItem("user", JSON.stringify(fallbackProfile));
           
           // If email confirmation is required
           if (!data.user.email_confirmed_at) {
@@ -109,8 +123,6 @@ export const useSignup = () => {
             return fallbackProfile;
           }
           
-          // Save to localStorage even if DB saving failed
-          localStorage.setItem("user", JSON.stringify(fallbackProfile));
           localStorage.setItem("authenticated", "true");
           localStorage.setItem("lastLoggedInEmail", data.user.email || '');
           
