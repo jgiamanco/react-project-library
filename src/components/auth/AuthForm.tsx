@@ -113,6 +113,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
       // Only proceed with signup on the final step
       if (signupStep === 3) {
         setIsSubmitting(true);
+        
         try {
           // Create profile object
           const userProfile: Partial<User> = {
@@ -122,9 +123,17 @@ export default function AuthForm({ mode }: AuthFormProps) {
           };
           
           // Show a loading toast for signup to improve UX
-          sonnerToast.loading("Creating your account...");
-          await signup(email, password, userProfile);
-          sonnerToast.dismiss();
+          const toastId = sonnerToast.loading("Creating your account...");
+          
+          try {
+            await signup(email, password, userProfile);
+            // The signup function will dismiss the toast
+          } catch (error) {
+            // If there's an error, manually dismiss the toast
+            sonnerToast.dismiss(toastId);
+            throw error;
+          }
+          
           // After signup, they need to verify email
           setNeedsVerification(true);
         } catch (error: any) {
@@ -174,12 +183,15 @@ export default function AuthForm({ mode }: AuthFormProps) {
             className="w-full"
             onClick={async () => {
               try {
+                sonnerToast.loading("Resending verification email...");
                 await supabase.auth.resend({
                   type: 'signup',
                   email,
                 });
+                sonnerToast.dismiss();
                 sonnerToast.success("Verification email resent");
               } catch (error) {
+                sonnerToast.dismiss();
                 sonnerToast.error("Could not resend verification email");
               }
             }}

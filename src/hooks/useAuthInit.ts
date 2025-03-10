@@ -10,20 +10,17 @@ export const useAuthInit = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // To prevent infinite loading, set a timeout
+    // To prevent infinite loading, set a timeout - reduced from 5000ms to 3000ms
     const loadingTimeout = setTimeout(() => {
       if (isLoading) {
         console.log("Auth check is taking too long, stopping loading state");
         setIsLoading(false);
       }
-    }, 5000);
+    }, 3000);
 
     const checkAuth = async () => {
       try {
         setIsLoading(true);
-        
-        // Ensure the users table exists in the database
-        await ensureUsersTable();
         
         // Check if there's an active Supabase session
         const { data: sessionData } = await supabase.auth.getSession();
@@ -34,55 +31,76 @@ export const useAuthInit = () => {
           if (userData.user) {
             console.log("Active session found for:", userData.user.email);
             
-            // Get the user's profile from our custom table
-            let userProfile = await getUser(userData.user.email || '');
-            
-            if (!userProfile) {
-              console.log("No profile found in database, creating one with stored data");
+            try {
+              // Ensure the users table exists in the database
+              await ensureUsersTable();
               
-              // Try to get profile data from localStorage
-              const storedUser = localStorage.getItem("user");
-              let parsedUser: User | null = null;
+              // Get the user's profile from our custom table
+              let userProfile = await getUser(userData.user.email || '');
               
-              try {
-                if (storedUser) {
-                  parsedUser = JSON.parse(storedUser) as User;
-                  console.log("Found stored user data:", parsedUser);
+              if (!userProfile) {
+                console.log("No profile found in database, creating one with stored data");
+                
+                // Try to get profile data from localStorage
+                const storedUser = localStorage.getItem("user");
+                let parsedUser: User | null = null;
+                
+                try {
+                  if (storedUser) {
+                    parsedUser = JSON.parse(storedUser) as User;
+                    console.log("Found stored user data:", parsedUser);
+                  }
+                } catch (e) {
+                  console.error("Error parsing stored user:", e);
                 }
-              } catch (e) {
-                console.error("Error parsing stored user:", e);
+                
+                // Create new user profile with basic info + any stored data
+                const newUser: User = {
+                  email: userData.user.email || '',
+                  displayName: parsedUser?.displayName || userData.user.email?.split("@")[0] || 'User',
+                  photoURL: parsedUser?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.user.email}`,
+                  location: parsedUser?.location || '',
+                  bio: parsedUser?.bio || '',
+                  website: parsedUser?.website || '',
+                  github: parsedUser?.github || '',
+                  twitter: parsedUser?.twitter || '',
+                  role: parsedUser?.role || 'User',
+                  theme: parsedUser?.theme || 'system',
+                  emailNotifications: parsedUser?.emailNotifications !== undefined ? parsedUser.emailNotifications : true,
+                  pushNotifications: parsedUser?.pushNotifications !== undefined ? parsedUser.pushNotifications : false,
+                };
+                
+                console.log("Creating new user profile:", newUser);
+                userProfile = await storeUser(newUser);
+                console.log("New profile created:", userProfile);
+              } else {
+                console.log("Found user profile in database:", userProfile);
               }
               
-              // Create new user profile with basic info + any stored data
-              const newUser: User = {
-                email: userData.user.email || '',
-                displayName: parsedUser?.displayName || userData.user.email?.split("@")[0] || 'User',
-                photoURL: parsedUser?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.user.email}`,
-                location: parsedUser?.location || '',
-                bio: parsedUser?.bio || '',
-                website: parsedUser?.website || '',
-                github: parsedUser?.github || '',
-                twitter: parsedUser?.twitter || '',
-                role: parsedUser?.role || 'User',
-                theme: parsedUser?.theme || 'system',
-                emailNotifications: parsedUser?.emailNotifications !== undefined ? parsedUser.emailNotifications : true,
-                pushNotifications: parsedUser?.pushNotifications !== undefined ? parsedUser.pushNotifications : false,
-              };
+              // Update localStorage for backwards compatibility
+              localStorage.setItem("user", JSON.stringify(userProfile));
+              localStorage.setItem("authenticated", "true");
+              localStorage.setItem("lastLoggedInEmail", userData.user.email || '');
               
-              console.log("Creating new user profile:", newUser);
-              userProfile = await storeUser(newUser);
-              console.log("New profile created:", userProfile);
-            } else {
-              console.log("Found user profile in database:", userProfile);
+              setUser(userProfile);
+              setIsAuthenticated(true);
+            } catch (error) {
+              console.error("Error while processing user profile:", error);
+              // Despite the error, we still have an authenticated user from Supabase
+              // Let's create a basic profile from the auth data
+              const basicUser: User = {
+                email: userData.user.email || '',
+                displayName: userData.user.email?.split("@")[0] || 'User',
+                photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.user.email}`,
+              };
+              setUser(basicUser);
+              setIsAuthenticated(true);
             }
-            
-            // Update localStorage for backwards compatibility
-            localStorage.setItem("user", JSON.stringify(userProfile));
-            localStorage.setItem("authenticated", "true");
-            localStorage.setItem("lastLoggedInEmail", userData.user.email || '');
-            
-            setUser(userProfile);
-            setIsAuthenticated(true);
+          } else {
+            // Clear auth state since there's no valid user
+            localStorage.removeItem("authenticated");
+            setUser(null);
+            setIsAuthenticated(false);
           }
         } else {
           // No active session, check localStorage as fallback
@@ -189,6 +207,7 @@ export const useAuthInit = () => {
       }
     });
 
+    // Immediately check auth state
     checkAuth();
 
     // Cleanup listener and timeout on unmount

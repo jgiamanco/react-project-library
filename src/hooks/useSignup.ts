@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { storeUser, updateUserProfile } from "@/services/db-service";
 import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
+import { toast as sonnerToast } from "sonner";
 
 export const useSignup = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +52,6 @@ export const useSignup = () => {
           };
           
           // Store the user in our custom table
-          // This now gracefully handles database errors
           const basicUserProfile = await storeUser(newUser);
           
           // Also store extended profile fields
@@ -67,6 +67,9 @@ export const useSignup = () => {
           const needsEmailConfirmation = !data.user.email_confirmed_at;
           
           if (needsEmailConfirmation) {
+            // Make sure to dismiss any loading toasts before showing the verification message
+            sonnerToast.dismiss();
+            
             toast({
               title: "Verification email sent",
               description: "Please check your email to verify your account before signing in.",
@@ -84,6 +87,9 @@ export const useSignup = () => {
           localStorage.setItem("authenticated", "true");
           localStorage.setItem("lastLoggedInEmail", data.user.email || '');
 
+          // Make sure to dismiss any loading toasts
+          sonnerToast.dismiss();
+          
           toast({
             title: "Account created!",
             description: "Your account has been successfully created.",
@@ -93,6 +99,9 @@ export const useSignup = () => {
           return userProfile;
         } catch (dbError: any) {
           console.error("Error creating user profile:", dbError);
+          
+          // Make sure to dismiss any loading toasts
+          sonnerToast.dismiss();
           
           // Even if there's an error with the profile creation, the auth was successful
           // We can let the user continue with a local profile
@@ -137,9 +146,13 @@ export const useSignup = () => {
           return fallbackProfile;
         }
       }
+      sonnerToast.dismiss(); // Ensure toast is dismissed if we reach this point
       return null;
     } catch (error: any) {
       console.error("Signup error:", error);
+      
+      // Make sure to dismiss any loading toasts
+      sonnerToast.dismiss();
       
       toast({
         variant: "destructive",
