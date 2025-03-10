@@ -4,7 +4,7 @@ import { supabase } from "./supabase-client";
 import { storeUser, getUser, deleteUser, getUserProfile, updateUserProfile } from "./user-service";
 import { getProjectSession, updateProjectSession } from "./project-service";
 import { getTodosByUser, storeTodo, deleteTodo, deleteAllTodosByUser } from "./todo-service";
-export { UserData, UserProfile, ProjectSession, TodoItem } from "./types";
+export type { UserData, UserProfile, ProjectSession, TodoItem } from "./types";
 
 // Re-export supabase client
 export { supabase };
