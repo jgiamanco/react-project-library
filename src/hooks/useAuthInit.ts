@@ -30,7 +30,7 @@ export const useAuthInit = () => {
             let userProfile = await getUser(userData.user.email || '');
             
             if (!userProfile) {
-              console.log("No profile found, creating one with stored data");
+              console.log("No profile found in database, creating one with stored data");
               
               // Try to get profile data from localStorage
               const storedUser = localStorage.getItem("user");
@@ -39,6 +39,7 @@ export const useAuthInit = () => {
               try {
                 if (storedUser) {
                   parsedUser = JSON.parse(storedUser) as User;
+                  console.log("Found stored user data:", parsedUser);
                 }
               } catch (e) {
                 console.error("Error parsing stored user:", e);
@@ -60,7 +61,11 @@ export const useAuthInit = () => {
                 pushNotifications: parsedUser?.pushNotifications !== undefined ? parsedUser.pushNotifications : false,
               };
               
+              console.log("Creating new user profile:", newUser);
               userProfile = await storeUser(newUser);
+              console.log("New profile created:", userProfile);
+            } else {
+              console.log("Found user profile in database:", userProfile);
             }
             
             // Update localStorage for backwards compatibility
@@ -75,46 +80,74 @@ export const useAuthInit = () => {
           // No active session, check localStorage as fallback
           const storedAuth = localStorage.getItem("authenticated");
           const storedUser = localStorage.getItem("user");
+          const lastLoggedInEmail = localStorage.getItem("lastLoggedInEmail");
           
-          if (storedAuth === "true" && storedUser) {
+          console.log("No active session, checking localStorage:", { storedAuth, lastLoggedInEmail });
+          
+          if (storedAuth === "true" && storedUser && lastLoggedInEmail) {
             try {
               // Try to restore the session
               const parsedUser = JSON.parse(storedUser) as User;
+              
+              console.log("Found stored auth, trying to restore session");
               
               // Attempt to retrieve the session
               const { data: { session } } = await supabase.auth.getSession();
               
               if (session) {
-                // Valid session found, set the user
-                setUser(parsedUser);
+                console.log("Valid session found, setting user");
+                // Check if we need to update from database
+                const dbUser = await getUser(parsedUser.email);
+                if (dbUser) {
+                  console.log("Updated user data from database:", dbUser);
+                  setUser(dbUser);
+                  localStorage.setItem("user", JSON.stringify(dbUser));
+                } else {
+                  setUser(parsedUser);
+                }
                 setIsAuthenticated(true);
               } else {
                 // Try to refresh the session
+                console.log("No valid session, trying to refresh");
                 const { error } = await supabase.auth.refreshSession();
                 
                 if (!error) {
-                  // Session refreshed successfully
-                  setUser(parsedUser);
+                  console.log("Session refreshed successfully");
+                  // Check if we need to update from database
+                  const dbUser = await getUser(parsedUser.email);
+                  if (dbUser) {
+                    console.log("Updated user data from database:", dbUser);
+                    setUser(dbUser);
+                    localStorage.setItem("user", JSON.stringify(dbUser));
+                  } else {
+                    setUser(parsedUser);
+                  }
                   setIsAuthenticated(true);
                 } else {
+                  console.log("Session couldn't be refreshed:", error);
                   // Clear cached auth as session couldn't be refreshed
                   localStorage.removeItem("authenticated");
                   localStorage.removeItem("user");
+                  localStorage.removeItem("lastLoggedInEmail");
                   setUser(null);
                   setIsAuthenticated(false);
                 }
               }
             } catch (e) {
+              console.error("Invalid stored user data:", e);
               // Invalid stored user data
               localStorage.removeItem("authenticated");
               localStorage.removeItem("user");
+              localStorage.removeItem("lastLoggedInEmail");
               setUser(null);
               setIsAuthenticated(false);
             }
           } else {
+            console.log("No stored auth, clearing local storage");
             // No stored auth
             localStorage.removeItem("authenticated");
             localStorage.removeItem("user");
+            localStorage.removeItem("lastLoggedInEmail");
             setUser(null);
             setIsAuthenticated(false);
           }
@@ -123,6 +156,7 @@ export const useAuthInit = () => {
         console.error("Auth check error:", error);
         localStorage.removeItem("authenticated");
         localStorage.removeItem("user");
+        localStorage.removeItem("lastLoggedInEmail");
         setUser(null);
         setIsAuthenticated(false);
       } finally {
@@ -137,8 +171,10 @@ export const useAuthInit = () => {
       if (event === 'SIGNED_IN' && session) {
         await checkAuth();
       } else if (event === 'SIGNED_OUT') {
+        console.log("User signed out, clearing user data");
         localStorage.removeItem("authenticated");
         localStorage.removeItem("user");
+        localStorage.removeItem("lastLoggedInEmail");
         setUser(null);
         setIsAuthenticated(false);
       }

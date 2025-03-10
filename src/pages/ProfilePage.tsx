@@ -28,12 +28,14 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { User } from "@/contexts/auth-types";
+import { toast as sonnerToast } from "sonner";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Get the tab from the URL query parameters
   const queryParams = new URLSearchParams(location.search);
@@ -59,9 +61,10 @@ const ProfilePage = () => {
   // Update profile state when user data changes
   useEffect(() => {
     if (user) {
+      console.log("User data loaded in ProfilePage:", user);
       setProfile({
         email: user.email,
-        displayName: user.displayName,
+        displayName: user.displayName || "",
         photoURL: user.photoURL || "",
         bio: user.bio || "Tell us about yourself...",
         location: user.location || "",
@@ -86,9 +89,15 @@ const ProfilePage = () => {
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSaving(true);
 
     try {
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      console.log("Updating profile with data:", profile);
+      
       // Update auth context with all profile data
       await updateUser({
         displayName: profile.displayName,
@@ -101,87 +110,133 @@ const ProfilePage = () => {
         role: profile.role,
       });
 
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully.",
+      sonnerToast.success("Profile updated", {
+        description: "Your profile has been updated successfully."
       });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
+      console.error("Profile update error:", error);
+      sonnerToast.error("Update failed", {
+        description: "Failed to update profile. Please try again."
       });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
   const handleAccountUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSaving(true);
 
     try {
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      console.log("Updating theme preference:", profile.theme);
+      
       // Update theme preference in user profile
       await updateUser({
         theme: profile.theme,
       });
 
-      toast({
-        title: "Account settings updated",
-        description: "Your account settings have been updated successfully.",
+      sonnerToast.success("Settings updated", {
+        description: "Your account settings have been updated successfully."
       });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update account settings. Please try again.",
-        variant: "destructive",
+      console.error("Account settings update error:", error);
+      sonnerToast.error("Update failed", {
+        description: "Failed to update account settings. Please try again."
       });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
   const handleNotificationsUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSaving(true);
 
     try {
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      console.log("Updating notification preferences:", {
+        email: profile.emailNotifications,
+        push: profile.pushNotifications
+      });
+      
       // Update notification preferences
       await updateUser({
         emailNotifications: profile.emailNotifications,
         pushNotifications: profile.pushNotifications,
       });
 
-      toast({
-        title: "Notification settings updated",
-        description: "Your notification preferences have been updated successfully.",
+      sonnerToast.success("Notifications updated", {
+        description: "Your notification preferences have been updated successfully."
       });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update notification settings. Please try again.",
-        variant: "destructive",
+      console.error("Notification settings update error:", error);
+      sonnerToast.error("Update failed", {
+        description: "Failed to update notification settings. Please try again."
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAvatarChange = async (newAvatarUrl: string) => {
+    try {
+      setIsLoading(true);
+      
+      // Update local state
+      setProfile({
+        ...profile,
+        photoURL: newAvatarUrl,
+      });
+      
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+      
+      console.log("Updating avatar URL:", newAvatarUrl);
+      
+      // Update auth context with new photo URL
+      await updateUser({ photoURL: newAvatarUrl });
+
+      sonnerToast.success("Avatar updated", {
+        description: "Your profile picture has been updated successfully."
+      });
+    } catch (error) {
+      console.error("Avatar update error:", error);
+      sonnerToast.error("Update failed", {
+        description: "Failed to update profile picture. Please try again."
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAvatarChange = (newAvatarUrl: string) => {
-    // Update local state
-    setProfile({
-      ...profile,
-      photoURL: newAvatarUrl,
-    });
-    
-    // Update auth context with new photo URL
-    updateUser({ photoURL: newAvatarUrl });
+  // Show loading state when user data is loading
+  if (authLoading) {
+    return (
+      <div className="container mx-auto py-10 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-muted-foreground">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
 
-    toast({
-      title: "Avatar updated",
-      description: "Your profile picture has been updated successfully.",
-    });
-  };
+  // If no user is found, redirect to sign in
+  if (!user && !authLoading) {
+    useEffect(() => {
+      navigate("/signin", { replace: true });
+    }, [navigate]);
+    
+    return null;
+  }
 
   return (
     <div className="container mx-auto py-10">
@@ -301,8 +356,8 @@ const ProfilePage = () => {
                     </div>
                   </div>
 
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading ? "Saving..." : "Save Changes"}
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? "Saving..." : "Save Changes"}
                   </Button>
                 </form>
               </CardContent>
@@ -368,8 +423,8 @@ const ProfilePage = () => {
                     </div>
                   </div>
 
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading ? "Saving..." : "Save Changes"}
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? "Saving..." : "Save Changes"}
                   </Button>
                 </form>
               </CardContent>
@@ -423,8 +478,8 @@ const ProfilePage = () => {
                     </div>
                   </div>
 
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading ? "Saving..." : "Save Changes"}
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? "Saving..." : "Save Changes"}
                   </Button>
                 </form>
               </CardContent>
