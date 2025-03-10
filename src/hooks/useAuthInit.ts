@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { getUser, storeUser } from "@/services/db-service";
 import { User } from "@/contexts/auth-types";
-import { supabase } from "@/services/db-service";
+import { supabase } from "@/services/supabase-client";
 
 export const useAuthInit = () => {
   const [user, setUser] = useState<User | null>(null);

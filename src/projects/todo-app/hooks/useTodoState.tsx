@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-hooks";
-import { getTodosByUser, storeTodo, deleteTodo } from "@/services/db-service";
+import { getTodosByUser, storeTodo, deleteTodo } from "@/services/todo-service";
 import { DropResult } from "react-beautiful-dnd";
 
 interface Todo {

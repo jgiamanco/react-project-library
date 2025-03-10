@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { getUser, storeUser } from "@/services/db-service";
 import { User } from "@/contexts/auth-types";
-import { supabase } from "@/services/db-service";
+import { supabase } from "@/services/supabase-client";
 
 export const useLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
