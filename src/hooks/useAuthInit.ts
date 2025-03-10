@@ -10,6 +10,14 @@ export const useAuthInit = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
+    // To prevent infinite loading, set a timeout
+    const loadingTimeout = setTimeout(() => {
+      if (isLoading) {
+        console.log("Auth check is taking too long, stopping loading state");
+        setIsLoading(false);
+      }
+    }, 5000);
+
     const checkAuth = async () => {
       try {
         setIsLoading(true);
@@ -160,6 +168,7 @@ export const useAuthInit = () => {
         setUser(null);
         setIsAuthenticated(false);
       } finally {
+        clearTimeout(loadingTimeout);
         setIsLoading(false);
       }
     };
@@ -182,8 +191,9 @@ export const useAuthInit = () => {
 
     checkAuth();
 
-    // Cleanup listener on unmount
+    // Cleanup listener and timeout on unmount
     return () => {
+      clearTimeout(loadingTimeout);
       authListener.subscription.unsubscribe();
     };
   }, []);

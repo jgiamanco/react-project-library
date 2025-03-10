@@ -27,7 +27,7 @@ export const useUpdateUser = () => {
       
       console.log("Profile updated in database:", result);
       
-      // Update in localStorage for compatibility
+      // Update in localStorage for compatibility and fallback
       localStorage.setItem("user", JSON.stringify(updatedUser));
       
       toast({
