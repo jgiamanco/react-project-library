@@ -32,7 +32,7 @@ export const useWeatherData = (API_KEY: string) => {
   } = useWeatherSearch(searchLocations);
 
   // Fetch weather data for a location
-  const fetchWeatherData = async (lat: number, lon: number) => {
+  const fetchWeatherData = async (lat: number, lon: number): Promise<WeatherData | null> => {
     const data = await fetchWeather(lat, lon);
     if (data) {
       setWeatherData(data);

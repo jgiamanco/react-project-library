@@ -189,7 +189,9 @@ const WeatherDashboard = () => {
 
           <FavoritesList 
             favorites={favorites}
-            fetchWeatherData={fetchWeatherData}
+            fetchWeatherData={async (lat, lon) => {
+              await fetchWeatherData(lat, lon);
+            }}
           />
         </CardContent>
         <CardFooter className="text-sm text-gray-500">

@@ -64,6 +64,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (updatedUser) {
       setUser(updatedUser);
     }
+    
+    return updatedUser;
   }, [user, performUpdateUser, setUser]);
 
   const contextValue: AuthContextType = {

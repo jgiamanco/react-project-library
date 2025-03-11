@@ -120,7 +120,9 @@ const ProfilePage = () => {
                 <ProfileInformation 
                   profile={profile} 
                   setProfile={setProfile} 
-                  updateUser={updateUser} 
+                  updateUser={async (updates) => {
+                    return await updateUser(updates);
+                  }} 
                 />
               </CardContent>
             </Card>
@@ -138,7 +140,9 @@ const ProfilePage = () => {
                 <AccountSettings 
                   profile={profile} 
                   setProfile={setProfile} 
-                  updateUser={updateUser} 
+                  updateUser={async (updates) => {
+                    return await updateUser(updates);
+                  }} 
                 />
               </CardContent>
             </Card>
@@ -156,7 +160,9 @@ const ProfilePage = () => {
                 <NotificationSettings 
                   profile={profile} 
                   setProfile={setProfile} 
-                  updateUser={updateUser} 
+                  updateUser={async (updates) => {
+                    return await updateUser(updates);
+                  }} 
                 />
               </CardContent>
             </Card>
