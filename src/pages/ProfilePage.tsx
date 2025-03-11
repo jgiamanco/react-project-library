@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-hooks";
@@ -15,7 +16,7 @@ import { ProfileInformation } from "@/components/profile/ProfileInformation";
 import { AccountSettings } from "@/components/profile/AccountSettings";
 import { NotificationSettings } from "@/components/profile/NotificationSettings";
 import { ProfileLoading } from "@/components/profile/ProfileLoading";
-import { getUserProfile, updateUserProfile } from "@/services/db-service";
+import { getUserProfile, updateUserProfile } from "@/services/user-service";
 import { toast } from "@/components/ui/use-toast";
 
 const ProfilePage = () => {
@@ -30,20 +31,7 @@ const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState(tabFromUrl || "profile");
 
   // User profile state
-  const [profile, setProfile] = useState<User>({
-    email: "",
-    displayName: "",
-    photoURL: "",
-    bio: "Tell us about yourself...",
-    location: "",
-    website: "",
-    github: "",
-    twitter: "",
-    role: "Developer",
-    theme: "system",
-    emailNotifications: true,
-    pushNotifications: false,
-  });
+  const [profile, setProfile] = useState<User | null>(null);
 
   // Load user profile from database
   useEffect(() => {
@@ -56,14 +44,17 @@ const ProfilePage = () => {
       }
 
       try {
+        console.log("Loading profile for user:", user.email);
         const dbProfile = await getUserProfile(user.email);
+        
         if (dbProfile) {
+          console.log("Profile loaded from database:", dbProfile);
           setProfile({
             email: dbProfile.email,
-            displayName: dbProfile.displayName,
-            photoURL: dbProfile.photoURL || "",
+            displayName: dbProfile.displayName || user.displayName,
+            photoURL: dbProfile.photoURL || user.photoURL || "",
             bio: dbProfile.bio || "Tell us about yourself...",
-            location: dbProfile.location || "",
+            location: dbProfile.location || user.location || "",
             website: dbProfile.website || "",
             github: dbProfile.github || "",
             twitter: dbProfile.twitter || "",
@@ -73,26 +64,46 @@ const ProfilePage = () => {
             pushNotifications: dbProfile.pushNotifications ?? false,
           });
         } else {
-          // If no profile exists, create one with default values
+          console.log("No profile found in database, using user data:", user);
+          // If no profile exists, use the current user data
           const defaultProfile = {
-            email: user.email,
-            displayName: user.displayName || user.email.split("@")[0],
-            photoURL: user.photoURL || "",
-            bio: "Tell us about yourself...",
-            role: "Developer",
-            theme: "system",
-            emailNotifications: true,
-            pushNotifications: false,
+            ...user,
+            bio: user.bio || "Tell us about yourself...",
+            role: user.role || "Developer",
+            theme: user.theme || "system",
+            emailNotifications: user.emailNotifications ?? true,
+            pushNotifications: user.pushNotifications ?? false,
           };
-          await updateUserProfile(user.email, defaultProfile);
-          setProfile(defaultProfile as User);
+          
+          setProfile(defaultProfile);
+          
+          // Try to create the profile in the database, but don't wait for it
+          try {
+            await updateUserProfile(user.email, defaultProfile);
+          } catch (createError) {
+            console.warn("Failed to create initial profile:", createError);
+            // This is fine, we'll try again when the user updates their profile
+          }
         }
       } catch (error) {
         console.error("Error loading profile:", error);
+        
+        // Fall back to user object from auth context
+        if (user) {
+          console.log("Falling back to user data from auth context");
+          setProfile({
+            ...user,
+            bio: user.bio || "Tell us about yourself...",
+            role: user.role || "Developer",
+            theme: user.theme || "system",
+            emailNotifications: user.emailNotifications ?? true,
+            pushNotifications: user.pushNotifications ?? false,
+          });
+        }
+        
         toast({
-          title: "Error",
-          description: "Failed to load profile data. Please try again.",
-          variant: "destructive",
+          title: "Notice",
+          description: "Using local profile data. Changes may not be saved to the server.",
         });
       }
     };
@@ -102,18 +113,17 @@ const ProfilePage = () => {
 
   // Handle profile updates
   const handleProfileUpdate = async (updates: Partial<User>) => {
-    if (!user?.email) return;
+    if (!user?.email || !profile) return;
 
     setIsUpdating(true);
     try {
-      // Update database
-      await updateUserProfile(user.email, updates);
-
       // Update auth context
-      await updateUser(updates);
-
-      // Update local state
-      setProfile((prev) => ({ ...prev, ...updates }));
+      const updatedUser = await updateUser(updates);
+      
+      if (updatedUser) {
+        // Update local state
+        setProfile((prev) => prev ? { ...prev, ...updates } : null);
+      }
 
       toast({
         title: "Success",
@@ -121,10 +131,13 @@ const ProfilePage = () => {
       });
     } catch (error) {
       console.error("Error updating profile:", error);
+      
+      // Still update the local state even if the server update failed
+      setProfile((prev) => prev ? { ...prev, ...updates } : null);
+      
       toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
+        title: "Warning",
+        description: "Profile updated locally but changes may not be saved to the server.",
       });
     } finally {
       setIsUpdating(false);
@@ -139,7 +152,7 @@ const ProfilePage = () => {
     });
   };
 
-  if (authLoading || isUpdating) {
+  if (authLoading || isUpdating || !profile) {
     return <ProfileLoading />;
   }
 

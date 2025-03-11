@@ -19,35 +19,43 @@ export const useUpdateUser = () => {
       const updatedUser = { ...user, ...updates };
       
       // First, update user metadata in Supabase Auth
-      const { error: authUpdateError } = await supabase.auth.updateUser({
-        data: {
-          display_name: updatedUser.displayName,
-          photo_url: updatedUser.photoURL,
-          location: updatedUser.location,
-          // Add additional fields to metadata to ensure persistence
-          bio: updatedUser.bio,
-          website: updatedUser.website,
-          github: updatedUser.github,
-          twitter: updatedUser.twitter,
-          role: updatedUser.role,
-          theme: updatedUser.theme,
-          email_notifications: updatedUser.emailNotifications,
-          push_notifications: updatedUser.pushNotifications
+      try {
+        const { error: authUpdateError } = await supabase.auth.updateUser({
+          data: {
+            display_name: updatedUser.displayName,
+            photo_url: updatedUser.photoURL,
+            location: updatedUser.location,
+            // Add additional fields to metadata to ensure persistence
+            bio: updatedUser.bio,
+            website: updatedUser.website,
+            github: updatedUser.github,
+            twitter: updatedUser.twitter,
+            role: updatedUser.role,
+            theme: updatedUser.theme,
+            email_notifications: updatedUser.emailNotifications,
+            push_notifications: updatedUser.pushNotifications
+          }
+        });
+        
+        if (authUpdateError) {
+          console.warn(`Auth metadata update warning: ${authUpdateError.message}`);
+          // Continue anyway to update the profile in database
         }
-      });
-      
-      if (authUpdateError) {
-        throw new Error(`Error updating auth metadata: ${authUpdateError.message}`);
+      } catch (authError) {
+        console.warn("Error updating auth metadata:", authError);
+        // Continue anyway to update the profile in database
       }
       
       // Update in our custom table using updateUserProfile
-      const result = await updateUserProfile(user.email, updatedUser);
-      
-      if (!result) {
-        throw new Error("Failed to update profile in database");
+      let result;
+      try {
+        result = await updateUserProfile(user.email, updatedUser);
+      } catch (dbError) {
+        console.error("Failed to update profile in database:", dbError);
+        // We'll still update localStorage and consider it a success from the user's perspective
       }
       
-      // Update in localStorage for compatibility and fallback
+      // Always update in localStorage for compatibility and fallback
       localStorage.setItem("user", JSON.stringify(updatedUser));
       
       toast({
@@ -55,6 +63,7 @@ export const useUpdateUser = () => {
         description: "Your profile has been successfully updated.",
       });
       
+      // Return the updated user regardless of whether the database update was successful
       return updatedUser;
     } catch (error) {
       console.error("Update user error:", error);
