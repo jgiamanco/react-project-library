@@ -1,6 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { Note, Folder } from '../types';
+import { useAuth } from '@/contexts/auth-hooks';
+import { supabase } from '@/services/supabase-client';
 
 export const useMarkdownEditor = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -9,24 +10,121 @@ export const useMarkdownEditor = () => {
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
+  const { user } = useAuth();
 
-  // Load notes from localStorage on mount
+  // Load notes and folders from Supabase or localStorage on mount
   useEffect(() => {
-    const savedNotes = localStorage.getItem("markdown_notes");
-    const savedFolders = localStorage.getItem("markdown_folders");
-    if (savedNotes) setNotes(JSON.parse(savedNotes));
-    if (savedFolders) setFolders(JSON.parse(savedFolders));
-  }, []);
+    const loadData = async () => {
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from('project_sessions')
+            .select('settings')
+            .eq('user_id', user.email)
+            .eq('project_id', 'markdown-editor')
+            .single();
 
-  // Save notes to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem("markdown_notes", JSON.stringify(notes));
-  }, [notes]);
+          if (error) {
+            if (error.code !== 'PGRST116') { // PGRST116 means no rows returned
+              console.error('Error loading notes from Supabase:', error);
+            }
+            // Fall back to localStorage if no data in Supabase
+            loadFromLocalStorage();
+          } else if (data?.settings) {
+            if (data.settings.notes) setNotes(data.settings.notes);
+            if (data.settings.folders) setFolders(data.settings.folders);
+          } else {
+            loadFromLocalStorage();
+          }
+        } catch (error) {
+          console.error('Error loading notes and folders:', error);
+          loadFromLocalStorage();
+        }
+      } else {
+        // Not logged in, use localStorage
+        loadFromLocalStorage();
+      }
+    };
 
-  // Save folders to localStorage whenever they change
+    const loadFromLocalStorage = () => {
+      const savedNotes = localStorage.getItem("markdown_notes");
+      const savedFolders = localStorage.getItem("markdown_folders");
+      if (savedNotes) setNotes(JSON.parse(savedNotes));
+      if (savedFolders) setFolders(JSON.parse(savedFolders));
+    };
+
+    loadData();
+  }, [user]);
+
+  // Save notes and folders to Supabase and localStorage when they change
   useEffect(() => {
-    localStorage.setItem("markdown_folders", JSON.stringify(folders));
-  }, [folders]);
+    const saveData = async () => {
+      // Always save to localStorage as fallback
+      localStorage.setItem("markdown_notes", JSON.stringify(notes));
+      
+      // If logged in, save to Supabase
+      if (user && notes.length > 0) {
+        try {
+          const { data, error } = await supabase
+            .from('project_sessions')
+            .upsert({
+              user_id: user.email,
+              project_id: 'markdown-editor',
+              last_accessed: new Date().toISOString(),
+              settings: { 
+                notes: notes,
+                folders: folders
+              },
+            }, {
+              onConflict: 'user_id,project_id'
+            });
+
+          if (error) {
+            console.error('Error saving notes to Supabase:', error);
+          }
+        } catch (error) {
+          console.error('Error saving notes:', error);
+        }
+      }
+    };
+
+    saveData();
+  }, [notes, user]);
+
+  // Save folders to localStorage and Supabase when they change
+  useEffect(() => {
+    const saveFolders = async () => {
+      // Always save to localStorage as fallback
+      localStorage.setItem("markdown_folders", JSON.stringify(folders));
+      
+      // If logged in, save to Supabase
+      if (user && folders.length > 0) {
+        try {
+          const { data, error } = await supabase
+            .from('project_sessions')
+            .upsert({
+              user_id: user.email,
+              project_id: 'markdown-editor',
+              last_accessed: new Date().toISOString(),
+              settings: { 
+                notes: notes,
+                folders: folders
+              },
+            }, {
+              onConflict: 'user_id,project_id'
+            });
+
+          if (error) {
+            console.error('Error saving folders to Supabase:', error);
+          }
+        } catch (error) {
+          console.error('Error saving folders:', error);
+        }
+      }
+    };
+
+    saveFolders();
+  }, [folders, notes, user]);
 
   const createNewNote = () => {
     const newNote: Note = {

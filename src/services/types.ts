@@ -26,8 +26,8 @@ export interface ProjectSession {
   userId: string;
   projectId: string;
   lastAccessed: string;
-  settings?: Record<string, string | number | boolean | null>;
-  progress?: Record<string, string | number | boolean | null>;
+  settings?: Record<string, any>;
+  progress?: Record<string, any>;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -39,4 +39,35 @@ export interface TodoItem {
   userId: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+// Added the following types for storing project-specific data
+export interface WeatherFavorites {
+  favorites: FavoriteLocation[];
+}
+
+export interface MarkdownNotes {
+  notes: Note[];
+  folders: Folder[];
+}
+
+export interface FavoriteLocation {
+  name: string;
+  country: string;
+  lat: number;
+  lon: number;
+}
+
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  folderId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Folder {
+  id: string;
+  name: string;
 }
