@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/auth-hooks";
 import { getTodosByUser, storeTodo, deleteTodo } from "@/services/todo-service";
 import { DropResult } from "react-beautiful-dnd";
@@ -42,8 +42,8 @@ export const useTodoState = () => {
     loadTodos();
   }, [user]);
 
-  // Add a new todo
-  const addTodo = async () => {
+  // Add a new todo (memoized)
+  const addTodo = useCallback(async () => {
     if (inputValue.trim() === "" || !user) return;
 
     const newTodo: Todo = {
@@ -55,74 +55,106 @@ export const useTodoState = () => {
 
     try {
       await storeTodo(newTodo);
-      setTodos([...todos, newTodo]);
+      setTodos(prevTodos => [...prevTodos, newTodo]);
       setInputValue("");
     } catch (error) {
       console.error("Error adding todo:", error);
     }
-  };
+  }, [inputValue, user]);
 
-  // Delete a todo
-  const deleteTodoItem = async (id: string) => {
+  // Delete a todo (memoized)
+  const deleteTodoItem = useCallback(async (id: string) => {
     try {
       await deleteTodo(id);
-      setTodos(todos.filter((todo) => todo.id !== id));
+      setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
     } catch (error) {
       console.error("Error deleting todo:", error);
     }
-  };
+  }, []);
 
-  // Toggle todo completion status
-  const toggleTodo = async (id: string) => {
-    const todoToUpdate = todos.find(todo => todo.id === id);
-    if (!todoToUpdate) return;
-    
-    try {
-      const updatedTodo = { ...todoToUpdate, completed: !todoToUpdate.completed };
-      await storeTodo(updatedTodo);
+  // Toggle todo completion status (memoized)
+  const toggleTodo = useCallback(async (id: string) => {
+    setTodos(prevTodos => {
+      const todoToUpdate = prevTodos.find(todo => todo.id === id);
+      if (!todoToUpdate) return prevTodos;
       
-      setTodos(
-        todos.map((todo) =>
-          todo.id === id ? updatedTodo : todo
-        )
+      const updatedTodo = { ...todoToUpdate, completed: !todoToUpdate.completed };
+      
+      // Optimistically update UI
+      const updatedTodos = prevTodos.map(todo => 
+        todo.id === id ? updatedTodo : todo
       );
-    } catch (error) {
-      console.error("Error updating todo:", error);
-    }
-  };
+      
+      // Update in database
+      storeTodo(updatedTodo).catch(error => {
+        console.error("Error updating todo:", error);
+        // Revert on error
+        setTodos(prevTodos);
+      });
+      
+      return updatedTodos;
+    });
+  }, []);
 
-  // Handle drag and drop reordering
-  const handleDragEnd = async (result: DropResult) => {
+  // Handle drag and drop reordering (memoized)
+  const handleDragEnd = useCallback((result: DropResult) => {
     if (!result.destination) return;
 
-    const items = Array.from(todos);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+    setTodos(prevTodos => {
+      const items = Array.from(prevTodos);
+      const [reorderedItem] = items.splice(result.source.index, 1);
+      items.splice(result.destination!.index, 0, reorderedItem);
+      return items;
+    });
+  }, []);
 
-    setTodos(items);
-  };
+  // Toggle dark/light theme (memoized)
+  const toggleTheme = useCallback(() => {
+    setDarkMode(prevMode => {
+      const newMode = !prevMode;
+      document.documentElement.classList.toggle("dark", newMode);
+      return newMode;
+    });
+  }, []);
 
-  // Toggle dark/light theme
-  const toggleTheme = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle("dark");
-  };
-
-  // Clear completed todos
-  const clearCompleted = async () => {
+  // Clear completed todos (memoized)
+  const clearCompleted = useCallback(async () => {
     if (!user) return;
     
     try {
       const completedTodos = todos.filter(todo => todo.completed);
+      // Optimistically update UI
+      setTodos(prevTodos => prevTodos.filter(todo => !todo.completed));
+      
+      // Delete in database
       await Promise.all(completedTodos.map(todo => deleteTodo(todo.id)));
-      setTodos(todos.filter(todo => !todo.completed));
     } catch (error) {
       console.error("Error clearing completed todos:", error);
+      // Reload todos on error
+      if (user) {
+        try {
+          const userTodos = await getTodosByUser(user.email);
+          setTodos(userTodos);
+        } catch (loadError) {
+          console.error("Error reloading todos:", loadError);
+        }
+      }
     }
-  };
+  }, [todos, user]);
+
+  // Memoize filtered todos to prevent unnecessary re-renders
+  const filteredTodos = useMemo(() => 
+    todos.filter(todo => {
+      if (filter === "all") return true;
+      if (filter === "active") return !todo.completed;
+      if (filter === "completed") return todo.completed;
+      return true;
+    }),
+  [todos, filter]);
 
   return {
     todos,
+    filteredTodos,
     inputValue,
     setInputValue,
     filter,

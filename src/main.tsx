@@ -1,3 +1,4 @@
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
@@ -7,7 +8,15 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import App from "./App";
 import "./index.css";
 
-const queryClient = new QueryClient();
+// Create a single QueryClient instance
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // Disable refetching on window focus for better performance
+      retry: 1, // Limit retries for better UX
+    },
+  },
+});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

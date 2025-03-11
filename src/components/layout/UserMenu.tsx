@@ -1,5 +1,5 @@
 
-import { useNavigate } from "react-router-dom";
+import { useCallback } from "react";
 import { useAuth } from "@/contexts/auth-hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -13,14 +13,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function UserMenu() {
-  const navigate = useNavigate();
   const { user, logout } = useAuth();
-
-  const handleLogout = async () => {
-    // Call the logout function from auth context
-    // The toast is now handled inside the logout function
+  
+  // Memoize the logout handler to prevent unnecessary re-renders
+  const handleLogout = useCallback(async () => {
     await logout();
-  };
+  }, [logout]);
+
+  // Extract initial letter for avatar fallback
+  const userInitial = user?.displayName?.[0]?.toUpperCase() || "U";
 
   return (
     <DropdownMenu>
@@ -31,9 +32,7 @@ export default function UserMenu() {
               src={user?.photoURL}
               alt={user?.displayName || "User"}
             />
-            <AvatarFallback>
-              {user?.displayName?.[0]?.toUpperCase() || "U"}
-            </AvatarFallback>
+            <AvatarFallback>{userInitial}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
@@ -49,10 +48,10 @@ export default function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate("/profile")}>
+        <DropdownMenuItem onClick={() => window.location.href = "/profile"}>
           Profile
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate("/profile?tab=account")}>
+        <DropdownMenuItem onClick={() => window.location.href = "/profile?tab=account"}>
           Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />

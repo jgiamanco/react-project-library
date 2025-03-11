@@ -1,5 +1,6 @@
 
 import * as React from "react";
+import { memo, useMemo } from "react";
 import { DragDropContext, Droppable, DropResult } from "react-beautiful-dnd";
 import TodoItem from "./TodoItem";
 
@@ -19,7 +20,7 @@ interface TodoListProps {
   darkMode: boolean;
 }
 
-const TodoList: React.FC<TodoListProps> = ({
+const TodoList: React.FC<TodoListProps> = memo(({
   todos,
   filter,
   toggleTodo,
@@ -27,13 +28,26 @@ const TodoList: React.FC<TodoListProps> = ({
   handleDragEnd,
   darkMode,
 }) => {
-  // Filter todos based on current filter
-  const filteredTodos = todos.filter((todo) => {
-    if (filter === "all") return true;
-    if (filter === "active") return !todo.completed;
-    if (filter === "completed") return todo.completed;
-    return true;
-  });
+  // Filter todos based on current filter - memoized to prevent recalculation on re-renders
+  const filteredTodos = useMemo(() => {
+    return todos.filter((todo) => {
+      if (filter === "all") return true;
+      if (filter === "active") return !todo.completed;
+      if (filter === "completed") return todo.completed;
+      return true;
+    });
+  }, [todos, filter]);
+
+  // Memoize the empty state message
+  const emptyStateMessage = useMemo(() => (
+    <div
+      className={`text-center py-4 ${
+        darkMode ? "text-gray-400" : "text-gray-500"
+      }`}
+    >
+      No tasks found
+    </div>
+  ), [darkMode]);
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
@@ -45,13 +59,7 @@ const TodoList: React.FC<TodoListProps> = ({
             className="space-y-2"
           >
             {filteredTodos.length === 0 ? (
-              <div
-                className={`text-center py-4 ${
-                  darkMode ? "text-gray-400" : "text-gray-500"
-                }`}
-              >
-                No tasks found
-              </div>
+              emptyStateMessage
             ) : (
               filteredTodos.map((todo, index) => (
                 <TodoItem
@@ -70,6 +78,8 @@ const TodoList: React.FC<TodoListProps> = ({
       </Droppable>
     </DragDropContext>
   );
-};
+});
+
+TodoList.displayName = "TodoList";
 
 export default TodoList;

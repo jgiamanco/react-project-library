@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { updateUserProfile } from "@/services/user-service";
 import { User } from "@/contexts/auth-types";
@@ -10,12 +10,11 @@ export const useUpdateUser = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const updateUser = async (user: User, updates: Partial<User>) => {
+  const updateUser = useCallback(async (user: User, updates: Partial<User>) => {
     if (!user) return null;
 
     try {
       setIsLoading(true);
-      console.log("Updating user with data:", updates);
       
       const updatedUser = { ...user, ...updates };
       
@@ -24,27 +23,31 @@ export const useUpdateUser = () => {
         data: {
           display_name: updatedUser.displayName,
           photo_url: updatedUser.photoURL,
-          location: updatedUser.location
+          location: updatedUser.location,
+          // Add additional fields to metadata to ensure persistence
+          bio: updatedUser.bio,
+          website: updatedUser.website,
+          github: updatedUser.github,
+          twitter: updatedUser.twitter,
+          role: updatedUser.role,
+          theme: updatedUser.theme,
+          email_notifications: updatedUser.emailNotifications,
+          push_notifications: updatedUser.pushNotifications
         }
       });
       
       if (authUpdateError) {
-        console.error("Error updating auth metadata:", authUpdateError);
-      } else {
-        console.log("Successfully updated auth metadata");
+        throw new Error(`Error updating auth metadata: ${authUpdateError.message}`);
       }
       
       // Update in our custom table using updateUserProfile
-      console.log("Updating user profile in database tables");
       const result = await updateUserProfile(user.email, updatedUser);
-      console.log("Profile update result:", result);
       
       if (!result) {
         throw new Error("Failed to update profile in database");
       }
       
       // Update in localStorage for compatibility and fallback
-      console.log("Updating local storage with new profile data");
       localStorage.setItem("user", JSON.stringify(updatedUser));
       
       toast({
@@ -62,7 +65,7 @@ export const useUpdateUser = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   return {
     updateUser,

@@ -1,18 +1,36 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { projects } from "@/data/projects";
 import ProjectGrid from "@/components/projects/ProjectGrid";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
+  // Optimize loading behavior
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
+    // Use requestAnimationFrame for better performance over setTimeout
+    let rafId: number;
     
-    return () => clearTimeout(timer);
+    // Check if data is already available (if user navigates back to dashboard)
+    if (projects.length > 0) {
+      // Immediate loading state update if data is available
+      rafId = requestAnimationFrame(() => setLoading(false));
+    } else {
+      // Simulate loading data with a slight delay
+      const startTime = performance.now();
+      const minLoadTime = 800; // Minimum load time to prevent flashing
+      
+      rafId = requestAnimationFrame(() => {
+        const elapsedTime = performance.now() - startTime;
+        const remainingTime = Math.max(0, minLoadTime - elapsedTime);
+        
+        setTimeout(() => setLoading(false), remainingTime);
+      });
+    }
+    
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   if (loading) {

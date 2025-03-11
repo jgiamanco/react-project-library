@@ -16,45 +16,48 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   const { isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
+    // Define a single, reusable function for redirecting on auth failure
+    const redirectToSignIn = (message: string) => {
+      localStorage.clear(); // Ensure local storage is cleared to prevent auth loops
+      toast.error(message);
+      navigate("/signin", { replace: true });
+      setIsChecking(false);
+    };
+
     const checkAuth = async () => {
       try {
-        console.log("AuthGuard: Checking authentication", { 
-          isAuthenticated, 
-          isLoading,
-          localStorageAuth: localStorage.getItem("authenticated")
-        });
+        // Only proceed with check if not already loading auth state
+        if (isLoading) return;
         
         // Get the current session from Supabase
         const { data } = await supabase.auth.getSession();
         
         // If no session and we're not in loading state, redirect
-        if (!data.session && !isLoading && !isAuthenticated) {
-          console.log("AuthGuard: No session found, redirecting to signin");
-          localStorage.clear(); // Ensure local storage is cleared
-          toast.error("Please sign in to access this page");
-          navigate("/signin", { replace: true });
+        if (!data.session && !isAuthenticated) {
+          redirectToSignIn("Please sign in to access this page");
+          return;
         }
+        
+        // Auth check passed
+        setIsChecking(false);
       } catch (error) {
         console.error("Auth check error:", error);
-        localStorage.clear(); // Ensure local storage is cleared
-        toast.error("Authentication error occurred");
-        navigate("/signin", { replace: true });
-      } finally {
-        setIsChecking(false);
+        redirectToSignIn("Authentication error occurred");
       }
     };
     
-    // Only check auth if we're not currently loading
-    if (!isLoading) {
-      checkAuth();
-    } else {
-      // If still loading, wait a bit before checking
-      const timer = setTimeout(() => {
-        checkAuth();
-      }, 300);
-      
-      return () => clearTimeout(timer);
-    }
+    // Set a timeout to prevent infinite auth checks
+    const timeoutId = setTimeout(() => {
+      if (isChecking) {
+        setIsChecking(false);
+      }
+    }, 3000);
+    
+    // Run the auth check
+    checkAuth();
+    
+    // Clean up
+    return () => clearTimeout(timeoutId);
   }, [isAuthenticated, isLoading, navigate, location.pathname]);
 
   // Don't render anything until authentication check is complete

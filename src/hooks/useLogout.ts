@@ -15,22 +15,16 @@ export const useLogout = () => {
       setIsLoading(true);
       sonnerToast.loading("Signing out...");
       
-      console.log("Starting logout process");
-      
-      // First clear all localStorage items
-      console.log("Clearing localStorage");
-      localStorage.clear(); // Use clear() to remove ALL items, not just specific ones
+      // First clear all localStorage items to prevent auth loops
+      localStorage.clear();
       
       // Then sign out from Supabase
-      console.log("Signing out from Supabase");
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error("Error signing out from Supabase:", error);
         throw error;
       }
-      
-      console.log("Successfully signed out");
       
       sonnerToast.dismiss();
       toast({
@@ -49,10 +43,7 @@ export const useLogout = () => {
         description: "There was a problem signing you out. Please try again.",
       });
       
-      // Even if there's an error with Supabase signout, clear localStorage anyway
-      localStorage.clear();
-      
-      // Force navigation to home page
+      // Force navigation to home page even on error
       navigate("/", { replace: true });
     } finally {
       setIsLoading(false);
