@@ -1,4 +1,3 @@
-
 // Common types for services
 export interface UserProfile {
   id?: string;
@@ -41,21 +40,23 @@ export interface TodoItem {
   updatedAt?: string;
 }
 
-// Added the following types for storing project-specific data
+// Weather dashboard favorite locations
 export interface WeatherFavorites {
   favorites: FavoriteLocation[];
 }
 
-export interface MarkdownNotes {
-  notes: Note[];
-  folders: Folder[];
-}
-
+// Define the FavoriteLocation interface if not already defined
 export interface FavoriteLocation {
   name: string;
   country: string;
   lat: number;
   lon: number;
+}
+
+// Markdown editor notes and folders
+export interface MarkdownNotes {
+  notes: Note[];
+  folders: Folder[];
 }
 
 export interface Note {

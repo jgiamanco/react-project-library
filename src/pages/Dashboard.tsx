@@ -1,37 +1,45 @@
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { projects } from "@/data/projects";
 import ProjectGrid from "@/components/projects/ProjectGrid";
+import { trackRenderTime } from "@/utils/performance-monitoring";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
-
-  // Optimize loading behavior
+  
+  // Memoize project data to prevent unnecessary re-renders
+  const projectsData = useMemo(() => projects, []);
+  
+  // Track render performance
   useEffect(() => {
-    // Use requestAnimationFrame for better performance over setTimeout
-    let rafId: number;
-    
-    // Check if data is already available (if user navigates back to dashboard)
-    if (projects.length > 0) {
-      // Immediate loading state update if data is available
-      rafId = requestAnimationFrame(() => setLoading(false));
-    } else {
-      // Simulate loading data with a slight delay
-      const startTime = performance.now();
-      const minLoadTime = 800; // Minimum load time to prevent flashing
-      
-      rafId = requestAnimationFrame(() => {
-        const elapsedTime = performance.now() - startTime;
-        const remainingTime = Math.max(0, minLoadTime - elapsedTime);
-        
-        setTimeout(() => setLoading(false), remainingTime);
-      });
-    }
-    
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-    };
+    const endTracking = trackRenderTime('Dashboard');
+    return endTracking;
   }, []);
+
+  // Optimize loading behavior with requestIdleCallback
+  useEffect(() => {
+    // Performance optimization - use requestIdleCallback if available
+    const loadProjects = () => {
+      // If projects are already available, don't show loading state
+      if (projectsData.length > 0) {
+        setLoading(false);
+        return;
+      }
+      
+      // Set a maximum loading time to prevent indefinite loading
+      const timeout = setTimeout(() => setLoading(false), 800);
+      return () => clearTimeout(timeout);
+    };
+    
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      // Use requestIdleCallback to defer non-essential work
+      const idleCallbackId = requestIdleCallback(loadProjects, { timeout: 1000 });
+      return () => cancelIdleCallback(idleCallbackId);
+    } else {
+      // Fallback for browsers without requestIdleCallback
+      loadProjects();
+    }
+  }, [projectsData]);
 
   if (loading) {
     return (
@@ -56,7 +64,7 @@ const Dashboard = () => {
         </p>
       </div>
 
-      <ProjectGrid projects={projects} />
+      <ProjectGrid projects={projectsData} />
     </div>
   );
 };

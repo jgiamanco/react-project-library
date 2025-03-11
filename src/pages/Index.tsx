@@ -1,34 +1,86 @@
-import { useEffect, useState } from "react";
+
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Code, Boxes, Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/auth-hooks";
+import { trackRenderTime } from "@/utils/performance-monitoring";
 
 const Index = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [scrollPosition, setScrollPosition] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const scrollListenerRef = useRef<number | null>(null);
 
+  // Track render performance
+  useEffect(() => {
+    const endTracking = trackRenderTime('IndexPage');
+    return endTracking;
+  }, []);
+
+  // Optimized scroll handler with throttling
   useEffect(() => {
     const handleScroll = () => {
-      setScrollPosition(window.scrollY);
+      if (scrollListenerRef.current !== null) return;
+      
+      scrollListenerRef.current = window.requestAnimationFrame(() => {
+        setScrollPosition(window.scrollY);
+        scrollListenerRef.current = null;
+      });
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
+      if (scrollListenerRef.current !== null) {
+        cancelAnimationFrame(scrollListenerRef.current);
+      }
     };
   }, []);
 
-  // Reveal animation
+  // Intersection Observer for lazy loading sections
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setRevealed(true);
-    }, 100);
+    if (!('IntersectionObserver' in window)) return;
+    
+    const sections = document.querySelectorAll('.lazy-section');
+    
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    
+    sections.forEach(section => observer.observe(section));
+    
+    return () => observer.disconnect();
+  }, []);
 
-    return () => clearTimeout(timer);
+  // Reveal animation with optimized timing
+  useEffect(() => {
+    if (document.readyState === 'complete') {
+      setImagesLoaded(true);
+      const timer = setTimeout(() => setRevealed(true), 100);
+      return () => clearTimeout(timer);
+    } else {
+      const handleLoad = () => {
+        setImagesLoaded(true);
+        setTimeout(() => setRevealed(true), 100);
+      };
+      window.addEventListener('load', handleLoad);
+      return () => window.removeEventListener('load', handleLoad);
+    }
+  }, []);
+
+  // Preload projects data when user hovers over the explore button
+  const preloadProjects = useCallback(() => {
+    // Dynamic import to preload the projects module
+    import("@/data/projects").catch(err => console.error("Failed to preload projects", err));
   }, []);
 
   return (
@@ -67,6 +119,7 @@ const Index = () => {
                 size="lg"
                 className="h-12 px-6 font-medium text-base"
                 onClick={() => navigate("/dashboard")}
+                onMouseEnter={preloadProjects}
               >
                 <span>Explore Projects</span>
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -77,6 +130,7 @@ const Index = () => {
                   size="lg"
                   className="h-12 px-6 font-medium text-base"
                   onClick={() => navigate("/dashboard")}
+                  onMouseEnter={preloadProjects}
                 >
                   <span>Explore Projects</span>
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -105,7 +159,7 @@ const Index = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gray-50 lazy-section">
         <div className="container px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4">
@@ -155,7 +209,7 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20">
+      <section className="py-20 lazy-section">
         <div className="container px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl font-bold mb-4">

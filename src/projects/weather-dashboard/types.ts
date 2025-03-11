@@ -1,4 +1,3 @@
-
 export interface WeatherData {
   location: {
     name: string;
@@ -54,4 +53,8 @@ export interface GeocodingResponse {
   country: string;
   lat: number;
   lon: number;
+}
+
+export interface WeatherFavorites {
+  favorites: FavoriteLocation[];
 }

@@ -15,12 +15,13 @@ interface WeatherChartProps {
   celsiusToFahrenheit: (celsius: number) => number;
 }
 
+// Use React.memo to prevent unnecessary re-renders
 const WeatherChart: React.FC<WeatherChartProps> = React.memo(({ 
   forecast, 
   useMetric,
   celsiusToFahrenheit
 }) => {
-  // Memoize the chart data to prevent unnecessary calculations
+  // Performance optimization: Create chartData only when inputs change
   const chartData = useMemo(() => ({
     labels: forecast.map((day) => day.date) || [],
     datasets: [
@@ -45,6 +46,7 @@ const WeatherChart: React.FC<WeatherChartProps> = React.memo(({
     ],
   }), [forecast, useMetric, celsiusToFahrenheit]);
 
+  // Performance optimization: Create options object only once
   const chartOptions = useMemo(() => ({
     responsive: true,
     plugins: {
