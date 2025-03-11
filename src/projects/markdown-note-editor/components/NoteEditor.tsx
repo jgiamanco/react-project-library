@@ -49,7 +49,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       <div
         className={`p-4 rounded border overflow-auto h-[600px] markdown-body ${
           darkMode
-            ? "bg-gray-700 border-gray-600 text-white"
+            ? "markdown-dark bg-gray-700 border-gray-600 text-white"
             : "bg-white border-gray-200 text-gray-900"
         }`}
       >
