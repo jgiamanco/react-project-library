@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/auth-hooks";
 import { getTodosByUser, storeTodo, deleteTodo } from "@/services/todo-service";
@@ -49,7 +50,7 @@ export const useTodoState = () => {
         console.log("Todo loading taking too long, stopping loading state");
         setIsLoading(false);
       }
-    }, 5000);
+    }, 3000); // Reduced from 5000ms to 3000ms for faster fallback
 
     loadTodos();
 

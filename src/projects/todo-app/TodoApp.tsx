@@ -61,29 +61,31 @@ const TodoApp: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="w-8 h-8 border-4 border-t-primary border-gray-200 rounded-full animate-spin"></div>
+          {/* Input and filters are always shown, regardless of loading state */}
+          <TodoInput
+            inputValue={inputValue}
+            setInputValue={setInputValue}
+            addTodo={addTodo}
+            darkMode={darkMode}
+            disabled={!user}
+          />
+
+          <TodoFilters filter={filter} setFilter={setFilter} />
+
+          {!user && (
+            <div className="text-center py-6 text-muted-foreground border border-dashed rounded-md">
+              Please sign in to save and manage your todos
             </div>
-          ) : (
+          )}
+
+          {user && (
             <>
-              <TodoInput
-                inputValue={inputValue}
-                setInputValue={setInputValue}
-                addTodo={addTodo}
-                darkMode={darkMode}
-                disabled={!user}
-              />
-
-              <TodoFilters filter={filter} setFilter={setFilter} />
-
-              {!user && (
-                <div className="text-center py-6 text-muted-foreground border border-dashed rounded-md">
-                  Please sign in to save and manage your todos
+              {/* Only the TodoList has a loading state */}
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-8 h-8 border-4 border-t-primary border-gray-200 rounded-full animate-spin"></div>
                 </div>
-              )}
-
-              {user && (
+              ) : (
                 <TodoList
                   todos={todos}
                   filter={filter}
