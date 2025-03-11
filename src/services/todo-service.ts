@@ -1,44 +1,36 @@
-import { supabase } from "./supabase-client";
-import { TodoItem } from "./types";
+import { supabase, handleSupabaseError } from "./supabase-client";
+import type { TodoItem } from "./types";
 import { v4 as uuidv4 } from "uuid";
 
 // Todo operations
 export const getTodosByUser = async (userId: string): Promise<TodoItem[]> => {
-  try {
-    const { data, error } = await supabase
-      .from("todos")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+  const { data, error } = await supabase
+    .from("todos")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
-    if (error) throw error;
+  if (error) handleSupabaseError(error);
 
-    // Return empty array if no data
-    if (!data || data.length === 0) {
-      return [];
-    }
-
-    return data.map((todo) => ({
+  return (
+    data?.map((todo) => ({
       id: todo.id,
       text: todo.text,
       completed: todo.completed,
       userId: todo.user_id,
       createdAt: todo.created_at,
       updatedAt: todo.updated_at,
-    }));
-  } catch (error) {
-    console.error("Error fetching todos:", error);
-    // Return empty array on error to prevent app from getting stuck
-    return [];
-  }
+    })) || []
+  );
 };
 
-export const storeTodo = async (todo: Omit<TodoItem, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<TodoItem> => {
-  // Generate a UUID if one doesn't exist
+export const storeTodo = async (
+  todo: Omit<TodoItem, "id" | "createdAt" | "updatedAt">
+): Promise<TodoItem> => {
   const todoWithId = {
+    id: uuidv4(),
     ...todo,
-    id: todo.id || uuidv4(),
-    user_id: todo.userId,
+    updated_at: new Date().toISOString(),
   };
 
   const { data, error } = await supabase
@@ -48,12 +40,12 @@ export const storeTodo = async (todo: Omit<TodoItem, "id" | "createdAt" | "updat
       text: todoWithId.text,
       completed: todoWithId.completed,
       user_id: todoWithId.userId,
-      updated_at: new Date().toISOString(),
+      updated_at: todoWithId.updated_at,
     })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) handleSupabaseError(error);
 
   return {
     id: data.id,
@@ -65,14 +57,43 @@ export const storeTodo = async (todo: Omit<TodoItem, "id" | "createdAt" | "updat
   };
 };
 
-export const deleteTodo = async (id: string): Promise<void> => {
-  const { error } = await supabase.from("todos").delete().eq("id", id);
+export const updateTodo = async (todo: TodoItem): Promise<TodoItem> => {
+  const { data, error } = await supabase
+    .from("todos")
+    .update({
+      text: todo.text,
+      completed: todo.completed,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", todo.id)
+    .eq("user_id", todo.userId) // Ensure user can only update their own todos
+    .select()
+    .single();
 
-  if (error) throw error;
+  if (error) handleSupabaseError(error);
+
+  return {
+    id: data.id,
+    text: data.text,
+    completed: data.completed,
+    userId: data.user_id,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+};
+
+export const deleteTodo = async (id: string, userId: string): Promise<void> => {
+  const { error } = await supabase
+    .from("todos")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId); // Ensure user can only delete their own todos
+
+  if (error) handleSupabaseError(error);
 };
 
 export const deleteAllTodosByUser = async (userId: string): Promise<void> => {
   const { error } = await supabase.from("todos").delete().eq("user_id", userId);
 
-  if (error) throw error;
+  if (error) handleSupabaseError(error);
 };

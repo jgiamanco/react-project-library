@@ -1,6 +1,7 @@
+import { PostgrestError } from "@supabase/supabase-js";
+
 // Common types for services
 export interface UserProfile {
-  id?: string;
   email: string;
   displayName: string;
   photoURL?: string;
@@ -25,8 +26,8 @@ export interface ProjectSession {
   userId: string;
   projectId: string;
   lastAccessed: string;
-  settings?: Record<string, any>;
-  progress?: Record<string, any>;
+  settings?: Record<string, string | number | boolean | null>;
+  progress?: Record<string, string | number | boolean | null>;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -72,3 +73,13 @@ export interface Folder {
   id: string;
   name: string;
 }
+
+export type DbResult<T> = {
+  data: T | null;
+  error: PostgrestError | null;
+};
+
+export type DbResultList<T> = {
+  data: T[] | null;
+  error: PostgrestError | null;
+};

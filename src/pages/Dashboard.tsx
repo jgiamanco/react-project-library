@@ -8,7 +8,7 @@ const Dashboard = () => {
 
   // Memoize project data to prevent unnecessary re-renders
   const projectsData = useMemo(() => projects, []);
-  const projectsLength = projectsData.length - 1;
+  const projectsLength = projectsData.length;
   // Track render performance
   useEffect(() => {
     const endTracking = trackRenderTime("Dashboard");

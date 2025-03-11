@@ -1,6 +1,5 @@
-
-import { supabase } from "./supabase-client";
-import { ProjectSession } from "./types";
+import { supabase, handleSupabaseError } from "./supabase-client";
+import type { ProjectSession } from "./types";
 
 // Project Session operations
 export const getProjectSession = async (
@@ -14,7 +13,10 @@ export const getProjectSession = async (
     .eq("project_id", projectId)
     .single();
 
-  if (error) return null;
+  if (error) {
+    if (error.code === "PGRST116") return null; // Record not found
+    handleSupabaseError(error);
+  }
 
   return data
     ? {
@@ -41,14 +43,14 @@ export const updateProjectSession = async (
       user_id: userId,
       project_id: projectId,
       last_accessed: new Date().toISOString(),
-      settings: updates.settings,
-      progress: updates.progress,
+      settings: updates.settings || {},
+      progress: updates.progress || {},
       updated_at: new Date().toISOString(),
     })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) handleSupabaseError(error);
 
   return {
     id: data.id,

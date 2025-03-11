@@ -1,12 +1,18 @@
+import { createClient, PostgrestError } from "@supabase/supabase-js";
 
-import { createClient } from "@supabase/supabase-js";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Initialize Supabase client
-const supabaseUrl =
-  import.meta.env.VITE_SUPABASE_URL ||
-  "https://yqbuvfezarqgsevcfoqc.supabase.co";
-const supabaseAnonKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxYnV2ZmV6YXJxZ3NldmNmb3FjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE2Mjk1NDYsImV4cCI6MjA1NzIwNTU0Nn0.ESPR8o__2Ze-HiYsh2toJt1kf_UdncWYPxx5PniAq4Y";
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error("Missing Supabase environment variables");
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Helper function to handle Supabase errors
+export const handleSupabaseError = (error: PostgrestError) => {
+  console.error("Supabase error:", error);
+  throw new Error(
+    error.message || "An error occurred with the database operation"
+  );
+};
