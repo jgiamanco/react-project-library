@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/auth-hooks";
 import { getTodosByUser, storeTodo, deleteTodo } from "@/services/todo-service";
@@ -77,7 +78,8 @@ export const useTodoState = () => {
       // Only try to save to database if user is logged in
       if (user) {
         try {
-          await storeTodo(newTodo);
+          // Fix: Pass the userId as the second argument
+          await storeTodo(newTodo, user.email);
         } catch (error) {
           console.error("Error adding todo:", error);
           // Even if there's a database error, keep the todo in the UI
@@ -99,7 +101,8 @@ export const useTodoState = () => {
       // Only try to delete from database if user is logged in
       if (user) {
         try {
-          await deleteTodo(id);
+          // Fix: Pass the user email as the second argument
+          await deleteTodo(id, user.email);
         } catch (error) {
           console.error("Error deleting todo:", error);
           // No rollback needed for delete operation in demo
@@ -125,7 +128,8 @@ export const useTodoState = () => {
       
       // Update in database only if user is logged in
       if (user) {
-        storeTodo(updatedTodo).catch(error => {
+        // Fix: Pass the user email as the second argument
+        storeTodo(updatedTodo, user.email).catch(error => {
           console.error("Error updating todo:", error);
           // Don't revert the UI state on error for the demo
         });
@@ -167,7 +171,9 @@ export const useTodoState = () => {
     // Only try database operations if user is logged in
     if (user) {
       try {
-        await Promise.all(completedTodos.map(todo => deleteTodo(todo.id)));
+        await Promise.all(
+          completedTodos.map(todo => deleteTodo(todo.id, user.email))
+        );
       } catch (error) {
         console.error("Error clearing completed todos:", error);
         // Don't revert the UI state on error for the demo

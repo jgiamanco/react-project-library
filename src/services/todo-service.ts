@@ -50,13 +50,18 @@ const transformTodoItems = (data: any[]): TodoItem[] => {
   }));
 };
 
+// Updated to accept both a todo object and a userId string
 export const storeTodo = async (
-  todo: Omit<TodoItem, "id" | "createdAt" | "updatedAt">
+  todo: Omit<TodoItem, "id" | "createdAt" | "updatedAt"> | TodoItem,
+  userId: string
 ): Promise<TodoItem> => {
   try {
+    // Make sure we have a user ID by using the passed userId parameter
     const todoWithId = {
-      id: uuidv4(),
-      ...todo,
+      id: 'id' in todo ? todo.id : uuidv4(),
+      text: todo.text,
+      completed: todo.completed,
+      userId: userId, // Use the provided userId parameter
       updated_at: new Date().toISOString(),
     };
 
@@ -123,19 +128,19 @@ export const storeTodo = async (
   } catch (error) {
     console.error("Error storing todo:", error);
     // Return a constructed todo with the ID we generated as fallback
-    const fallbackId = uuidv4();
+    const fallbackId = 'id' in todo ? todo.id : uuidv4();
     return {
       id: fallbackId,
       text: todo.text,
       completed: todo.completed,
-      userId: todo.userId,
+      userId: userId, // Use the provided userId parameter
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
   }
 };
 
-export const updateTodo = async (todo: TodoItem): Promise<TodoItem> => {
+export const updateTodo = async (todo: TodoItem, userId: string): Promise<TodoItem> => {
   try {
     const client = getSupabaseClient(true);
     
@@ -147,7 +152,7 @@ export const updateTodo = async (todo: TodoItem): Promise<TodoItem> => {
         updated_at: new Date().toISOString(),
       })
       .eq("id", todo.id)
-      .eq("user_id", todo.userId) // Ensure user can only update their own todos
+      .eq("user_id", userId) // Ensure user can only update their own todos
       .select()
       .single();
 
@@ -162,7 +167,7 @@ export const updateTodo = async (todo: TodoItem): Promise<TodoItem> => {
           updated_at: new Date().toISOString(),
         })
         .eq("id", todo.id)
-        .eq("user_id", todo.userId)
+        .eq("user_id", userId)
         .select()
         .single();
         
