@@ -12,7 +12,7 @@ import { toast as sonnerToast } from "sonner";
 interface ProfileInformationProps {
   profile: User;
   setProfile: React.Dispatch<React.SetStateAction<User>>;
-  updateUser: (updates: Partial<User>) => Promise<void>;
+  updateUser: (updates: Partial<User>) => Promise<User | void>;
 }
 
 export const ProfileInformation = ({ profile, setProfile, updateUser }: ProfileInformationProps) => {

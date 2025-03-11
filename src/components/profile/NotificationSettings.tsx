@@ -9,7 +9,7 @@ import { toast as sonnerToast } from "sonner";
 interface NotificationSettingsProps {
   profile: User;
   setProfile: React.Dispatch<React.SetStateAction<User>>;
-  updateUser: (updates: Partial<User>) => Promise<void>;
+  updateUser: (updates: Partial<User>) => Promise<User | void>;
 }
 
 export const NotificationSettings = ({ profile, setProfile, updateUser }: NotificationSettingsProps) => {

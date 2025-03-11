@@ -10,7 +10,7 @@ export const useUpdateUser = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const updateUser = useCallback(async (user: User, updates: Partial<User>) => {
+  const updateUser = useCallback(async (user: User, updates: Partial<User>): Promise<User | null> => {
     if (!user) return null;
 
     try {

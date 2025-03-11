@@ -17,7 +17,7 @@ import { toast as sonnerToast } from "sonner";
 interface AccountSettingsProps {
   profile: User;
   setProfile: React.Dispatch<React.SetStateAction<User>>;
-  updateUser: (updates: Partial<User>) => Promise<void>;
+  updateUser: (updates: Partial<User>) => Promise<User | void>;
 }
 
 export const AccountSettings = ({ profile, setProfile, updateUser }: AccountSettingsProps) => {

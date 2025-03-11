@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Chart as ChartJS,
@@ -26,7 +25,6 @@ import WeatherChart from "./components/WeatherChart";
 import FavoritesList from "./components/FavoritesList";
 import "./weather-animations.css";
 
-// Register ChartJS components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -39,7 +37,6 @@ ChartJS.register(
 
 const API_KEY = import.meta.env.VITE_OPENWEATHERMAP_API_KEY;
 
-// Update weather condition mapping
 const getWeatherBackground = (weatherMain: string, iconCode: string) => {
   const isNight = iconCode.endsWith("n");
   const timeOfDay = isNight ? "night" : "day";
@@ -128,76 +125,86 @@ const WeatherDashboard = () => {
   }
 
   return (
-    <div
-      className={`min-h-screen p-4 relative overflow-hidden ${
-        weatherData
-          ? getWeatherBackground(
-              weatherData.current.weather.main,
-              weatherData.current.weather.icon
-            )
-          : ""
-      }`}
-    >
-      <div className="weather-overlay absolute inset-0" />
-      <Card className="mx-auto max-w-4xl relative z-10 bg-background/95 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle>Weather Dashboard</CardTitle>
-          <CardDescription>
-            Search for a location to view current weather and forecast
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LocationSearch 
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            suggestions={suggestions}
-            isSearchOpen={isSearchOpen}
-            setIsSearchOpen={setIsSearchOpen}
-            handleLocationSelect={handleLocationSelect}
-            loading={loading}
-          />
+    <div className="container mx-auto p-4 space-y-6">
+      <div
+        className={`min-h-screen p-4 relative overflow-hidden ${
+          weatherData
+            ? getWeatherBackground(
+                weatherData.current.weather.main,
+                weatherData.current.weather.icon
+              )
+            : ""
+        }`}
+      >
+        <div className="weather-overlay absolute inset-0" />
+        <Card className="mx-auto max-w-4xl relative z-10 bg-background/95 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle>Weather Dashboard</CardTitle>
+            <CardDescription>
+              Search for a location to view current weather and forecast
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LocationSearch 
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              suggestions={suggestions}
+              isSearchOpen={isSearchOpen}
+              setIsSearchOpen={setIsSearchOpen}
+              handleLocationSelect={handleLocationSelect}
+              loading={loading}
+            />
 
-          {error && <div className="text-red-500 mb-4">{error}</div>}
+            {error && <div className="text-red-500 mb-4">{error}</div>}
 
-          {loading && <div className="text-center py-8">Loading...</div>}
+            {loading && <div className="text-center py-8">Loading...</div>}
 
-          {weatherData && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <WeatherCard 
-                  weatherData={weatherData}
-                  useMetric={useMetric}
-                  setUseMetric={setUseMetric}
-                  favorites={favorites}
-                  toggleFavorite={toggleFavorite}
-                  formatTemp={formatTemp}
-                />
+            {weatherData && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <WeatherCard 
+                    weatherData={weatherData}
+                    useMetric={useMetric}
+                    setUseMetric={setUseMetric}
+                    favorites={favorites}
+                    toggleFavorite={toggleFavorite}
+                    formatTemp={formatTemp}
+                  />
 
-                <ForecastCard 
+                  <ForecastCard 
+                    forecast={weatherData.forecast}
+                    formatTemp={formatTemp}
+                  />
+                </div>
+
+                <WeatherChart 
                   forecast={weatherData.forecast}
-                  formatTemp={formatTemp}
+                  useMetric={useMetric}
+                  celsiusToFahrenheit={celsiusToFahrenheit}
                 />
-              </div>
+              </>
+            )}
 
-              <WeatherChart 
-                forecast={weatherData.forecast}
-                useMetric={useMetric}
-                celsiusToFahrenheit={celsiusToFahrenheit}
-              />
-            </>
-          )}
-
-          <FavoritesList 
-            favorites={favorites}
-            fetchWeatherData={async (lat, lon) => {
-              await fetchWeatherData(lat, lon);
-            }}
-          />
-        </CardContent>
-        <CardFooter className="text-sm text-gray-500">
-          Data provided by OpenWeatherMap
-        </CardFooter>
-      </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Saved Locations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FavoritesList 
+                  favorites={favorites}
+                  fetchWeatherData={fetchWeatherData}
+                />
+              </CardContent>
+              <CardFooter className="text-sm text-gray-500">
+                Click on a location to load its weather data.
+              </CardFooter>
+            </Card>
+          </CardContent>
+          <CardFooter className="text-sm text-gray-500">
+            Data provided by OpenWeatherMap
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-hooks";
@@ -120,9 +119,7 @@ const ProfilePage = () => {
                 <ProfileInformation 
                   profile={profile} 
                   setProfile={setProfile} 
-                  updateUser={async (updates) => {
-                    return await updateUser(updates);
-                  }} 
+                  updateUser={updateUser} 
                 />
               </CardContent>
             </Card>
@@ -140,9 +137,7 @@ const ProfilePage = () => {
                 <AccountSettings 
                   profile={profile} 
                   setProfile={setProfile} 
-                  updateUser={async (updates) => {
-                    return await updateUser(updates);
-                  }} 
+                  updateUser={updateUser} 
                 />
               </CardContent>
             </Card>
@@ -160,9 +155,7 @@ const ProfilePage = () => {
                 <NotificationSettings 
                   profile={profile} 
                   setProfile={setProfile} 
-                  updateUser={async (updates) => {
-                    return await updateUser(updates);
-                  }} 
+                  updateUser={updateUser} 
                 />
               </CardContent>
             </Card>
