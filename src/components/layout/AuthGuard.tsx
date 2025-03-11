@@ -18,16 +18,25 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Get the current session
+        console.log("AuthGuard: Checking authentication", { 
+          isAuthenticated, 
+          isLoading,
+          localStorageAuth: localStorage.getItem("authenticated")
+        });
+        
+        // Get the current session from Supabase
         const { data } = await supabase.auth.getSession();
         
         // If no session and we're not in loading state, redirect
         if (!data.session && !isLoading && !isAuthenticated) {
+          console.log("AuthGuard: No session found, redirecting to signin");
+          localStorage.clear(); // Ensure local storage is cleared
           toast.error("Please sign in to access this page");
           navigate("/signin", { replace: true });
         }
       } catch (error) {
         console.error("Auth check error:", error);
+        localStorage.clear(); // Ensure local storage is cleared
         toast.error("Authentication error occurred");
         navigate("/signin", { replace: true });
       } finally {
@@ -35,12 +44,17 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
       }
     };
     
-    // Short delay to ensure proper check and context is fully loaded
-    const timer = setTimeout(() => {
+    // Only check auth if we're not currently loading
+    if (!isLoading) {
       checkAuth();
-    }, 300);
-    
-    return () => clearTimeout(timer);
+    } else {
+      // If still loading, wait a bit before checking
+      const timer = setTimeout(() => {
+        checkAuth();
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
   }, [isAuthenticated, isLoading, navigate, location.pathname]);
 
   // Don't render anything until authentication check is complete

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/services/supabase-client";
+import { toast as sonnerToast } from "sonner";
 
 export const useLogout = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -12,20 +13,26 @@ export const useLogout = () => {
   const logout = async () => {
     try {
       setIsLoading(true);
+      sonnerToast.loading("Signing out...");
       
-      // Sign out from Supabase
+      console.log("Starting logout process");
+      
+      // First clear all localStorage items
+      console.log("Clearing localStorage");
+      localStorage.clear(); // Use clear() to remove ALL items, not just specific ones
+      
+      // Then sign out from Supabase
+      console.log("Signing out from Supabase");
       const { error } = await supabase.auth.signOut();
       
       if (error) {
-        console.error("Error signing out:", error);
+        console.error("Error signing out from Supabase:", error);
         throw error;
       }
       
-      // Clean up local storage
-      localStorage.removeItem("user");
-      localStorage.removeItem("authenticated");
-      localStorage.removeItem("lastLoggedInEmail");
+      console.log("Successfully signed out");
       
+      sonnerToast.dismiss();
       toast({
         title: "Signed out",
         description: "You have been successfully signed out.",
@@ -35,11 +42,18 @@ export const useLogout = () => {
       navigate("/", { replace: true });
     } catch (error) {
       console.error("Logout error:", error);
+      sonnerToast.dismiss();
       toast({
         variant: "destructive",
         title: "Error signing out",
         description: "There was a problem signing you out. Please try again.",
       });
+      
+      // Even if there's an error with Supabase signout, clear localStorage anyway
+      localStorage.clear();
+      
+      // Force navigation to home page
+      navigate("/", { replace: true });
     } finally {
       setIsLoading(false);
     }
