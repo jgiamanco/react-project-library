@@ -1,5 +1,6 @@
 
-import { useCallback } from "react";
+import { useCallback, memo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export default function UserMenu() {
+const UserMenu = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   
   // Memoize the logout handler to prevent unnecessary re-renders
   const handleLogout = useCallback(async () => {
@@ -22,6 +24,11 @@ export default function UserMenu() {
 
   // Extract initial letter for avatar fallback
   const userInitial = user?.displayName?.[0]?.toUpperCase() || "U";
+
+  // Handle navigation with React Router instead of direct window.location changes
+  const handleNavigate = useCallback((path: string) => {
+    navigate(path);
+  }, [navigate]);
 
   return (
     <DropdownMenu>
@@ -48,10 +55,10 @@ export default function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => window.location.href = "/profile"}>
+        <DropdownMenuItem onClick={() => handleNavigate("/profile")}>
           Profile
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => window.location.href = "/profile?tab=account"}>
+        <DropdownMenuItem onClick={() => handleNavigate("/profile?tab=account")}>
           Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -59,4 +66,7 @@ export default function UserMenu() {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+};
+
+// Memoize the component to prevent unnecessary re-renders
+export default memo(UserMenu);

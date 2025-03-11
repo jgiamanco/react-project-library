@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/services/supabase-client";
@@ -10,7 +10,7 @@ export const useLogout = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       setIsLoading(true);
       sonnerToast.loading("Signing out...");
@@ -48,7 +48,7 @@ export const useLogout = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [navigate, toast]);
 
   return {
     logout,

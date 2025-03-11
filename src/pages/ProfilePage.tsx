@@ -6,36 +6,21 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
-import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { User } from "@/contexts/auth-types";
-import { toast as sonnerToast } from "sonner";
+import { ProfileInformation } from "@/components/profile/ProfileInformation";
+import { AccountSettings } from "@/components/profile/AccountSettings";
+import { NotificationSettings } from "@/components/profile/NotificationSettings";
+import { ProfileLoading } from "@/components/profile/ProfileLoading";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, updateUser, isLoading: authLoading } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
 
   // Get the tab from the URL query parameters
   const queryParams = new URLSearchParams(location.search);
@@ -44,18 +29,18 @@ const ProfilePage = () => {
 
   // User profile state
   const [profile, setProfile] = useState<User>({
-    email: user?.email || "",
-    displayName: user?.displayName || "",
-    photoURL: user?.photoURL || "",
-    bio: user?.bio || "Tell us about yourself...",
-    location: user?.location || "",
-    website: user?.website || "",
-    github: user?.github || "",
-    twitter: user?.twitter || "",
-    role: user?.role || "Developer",
-    theme: user?.theme || "system",
-    emailNotifications: user?.emailNotifications !== undefined ? user.emailNotifications : true,
-    pushNotifications: user?.pushNotifications !== undefined ? user.pushNotifications : false,
+    email: "",
+    displayName: "",
+    photoURL: "",
+    bio: "Tell us about yourself...",
+    location: "",
+    website: "",
+    github: "",
+    twitter: "",
+    role: "Developer",
+    theme: "system",
+    emailNotifications: true,
+    pushNotifications: false,
   });
 
   // Update profile state when user data changes
@@ -87,146 +72,9 @@ const ProfilePage = () => {
     });
   };
 
-  const handleProfileUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-
-    try {
-      if (!user) {
-        throw new Error("User not authenticated");
-      }
-
-      console.log("Updating profile with data:", profile);
-      
-      // Update auth context with all profile data
-      await updateUser({
-        displayName: profile.displayName,
-        photoURL: profile.photoURL,
-        bio: profile.bio,
-        location: profile.location,
-        website: profile.website,
-        github: profile.github,
-        twitter: profile.twitter,
-        role: profile.role,
-      });
-
-      sonnerToast.success("Profile updated", {
-        description: "Your profile has been updated successfully."
-      });
-    } catch (error) {
-      console.error("Profile update error:", error);
-      sonnerToast.error("Update failed", {
-        description: "Failed to update profile. Please try again."
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleAccountUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-
-    try {
-      if (!user) {
-        throw new Error("User not authenticated");
-      }
-
-      console.log("Updating theme preference:", profile.theme);
-      
-      // Update theme preference in user profile
-      await updateUser({
-        theme: profile.theme,
-      });
-
-      sonnerToast.success("Settings updated", {
-        description: "Your account settings have been updated successfully."
-      });
-    } catch (error) {
-      console.error("Account settings update error:", error);
-      sonnerToast.error("Update failed", {
-        description: "Failed to update account settings. Please try again."
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleNotificationsUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-
-    try {
-      if (!user) {
-        throw new Error("User not authenticated");
-      }
-
-      console.log("Updating notification preferences:", {
-        email: profile.emailNotifications,
-        push: profile.pushNotifications
-      });
-      
-      // Update notification preferences
-      await updateUser({
-        emailNotifications: profile.emailNotifications,
-        pushNotifications: profile.pushNotifications,
-      });
-
-      sonnerToast.success("Notifications updated", {
-        description: "Your notification preferences have been updated successfully."
-      });
-    } catch (error) {
-      console.error("Notification settings update error:", error);
-      sonnerToast.error("Update failed", {
-        description: "Failed to update notification settings. Please try again."
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleAvatarChange = async (newAvatarUrl: string) => {
-    try {
-      setIsLoading(true);
-      
-      // Update local state
-      setProfile({
-        ...profile,
-        photoURL: newAvatarUrl,
-      });
-      
-      if (!user) {
-        throw new Error("User not authenticated");
-      }
-      
-      console.log("Updating avatar URL:", newAvatarUrl);
-      
-      // Update auth context with new photo URL
-      await updateUser({ photoURL: newAvatarUrl });
-
-      sonnerToast.success("Avatar updated", {
-        description: "Your profile picture has been updated successfully."
-      });
-    } catch (error) {
-      console.error("Avatar update error:", error);
-      sonnerToast.error("Update failed", {
-        description: "Failed to update profile picture. Please try again."
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Show loading state when user data is loading
   if (authLoading) {
-    return (
-      <div className="container mx-auto py-10 flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-muted-foreground">Loading your profile...</p>
-        </div>
-      </div>
-    );
+    return <ProfileLoading />;
   }
 
   // If no user is found, redirect to sign in
@@ -269,97 +117,11 @@ const ProfilePage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleProfileUpdate} className="space-y-6">
-                  <div className="flex items-center space-x-4">
-                    <AvatarUpload
-                      currentAvatar={profile.photoURL || ""}
-                      onAvatarChange={handleAvatarChange}
-                      name={profile.displayName}
-                    />
-                    <div>
-                      <p className="text-sm font-medium">Profile Picture</p>
-                      <p className="text-sm text-muted-foreground">
-                        Click on your avatar to change it
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input
-                        id="name"
-                        value={profile.displayName}
-                        onChange={(e) =>
-                          setProfile({ ...profile, displayName: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="location">Location</Label>
-                      <Input
-                        id="location"
-                        value={profile.location}
-                        onChange={(e) =>
-                          setProfile({ ...profile, location: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="bio">Bio</Label>
-                      <Textarea
-                        id="bio"
-                        rows={4}
-                        value={profile.bio}
-                        onChange={(e) =>
-                          setProfile({ ...profile, bio: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Social Links</h3>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="website">Website</Label>
-                        <Input
-                          id="website"
-                          value={profile.website}
-                          onChange={(e) =>
-                            setProfile({ ...profile, website: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="github">GitHub</Label>
-                        <Input
-                          id="github"
-                          value={profile.github}
-                          onChange={(e) =>
-                            setProfile({ ...profile, github: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="twitter">Twitter</Label>
-                        <Input
-                          id="twitter"
-                          value={profile.twitter}
-                          onChange={(e) =>
-                            setProfile({ ...profile, twitter: e.target.value })
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button type="submit" disabled={isSaving}>
-                    {isSaving ? "Saving..." : "Save Changes"}
-                  </Button>
-                </form>
+                <ProfileInformation 
+                  profile={profile} 
+                  setProfile={setProfile} 
+                  updateUser={updateUser} 
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -373,60 +135,11 @@ const ProfilePage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleAccountUpdate} className="space-y-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Theme Preferences</h3>
-                    <div className="space-y-2">
-                      <Label htmlFor="theme">Theme</Label>
-                      <Select
-                        value={profile.theme}
-                        onValueChange={(value) =>
-                          setProfile({
-                            ...profile,
-                            theme: value as "light" | "dark" | "system",
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a theme" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="light">Light</SelectItem>
-                          <SelectItem value="dark">Dark</SelectItem>
-                          <SelectItem value="system">System</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Password</h3>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="current-password">
-                          Current Password
-                        </Label>
-                        <Input id="current-password" type="password" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="new-password">New Password</Label>
-                        <Input id="new-password" type="password" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="confirm-password">
-                          Confirm Password
-                        </Label>
-                        <Input id="confirm-password" type="password" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button type="submit" disabled={isSaving}>
-                    {isSaving ? "Saving..." : "Save Changes"}
-                  </Button>
-                </form>
+                <AccountSettings 
+                  profile={profile} 
+                  setProfile={setProfile} 
+                  updateUser={updateUser} 
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -440,48 +153,11 @@ const ProfilePage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleNotificationsUpdate} className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium">Email Notifications</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Receive notifications via email.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={profile.emailNotifications}
-                        onCheckedChange={(checked) =>
-                          setProfile({
-                            ...profile,
-                            emailNotifications: checked,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <Separator />
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium">Push Notifications</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Receive push notifications in your browser.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={profile.pushNotifications}
-                        onCheckedChange={(checked) =>
-                          setProfile({ ...profile, pushNotifications: checked })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <Button type="submit" disabled={isSaving}>
-                    {isSaving ? "Saving..." : "Save Changes"}
-                  </Button>
-                </form>
+                <NotificationSettings 
+                  profile={profile} 
+                  setProfile={setProfile} 
+                  updateUser={updateUser} 
+                />
               </CardContent>
             </Card>
           </TabsContent>
