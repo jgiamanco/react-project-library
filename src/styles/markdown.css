@@ -7,6 +7,7 @@
   line-height: 1.6;
   word-wrap: break-word;
   padding: 16px;
+  max-width: 100%;
 }
 
 /* Headings */
@@ -32,10 +33,12 @@
   font-size: 1.5em;
   padding-bottom: 0.3em;
   border-bottom: 1px solid #eaecef;
+  margin-top: 32px;
 }
 
 .markdown-body h3 {
   font-size: 1.25em;
+  margin-top: 28px;
 }
 
 .markdown-body h4 {
@@ -55,13 +58,22 @@
 .markdown-body p {
   margin-top: 0;
   margin-bottom: 16px;
+  line-height: 1.7;
 }
 
 .markdown-body blockquote {
-  margin: 0;
-  padding: 0 1em;
+  margin: 16px 0;
+  padding: 0 16px;
   color: #6a737d;
   border-left: 0.25em solid #dfe2e5;
+}
+
+.markdown-body blockquote > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body blockquote > :last-child {
+  margin-bottom: 0;
 }
 
 .markdown-body strong {
@@ -84,16 +96,20 @@
 .markdown-body ul ol,
 .markdown-body ol ol,
 .markdown-body ol ul {
-  margin-top: 0;
-  margin-bottom: 0;
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 
 .markdown-body li {
-  word-wrap: break-all;
+  margin-bottom: 4px;
 }
 
 .markdown-body li + li {
-  margin-top: 0.25em;
+  margin-top: 4px;
+}
+
+.markdown-body li > p {
+  margin-top: 8px;
 }
 
 /* Code */
@@ -114,6 +130,7 @@
   background-color: #f6f8fa;
   border-radius: 3px;
   margin-bottom: 16px;
+  margin-top: 0;
 }
 
 .markdown-body pre code {
@@ -125,6 +142,7 @@
   word-wrap: normal;
   background-color: transparent;
   border: 0;
+  font-size: 100%;
 }
 
 /* Links */
@@ -150,6 +168,7 @@
 
 .markdown-body table th {
   font-weight: 600;
+  padding: 8px 13px;
 }
 
 .markdown-body table th,
@@ -172,6 +191,7 @@
   max-width: 100%;
   box-sizing: content-box;
   background-color: #fff;
+  margin: 8px 0;
 }
 
 /* Horizontal Rule */
@@ -181,6 +201,21 @@
   margin: 24px 0;
   background-color: #e1e4e8;
   border: 0;
+}
+
+/* Spacing Adjustments */
+.markdown-body > *:first-child {
+  margin-top: 0 !important;
+}
+
+.markdown-body > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.markdown-body .lead {
+  font-size: 1.1em;
+  font-weight: 400;
+  margin-bottom: 24px;
 }
 
 /* Dark Mode */
@@ -226,4 +261,8 @@
 
 .dark .markdown-body a {
   color: #58a6ff;
+}
+
+.dark .markdown-body img {
+  background-color: #0d1117;
 }
