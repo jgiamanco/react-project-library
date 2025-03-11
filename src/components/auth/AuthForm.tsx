@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-hooks";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
             location: location || undefined,
             photoURL: avatarUrl,
           };
+          
+          console.log("Signing up with profile:", userProfile);
           
           await signup(email, password, userProfile);
           

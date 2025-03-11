@@ -1,49 +1,16 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
 import { toast as sonnerToast } from "sonner";
-import { ensureUsersTable } from "@/services/user-service";
+import { storeUser } from "@/services/user-service";
 
 export const useSignup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  const createUserInSupabase = async (userData: User) => {
-    try {
-      // Check if the users table exists
-      const tableExists = await ensureUsersTable();
-      
-      if (!tableExists) {
-        console.log("Users table doesn't exist, skipping database insertion");
-        return false;
-      }
-      
-      // Now try to insert the user
-      const { error: insertError } = await supabase
-        .from("users")
-        .upsert({
-          email: userData.email,
-          display_name: userData.displayName,
-          photo_url: userData.photoURL,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'email'
-        });
-        
-      if (insertError) {
-        console.error("Error inserting user:", insertError);
-        return false;
-      }
-      
-      return true;
-    } catch (err) {
-      console.error("Error in createUserInSupabase:", err);
-      return false;
-    }
-  };
 
   const signup = async (email: string, password: string, profileData: Partial<User> = {}) => {
     try {
@@ -95,8 +62,8 @@ export const useSignup = () => {
           localStorage.setItem("user", JSON.stringify(newUser));
           
           // Try to store in database, but don't fail if it doesn't work
-          const dbStored = await createUserInSupabase(newUser);
-          console.log("User stored in database:", dbStored);
+          const storedUser = await storeUser(newUser);
+          console.log("User stored in database:", storedUser);
           
           // If email confirmation is required (which is the default for Supabase)
           const needsEmailConfirmation = !data.user.email_confirmed_at;

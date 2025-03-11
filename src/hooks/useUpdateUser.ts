@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { updateUserProfile } from "@/services/db-service";
+import { updateUserProfile } from "@/services/user-service";
 import { User } from "@/contexts/auth-types";
 import { toast as sonnerToast } from "sonner";
 
@@ -18,14 +18,13 @@ export const useUpdateUser = () => {
       
       const updatedUser = { ...user, ...updates };
       
-      // Update in our custom table using updateUserProfile for better field handling
+      // Update in our custom table using updateUserProfile
       const result = await updateUserProfile(user.email, updatedUser);
+      console.log("Profile update result:", result);
       
       if (!result) {
         throw new Error("Failed to update profile in database");
       }
-      
-      console.log("Profile updated in database:", result);
       
       // Update in localStorage for compatibility and fallback
       localStorage.setItem("user", JSON.stringify(updatedUser));

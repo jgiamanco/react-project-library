@@ -46,6 +46,8 @@ export const ensureUsersTable = async (): Promise<boolean> => {
 // User operations
 export const storeUser = async (userData: UserData): Promise<UserData> => {
   try {
+    console.log("Attempting to store user:", userData.email);
+    
     // First check if the users table exists
     const tableExists = await ensureUsersTable();
     
@@ -56,6 +58,7 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
     }
 
     try {
+      // Insert or update the user record
       const { data, error } = await supabase
         .from("users")
         .upsert({
@@ -79,6 +82,8 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
         console.warn('No data returned from user creation, using provided data');
         return userData;
       }
+      
+      console.log("User stored in database:", data);
 
       // Attempt to store extended profile data if available, but don't fail if it doesn't work
       if (userData.location || userData.bio || userData.website || 
@@ -112,6 +117,8 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
 
 export const getUser = async (email: string): Promise<UserData | null> => {
   try {
+    console.log("Attempting to get user:", email);
+    
     // Check if the users table exists
     const tableExists = await ensureUsersTable();
     
@@ -131,6 +138,13 @@ export const getUser = async (email: string): Promise<UserData | null> => {
       console.log("Error fetching user:", error.message);
       return null;
     }
+    
+    if (!data) {
+      console.log("No user found with email:", email);
+      return null;
+    }
+    
+    console.log("User found in database:", data);
 
     // Base user data
     const userData: UserData = {
@@ -143,6 +157,7 @@ export const getUser = async (email: string): Promise<UserData | null> => {
     try {
       const profile = await getUserProfile(email);
       if (profile) {
+        console.log("Extended profile found:", profile);
         // Merge profile data with user data
         return {
           ...userData,
@@ -183,6 +198,8 @@ export const getUserProfile = async (
   email: string
 ): Promise<UserProfile | null> => {
   try {
+    console.log("Attempting to get user profile:", email);
+    
     const { data, error } = await supabase
       .from("user_profiles")
       .select("*")
@@ -193,6 +210,13 @@ export const getUserProfile = async (
       console.log("Error fetching user profile:", error.message);
       return null;
     }
+    
+    if (!data) {
+      console.log("No profile found for email:", email);
+      return null;
+    }
+    
+    console.log("Profile found:", data);
 
     return data
       ? {
@@ -224,11 +248,13 @@ export const updateUserProfile = async (
   profile: Partial<UserProfile>
 ): Promise<UserProfile> => {
   try {
+    console.log("Attempting to update profile for:", email, profile);
+    
     const { data, error } = await supabase
       .from("user_profiles")
       .upsert({
         email,
-        display_name: profile.displayName,
+        display_name: profile.displayName || '',
         photo_url: profile.photoURL,
         bio: profile.bio,
         location: profile.location,
@@ -255,6 +281,8 @@ export const updateUserProfile = async (
         ...profile,
       };
     }
+    
+    console.log("Profile updated successfully:", data);
 
     return {
       id: data.id,
