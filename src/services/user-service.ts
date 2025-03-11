@@ -1,3 +1,4 @@
+
 import { supabase } from "./supabase-client";
 import { UserData, UserProfile } from "./types";
 
@@ -16,6 +17,22 @@ export const ensureUsersTable = async (): Promise<boolean> => {
     if (!checkError) {
       console.log("Users table exists");
       return true;
+    }
+    
+    if (checkError.message.includes("relation") && checkError.message.includes("does not exist")) {
+      console.log("Users table doesn't exist. Please create the table using the Supabase SQL editor");
+      // Show a helpful message to the developer
+      console.info(`
+        Run this SQL in Supabase:
+        CREATE TABLE public.users (
+          email VARCHAR PRIMARY KEY,
+          display_name VARCHAR NOT NULL,
+          photo_url VARCHAR,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+        );
+        ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+      `);
     }
     
     console.error("Users table doesn't exist:", checkError.message);

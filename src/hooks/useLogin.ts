@@ -55,84 +55,60 @@ export const useLogin = () => {
       }
 
       if (data && data.user) {
+        // Create a basic profile regardless of database access
+        const basicProfile: User = {
+          email: data.user.email || '',
+          displayName: data.user.email?.split("@")[0] || 'User',
+          photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+          location: '',
+          bio: '',
+          website: '',
+          github: '',
+          twitter: '',
+          role: 'User',
+          theme: 'system',
+          emailNotifications: true,
+          pushNotifications: false,
+        };
+        
+        let finalProfile: User = basicProfile;
+        
         try {
-          // Create a basic profile regardless of database access
-          const basicProfile: User = {
-            email: data.user.email || '',
-            displayName: data.user.email?.split("@")[0] || 'User',
-            photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
-            location: '',
-            bio: '',
-            website: '',
-            github: '',
-            twitter: '',
-            role: 'User',
-            theme: 'system',
-            emailNotifications: true,
-            pushNotifications: false,
-          };
+          // Try to get user profile from database, but don't fail if it doesn't work
+          const userProfile = await getUser(data.user.email || '');
           
-          let finalProfile: User = basicProfile;
-          
-          try {
-            // Try to get user profile from database, but don't fail if it doesn't work
-            const userProfile = await getUser(data.user.email || '');
-            
-            // Use the database profile if available, otherwise use basic profile
-            if (userProfile) {
-              finalProfile = userProfile;
-            }
-          } catch (profileError) {
-            console.error("Error getting user profile, using basic profile:", profileError);
-            // Continue with basic profile
+          if (userProfile) {
+            console.log("User profile found in database:", userProfile);
+            finalProfile = userProfile;
+          } else {
+            console.log("No user profile found in database, using basic profile");
           }
-          
-          // Store in localStorage
-          localStorage.setItem("user", JSON.stringify(finalProfile));
-          localStorage.setItem("authenticated", "true");
-          localStorage.setItem("lastLoggedInEmail", data.user.email || '');
-
-          toast({
-            title: "Welcome back!",
-            description: "You have successfully signed in.",
-          });
-
-          navigate("/dashboard", { replace: true });
-          
-          return finalProfile;
         } catch (profileError) {
           console.error("Error getting user profile, using basic profile:", profileError);
-          
-          // Create a basic profile as fallback
-          const fallbackProfile: User = {
-            email: data.user.email || '',
-            displayName: data.user.email?.split("@")[0] || 'User',
-            photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
-            location: '',
-            bio: '',
-            website: '',
-            github: '',
-            twitter: '',
-            role: 'User',
-            theme: 'system',
-            emailNotifications: true,
-            pushNotifications: false,
-          };
-          
-          // Store in localStorage
-          localStorage.setItem("user", JSON.stringify(fallbackProfile));
-          localStorage.setItem("authenticated", "true");
-          localStorage.setItem("lastLoggedInEmail", data.user.email || '');
-
-          toast({
-            title: "Welcome back!",
-            description: "You have successfully signed in.",
-          });
-
-          navigate("/dashboard", { replace: true });
-          
-          return fallbackProfile;
+          // If tables don't exist, show a more helpful message
+          if (profileError instanceof Error && 
+              profileError.message.includes("relation") && 
+              profileError.message.includes("does not exist")) {
+            console.info(`
+              Some database tables are missing. If you're setting up this project,
+              make sure to create all required tables in Supabase.
+            `);
+          }
         }
+        
+        // Store in localStorage
+        localStorage.setItem("user", JSON.stringify(finalProfile));
+        localStorage.setItem("authenticated", "true");
+        localStorage.setItem("lastLoggedInEmail", data.user.email || '');
+
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully signed in.",
+        });
+
+        navigate("/dashboard", { replace: true });
+        
+        return finalProfile;
       }
       return null;
     } catch (error: any) {
