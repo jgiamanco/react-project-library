@@ -15,11 +15,14 @@ import { ProfileInformation } from "@/components/profile/ProfileInformation";
 import { AccountSettings } from "@/components/profile/AccountSettings";
 import { NotificationSettings } from "@/components/profile/NotificationSettings";
 import { ProfileLoading } from "@/components/profile/ProfileLoading";
+import { getUserProfile, updateUserProfile } from "@/services/db-service";
+import { toast } from "@/components/ui/use-toast";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, updateUser, isLoading: authLoading } = useAuth();
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Get the tab from the URL query parameters
   const queryParams = new URLSearchParams(location.search);
@@ -42,26 +45,91 @@ const ProfilePage = () => {
     pushNotifications: false,
   });
 
-  // Update profile state when user data changes
+  // Load user profile from database
   useEffect(() => {
-    if (user) {
-      console.log("User data loaded in ProfilePage:", user);
-      setProfile({
-        email: user.email,
-        displayName: user.displayName || "",
-        photoURL: user.photoURL || "",
-        bio: user.bio || "Tell us about yourself...",
-        location: user.location || "",
-        website: user.website || "",
-        github: user.github || "",
-        twitter: user.twitter || "",
-        role: user.role || "Developer",
-        theme: user.theme || "system",
-        emailNotifications: user.emailNotifications !== undefined ? user.emailNotifications : true,
-        pushNotifications: user.pushNotifications !== undefined ? user.pushNotifications : false,
+    const loadUserProfile = async () => {
+      if (!user?.email) {
+        if (!authLoading) {
+          navigate("/signin", { replace: true });
+        }
+        return;
+      }
+
+      try {
+        const dbProfile = await getUserProfile(user.email);
+        if (dbProfile) {
+          setProfile({
+            email: dbProfile.email,
+            displayName: dbProfile.displayName,
+            photoURL: dbProfile.photoURL || "",
+            bio: dbProfile.bio || "Tell us about yourself...",
+            location: dbProfile.location || "",
+            website: dbProfile.website || "",
+            github: dbProfile.github || "",
+            twitter: dbProfile.twitter || "",
+            role: dbProfile.role || "Developer",
+            theme: dbProfile.theme || "system",
+            emailNotifications: dbProfile.emailNotifications ?? true,
+            pushNotifications: dbProfile.pushNotifications ?? false,
+          });
+        } else {
+          // If no profile exists, create one with default values
+          const defaultProfile = {
+            email: user.email,
+            displayName: user.displayName || user.email.split("@")[0],
+            photoURL: user.photoURL || "",
+            bio: "Tell us about yourself...",
+            role: "Developer",
+            theme: "system",
+            emailNotifications: true,
+            pushNotifications: false,
+          };
+          await updateUserProfile(user.email, defaultProfile);
+          setProfile(defaultProfile as User);
+        }
+      } catch (error) {
+        console.error("Error loading profile:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data. Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    loadUserProfile();
+  }, [user, authLoading, navigate]);
+
+  // Handle profile updates
+  const handleProfileUpdate = async (updates: Partial<User>) => {
+    if (!user?.email) return;
+
+    setIsUpdating(true);
+    try {
+      // Update database
+      await updateUserProfile(user.email, updates);
+
+      // Update auth context
+      await updateUser(updates);
+
+      // Update local state
+      setProfile((prev) => ({ ...prev, ...updates }));
+
+      toast({
+        title: "Success",
+        description: "Profile updated successfully.",
       });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
     }
-  }, [user]);
+  };
 
   // Update the URL when the tab changes
   const handleTabChange = (value: string) => {
@@ -71,17 +139,11 @@ const ProfilePage = () => {
     });
   };
 
-  // Show loading state when user data is loading
-  if (authLoading) {
+  if (authLoading || isUpdating) {
     return <ProfileLoading />;
   }
 
-  // If no user is found, redirect to sign in
   if (!user && !authLoading) {
-    useEffect(() => {
-      navigate("/signin", { replace: true });
-    }, [navigate]);
-    
     return null;
   }
 
@@ -116,10 +178,10 @@ const ProfilePage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ProfileInformation 
-                  profile={profile} 
-                  setProfile={setProfile} 
-                  updateUser={updateUser} 
+                <ProfileInformation
+                  profile={profile}
+                  setProfile={setProfile}
+                  updateUser={handleProfileUpdate}
                 />
               </CardContent>
             </Card>
@@ -134,10 +196,10 @@ const ProfilePage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <AccountSettings 
-                  profile={profile} 
-                  setProfile={setProfile} 
-                  updateUser={updateUser} 
+                <AccountSettings
+                  profile={profile}
+                  setProfile={setProfile}
+                  updateUser={handleProfileUpdate}
                 />
               </CardContent>
             </Card>
@@ -152,10 +214,10 @@ const ProfilePage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <NotificationSettings 
-                  profile={profile} 
-                  setProfile={setProfile} 
-                  updateUser={updateUser} 
+                <NotificationSettings
+                  profile={profile}
+                  setProfile={setProfile}
+                  updateUser={handleProfileUpdate}
                 />
               </CardContent>
             </Card>
