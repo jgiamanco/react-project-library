@@ -4,6 +4,8 @@ import { UserData, UserProfile } from "./types";
 // Helper function to ensure the users table exists
 export const ensureUsersTable = async (): Promise<boolean> => {
   try {
+    console.log("Checking if users table exists...");
+    
     // Check if the table exists by querying for its records
     const { error: checkError } = await supabase
       .from('users')
@@ -11,108 +13,43 @@ export const ensureUsersTable = async (): Promise<boolean> => {
       .limit(1);
     
     // If no error, then the table exists
-    if (!checkError) return true;
-    
-    // If error indicates the table doesn't exist, create it
-    if (checkError.message.includes("relation") && checkError.message.includes("does not exist")) {
-      console.log("Users table doesn't exist, creating it now");
-      
-      // Create the table directly with SQL
-      const { error: createError } = await supabase.rpc('exec_sql', {
-        sql: `
-          CREATE TABLE IF NOT EXISTS users (
-            email VARCHAR PRIMARY KEY,
-            display_name VARCHAR NOT NULL,
-            photo_url VARCHAR,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-          );
-          
-          -- Enable RLS
-          ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-          
-          -- Create RLS policies for users table
-          DO $$
-          BEGIN
-            IF NOT EXISTS (
-              SELECT 1 FROM pg_policies 
-              WHERE tablename = 'users' AND policyname = 'Users can read own data'
-            ) THEN
-              CREATE POLICY "Users can read own data" ON users
-                FOR SELECT USING (auth.uid()::text = email);
-            END IF;
-            
-            IF NOT EXISTS (
-              SELECT 1 FROM pg_policies 
-              WHERE tablename = 'users' AND policyname = 'Users can insert own data'
-            ) THEN
-              CREATE POLICY "Users can insert own data" ON users
-                FOR INSERT WITH CHECK (auth.uid()::text = email);
-            END IF;
-            
-            IF NOT EXISTS (
-              SELECT 1 FROM pg_policies 
-              WHERE tablename = 'users' AND policyname = 'Users can update own data'
-            ) THEN
-              CREATE POLICY "Users can update own data" ON users
-                FOR UPDATE USING (auth.uid()::text = email);
-            END IF;
-          END
-          $$;
-        `
-      });
-      
-      if (createError) {
-        console.error("Error creating users table with SQL:", createError);
-        
-        // Fallback: Try simpler table creation without policies
-        const { error: simpleFallbackError } = await supabase.rpc('exec_sql', {
-          sql: `CREATE TABLE IF NOT EXISTS users (
-            email VARCHAR PRIMARY KEY,
-            display_name VARCHAR NOT NULL,
-            photo_url VARCHAR,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-          )`
-        });
-        
-        if (simpleFallbackError) {
-          console.error("Error with simple table creation fallback:", simpleFallbackError);
-          return false;
-        }
-      }
-      
-      // Also create the user_profiles table if it doesn't exist
-      const { error: profilesError } = await supabase.rpc('exec_sql', {
-        sql: `
-          CREATE TABLE IF NOT EXISTS user_profiles (
-            id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-            email VARCHAR NOT NULL REFERENCES users(email) ON DELETE CASCADE,
-            display_name VARCHAR NOT NULL,
-            photo_url VARCHAR,
-            bio TEXT,
-            location VARCHAR,
-            website VARCHAR,
-            github VARCHAR,
-            twitter VARCHAR,
-            role VARCHAR,
-            theme VARCHAR CHECK (theme IN ('light', 'dark', 'system')),
-            email_notifications BOOLEAN DEFAULT true,
-            push_notifications BOOLEAN DEFAULT false,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-          )`
-      });
-      
-      if (profilesError) {
-        console.error("Error creating user_profiles table:", profilesError);
-      }
-      
-      console.log("Tables created successfully");
+    if (!checkError) {
+      console.log("Users table exists");
       return true;
     }
     
-    console.error("Users table doesn't exist or is not accessible:", checkError.message);
+    // If error indicates the table doesn't exist, try to create it
+    if (checkError.message.includes("relation") && checkError.message.includes("does not exist")) {
+      console.log("Users table doesn't exist, trying to create it now");
+      
+      try {
+        // Attempt to create the table with RLS enabled
+        const { error: createError } = await supabase.rpc('exec_sql', {
+          sql: `
+            CREATE TABLE IF NOT EXISTS users (
+              email VARCHAR PRIMARY KEY,
+              display_name VARCHAR NOT NULL,
+              photo_url VARCHAR,
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+              updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+            );
+          `
+        });
+        
+        if (createError) {
+          console.error("Error creating users table with SQL:", createError);
+          return false;
+        }
+        
+        console.log("Users table created successfully");
+        return true;
+      } catch (createError) {
+        console.error("Exception when creating users table:", createError);
+        return false;
+      }
+    }
+    
+    console.error("Users table doesn't exist and couldn't be created:", checkError.message);
     return false;
   } catch (err) {
     console.error("Error checking/creating users table:", err);
@@ -123,58 +60,63 @@ export const ensureUsersTable = async (): Promise<boolean> => {
 // User operations
 export const storeUser = async (userData: UserData): Promise<UserData> => {
   try {
-    // First check if the users table exists
+    // First check if the users table exists and try to create it if not
     const tableExists = await ensureUsersTable();
     
     if (!tableExists) {
-      // If table doesn't exist, fallback to storing in localStorage only
+      // If table doesn't exist, store in localStorage only and return userData
       console.log("Users table not available, storing user in localStorage only");
       return userData;
     }
 
-    const { data, error } = await supabase
-      .from("users")
-      .upsert({
-        email: userData.email,
-        display_name: userData.displayName,
-        photo_url: userData.photoURL,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'email'
-      })
-      .select('*')
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .upsert({
+          email: userData.email,
+          display_name: userData.displayName || userData.email.split('@')[0],
+          photo_url: userData.photoURL,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'email'
+        })
+        .select('*')
+        .single();
 
-    if (error) {
-      console.error('Error storing user:', error);
-      // Return the userData as is since we couldn't store it
-      return userData;
-    }
-
-    if (!data) {
-      console.warn('No data returned from user creation, using provided data');
-      return userData;
-    }
-
-    // Also store extended profile data if available
-    if (userData.location || userData.bio || userData.website || 
-        userData.github || userData.twitter || userData.role || 
-        userData.theme || userData.emailNotifications !== undefined || 
-        userData.pushNotifications !== undefined) {
-      
-      try {
-        await updateUserProfile(userData.email, userData);
-      } catch (profileError) {
-        console.error('Error storing extended profile data:', profileError);
+      if (error) {
+        console.error('Error storing user:', error);
+        // Return the userData as is since we couldn't store it
+        return userData;
       }
-    }
 
-    return {
-      email: data.email,
-      displayName: data.display_name,
-      photoURL: data.photo_url,
-      ...userData, // Keep any additional profile fields that might not be in the users table
-    };
+      if (!data) {
+        console.warn('No data returned from user creation, using provided data');
+        return userData;
+      }
+
+      // Attempt to store extended profile data if available, but don't fail if it doesn't work
+      if (userData.location || userData.bio || userData.website || 
+          userData.github || userData.twitter || userData.role || 
+          userData.theme || userData.emailNotifications !== undefined || 
+          userData.pushNotifications !== undefined) {
+        
+        try {
+          await updateUserProfile(userData.email, userData);
+        } catch (profileError) {
+          console.error('Error storing extended profile data:', profileError);
+        }
+      }
+
+      return {
+        email: data.email,
+        displayName: data.display_name,
+        photoURL: data.photo_url,
+        ...userData, // Keep any additional profile fields that might not be in the users table
+      };
+    } catch (upsertError) {
+      console.error('Error during upsert operation:', upsertError);
+      return userData;
+    }
   } catch (err) {
     console.error('Unexpected error storing user:', err);
     // In case of any error, return the original userData
@@ -184,7 +126,15 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
 
 export const getUser = async (email: string): Promise<UserData | null> => {
   try {
-    // First try to get basic user data
+    // Check if the users table exists
+    const tableExists = await ensureUsersTable();
+    
+    if (!tableExists) {
+      console.log("Users table not available, no profile can be retrieved");
+      return null;
+    }
+    
+    // Try to get basic user data
     const { data, error } = await supabase
       .from("users")
       .select()
@@ -234,9 +184,12 @@ export const getUser = async (email: string): Promise<UserData | null> => {
 };
 
 export const deleteUser = async (email: string): Promise<void> => {
-  const { error } = await supabase.from("users").delete().eq("email", email);
-
-  if (error) throw error;
+  try {
+    const { error } = await supabase.from("users").delete().eq("email", email);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Error deleting user:", error);
+  }
 };
 
 // User Profile operations

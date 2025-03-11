@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
@@ -39,7 +38,27 @@ export const useAuthInit = () => {
       try {
         setIsLoading(true);
         
-        // Check if there's an active Supabase session
+        // First check localStorage for faster loading
+        const storedAuth = localStorage.getItem("authenticated");
+        const storedUser = localStorage.getItem("user");
+        const lastLoggedInEmail = localStorage.getItem("lastLoggedInEmail");
+        
+        if (storedAuth === "true" && storedUser) {
+          try {
+            // Parse and set the user from localStorage immediately for a faster UI update
+            const parsedUser = JSON.parse(storedUser) as User;
+            setUser(parsedUser);
+            setIsAuthenticated(true);
+          } catch (e) {
+            console.error("Invalid stored user data:", e);
+            // Clear invalid data
+            localStorage.removeItem("authenticated");
+            localStorage.removeItem("user");
+            localStorage.removeItem("lastLoggedInEmail");
+          }
+        }
+        
+        // Now check if there's an active Supabase session
         const { data: sessionData } = await supabase.auth.getSession();
         
         if (sessionData?.session) {
@@ -48,112 +67,55 @@ export const useAuthInit = () => {
           if (userData?.user) {
             console.log("Active session found for:", userData.user.email);
             
-            // We'll use a basic profile first, which we can enrich later if possible
+            // Create a basic profile for the user
             const email = userData.user.email || '';
-            const basicProfile = createBasicUserProfile(email);
+            let userProfile = createBasicUserProfile(email);
             
-            // Try to get a stored profile from localStorage
-            try {
-              const storedUser = localStorage.getItem("user");
-              if (storedUser) {
+            // Try to use stored profile if available
+            if (storedAuth === "true" && storedUser) {
+              try {
                 const parsedProfile = JSON.parse(storedUser) as User;
-                // Use the stored profile with the basic profile as a fallback
-                Object.keys(basicProfile).forEach((key) => {
-                  if (!parsedProfile[key as keyof User]) {
-                    parsedProfile[key as keyof User] = basicProfile[key as keyof User];
-                  }
-                });
-                setUser(parsedProfile);
-              } else {
-                setUser(basicProfile);
+                // Use the stored profile with the basic profile as fallback fields
+                userProfile = {
+                  ...userProfile,
+                  ...parsedProfile,
+                  email, // Always use the current session email
+                };
+              } catch (e) {
+                console.error("Error parsing stored user:", e);
+                // Keep using basic profile
               }
-            } catch (e) {
-              // If there's an error parsing, just use the basic profile
-              setUser(basicProfile);
             }
             
-            // Set authenticated state
+            // Set user and authenticated state
+            setUser(userProfile);
             setIsAuthenticated(true);
             localStorage.setItem("authenticated", "true");
             localStorage.setItem("lastLoggedInEmail", email);
-            
-            // Always save the current user to localStorage
-            if (user) {
-              localStorage.setItem("user", JSON.stringify(user));
-            }
+            localStorage.setItem("user", JSON.stringify(userProfile));
           } else {
-            // Clear auth state since there's no valid user
+            // Clear auth state since session exists but no valid user
             localStorage.removeItem("authenticated");
             setUser(null);
             setIsAuthenticated(false);
           }
-        } else {
-          // No active session, check localStorage as fallback
-          const storedAuth = localStorage.getItem("authenticated");
-          const storedUser = localStorage.getItem("user");
-          const lastLoggedInEmail = localStorage.getItem("lastLoggedInEmail");
-          
-          console.log("No active session, checking localStorage:", { storedAuth, lastLoggedInEmail });
-          
-          if (storedAuth === "true" && storedUser && lastLoggedInEmail) {
-            try {
-              // Try to restore the session
-              const parsedUser = JSON.parse(storedUser) as User;
-              
-              console.log("Found stored auth, trying to restore session");
-              
-              // Attempt to retrieve the session
-              const { data: { session } } = await supabase.auth.getSession();
-              
-              if (session) {
-                console.log("Valid session found, setting user");
-                setUser(parsedUser);
-                setIsAuthenticated(true);
-              } else {
-                // Try to refresh the session
-                console.log("No valid session, trying to refresh");
-                const { error } = await supabase.auth.refreshSession();
-                
-                if (!error) {
-                  console.log("Session refreshed successfully");
-                  setUser(parsedUser);
-                  setIsAuthenticated(true);
-                } else {
-                  console.log("Session couldn't be refreshed:", error);
-                  // Clear cached auth as session couldn't be refreshed
-                  localStorage.removeItem("authenticated");
-                  localStorage.removeItem("user");
-                  localStorage.removeItem("lastLoggedInEmail");
-                  setUser(null);
-                  setIsAuthenticated(false);
-                }
-              }
-            } catch (e) {
-              console.error("Invalid stored user data:", e);
-              // Invalid stored user data
-              localStorage.removeItem("authenticated");
-              localStorage.removeItem("user");
-              localStorage.removeItem("lastLoggedInEmail");
-              setUser(null);
-              setIsAuthenticated(false);
-            }
-          } else {
-            console.log("No stored auth, clearing local storage");
-            // No stored auth
-            localStorage.removeItem("authenticated");
-            localStorage.removeItem("user");
-            localStorage.removeItem("lastLoggedInEmail");
-            setUser(null);
-            setIsAuthenticated(false);
-          }
+        } else if (storedAuth !== "true" || !storedUser) {
+          // No active session and no valid localStorage data
+          localStorage.removeItem("authenticated");
+          localStorage.removeItem("user");
+          localStorage.removeItem("lastLoggedInEmail");
+          setUser(null);
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error("Auth check error:", error);
-        localStorage.removeItem("authenticated");
-        localStorage.removeItem("user");
-        localStorage.removeItem("lastLoggedInEmail");
-        setUser(null);
-        setIsAuthenticated(false);
+        // Don't clear localStorage on error - the user might be offline
+        // Just set authenticated state based on localStorage
+        if (localStorage.getItem("authenticated") === "true" && localStorage.getItem("user")) {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
       } finally {
         clearTimeout(loadingTimeout);
         setIsLoading(false);
@@ -165,7 +127,17 @@ export const useAuthInit = () => {
       console.log("Auth state changed:", event, session ? "Session exists" : "No session");
       
       if (event === 'SIGNED_IN' && session) {
-        await checkAuth();
+        const { data } = await supabase.auth.getUser();
+        if (data?.user) {
+          const email = data.user.email || '';
+          const basicProfile = createBasicUserProfile(email);
+          
+          setUser(basicProfile);
+          setIsAuthenticated(true);
+          localStorage.setItem("authenticated", "true");
+          localStorage.setItem("lastLoggedInEmail", email);
+          localStorage.setItem("user", JSON.stringify(basicProfile));
+        }
       } else if (event === 'SIGNED_OUT') {
         console.log("User signed out, clearing user data");
         localStorage.removeItem("authenticated");

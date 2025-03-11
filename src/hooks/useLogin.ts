@@ -2,9 +2,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { getUser, storeUser } from "@/services/db-service";
+import { getUser } from "@/services/db-service";
 import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
+import { toast as sonnerToast } from "sonner";
 
 export const useLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +15,7 @@ export const useLogin = () => {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
+      sonnerToast.dismiss(); // Clear any existing toasts
 
       // Sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -53,33 +55,75 @@ export const useLogin = () => {
       }
 
       if (data && data.user) {
-        // Get or create user profile
-        let userProfile = await getUser(data.user.email || '');
-        
-        if (!userProfile) {
-          // Create user profile if it doesn't exist
-          const newUser: User = {
+        try {
+          // Try to get user profile from database
+          const userProfile = await getUser(data.user.email || '');
+          
+          // Create a basic profile regardless of database access
+          const basicProfile: User = {
             email: data.user.email || '',
             displayName: data.user.email?.split("@")[0] || 'User',
             photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+            location: '',
+            bio: '',
+            website: '',
+            github: '',
+            twitter: '',
+            role: 'User',
+            theme: 'system',
+            emailNotifications: true,
+            pushNotifications: false,
           };
           
-          userProfile = await storeUser(newUser);
+          // Use the database profile if available, otherwise use basic profile
+          const finalProfile = userProfile || basicProfile;
+          
+          // Store in localStorage
+          localStorage.setItem("user", JSON.stringify(finalProfile));
+          localStorage.setItem("authenticated", "true");
+          localStorage.setItem("lastLoggedInEmail", data.user.email || '');
+
+          toast({
+            title: "Welcome back!",
+            description: "You have successfully signed in.",
+          });
+
+          navigate("/dashboard", { replace: true });
+          
+          return finalProfile;
+        } catch (profileError) {
+          console.error("Error getting user profile, using basic profile:", profileError);
+          
+          // Create a basic profile as fallback
+          const fallbackProfile: User = {
+            email: data.user.email || '',
+            displayName: data.user.email?.split("@")[0] || 'User',
+            photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+            location: '',
+            bio: '',
+            website: '',
+            github: '',
+            twitter: '',
+            role: 'User',
+            theme: 'system',
+            emailNotifications: true,
+            pushNotifications: false,
+          };
+          
+          // Store in localStorage
+          localStorage.setItem("user", JSON.stringify(fallbackProfile));
+          localStorage.setItem("authenticated", "true");
+          localStorage.setItem("lastLoggedInEmail", data.user.email || '');
+
+          toast({
+            title: "Welcome back!",
+            description: "You have successfully signed in.",
+          });
+
+          navigate("/dashboard", { replace: true });
+          
+          return fallbackProfile;
         }
-        
-        // Store in localStorage for backwards compatibility
-        localStorage.setItem("user", JSON.stringify(userProfile));
-        localStorage.setItem("authenticated", "true");
-        localStorage.setItem("lastLoggedInEmail", data.user.email || '');
-
-        toast({
-          title: "Welcome back!",
-          description: "You have successfully signed in.",
-        });
-
-        navigate("/dashboard", { replace: true });
-        
-        return userProfile;
       }
       return null;
     } catch (error: any) {
