@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/auth-hooks";
 import { getTodosByUser, storeTodo, deleteTodo } from "@/services/todo-service";
@@ -60,13 +59,14 @@ export const useTodoState = () => {
 
   // Add a new todo (memoized)
   const addTodo = useCallback(async () => {
-    if (inputValue.trim() === "" || !user) return;
+    if (inputValue.trim() === "") return;
 
+    // Generate a unique ID for the new todo
     const newTodo = {
       id: uuidv4(),
       text: inputValue,
       completed: false,
-      userId: user.email,
+      userId: user?.email || 'anonymous',
     };
 
     try {
@@ -74,12 +74,19 @@ export const useTodoState = () => {
       setTodos(prevTodos => [...prevTodos, newTodo]);
       setInputValue("");
       
-      // Then create the todo in the database
-      await storeTodo(newTodo);
+      // Only try to save to database if user is logged in
+      if (user) {
+        try {
+          await storeTodo(newTodo);
+        } catch (error) {
+          console.error("Error adding todo:", error);
+          // Even if there's a database error, keep the todo in the UI
+          // Don't remove it since we're in demo mode
+        }
+      }
     } catch (error) {
-      console.error("Error adding todo:", error);
-      // If there's an error, remove the optimistically added todo
-      setTodos(prevTodos => prevTodos.filter(todo => todo.id !== newTodo.id));
+      console.error("Unexpected error in addTodo:", error);
+      // Don't remove the todo even on error
     }
   }, [inputValue, user]);
 
@@ -88,15 +95,18 @@ export const useTodoState = () => {
     try {
       // Optimistically update UI
       setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
-      // Then delete from database
-      await deleteTodo(id);
-    } catch (error) {
-      console.error("Error deleting todo:", error);
-      // If there's an error, reload the todos to restore the correct state
+      
+      // Only try to delete from database if user is logged in
       if (user) {
-        const userTodos = await getTodosByUser(user.email);
-        setTodos(userTodos);
+        try {
+          await deleteTodo(id);
+        } catch (error) {
+          console.error("Error deleting todo:", error);
+          // No rollback needed for delete operation in demo
+        }
       }
+    } catch (error) {
+      console.error("Unexpected error in deleteTodoItem:", error);
     }
   }, [user]);
 
@@ -113,16 +123,17 @@ export const useTodoState = () => {
         todo.id === id ? updatedTodo : todo
       );
       
-      // Update in database
-      storeTodo(updatedTodo).catch(error => {
-        console.error("Error updating todo:", error);
-        // Revert on error
-        setTodos(prevTodos);
-      });
+      // Update in database only if user is logged in
+      if (user) {
+        storeTodo(updatedTodo).catch(error => {
+          console.error("Error updating todo:", error);
+          // Don't revert the UI state on error for the demo
+        });
+      }
       
       return updatedTodos;
     });
-  }, []);
+  }, [user]);
 
   // Handle drag and drop reordering (memoized)
   const handleDragEnd = useCallback((result: DropResult) => {
@@ -147,25 +158,19 @@ export const useTodoState = () => {
 
   // Clear completed todos (memoized)
   const clearCompleted = useCallback(async () => {
-    if (!user) return;
+    // Get completed todos before filtering them out
+    const completedTodos = todos.filter(todo => todo.completed);
     
-    try {
-      const completedTodos = todos.filter(todo => todo.completed);
-      // Optimistically update UI
-      setTodos(prevTodos => prevTodos.filter(todo => !todo.completed));
-      
-      // Delete in database
-      await Promise.all(completedTodos.map(todo => deleteTodo(todo.id)));
-    } catch (error) {
-      console.error("Error clearing completed todos:", error);
-      // Reload todos on error
-      if (user) {
-        try {
-          const userTodos = await getTodosByUser(user.email);
-          setTodos(userTodos);
-        } catch (loadError) {
-          console.error("Error reloading todos:", loadError);
-        }
+    // Optimistically update UI
+    setTodos(prevTodos => prevTodos.filter(todo => !todo.completed));
+    
+    // Only try database operations if user is logged in
+    if (user) {
+      try {
+        await Promise.all(completedTodos.map(todo => deleteTodo(todo.id)));
+      } catch (error) {
+        console.error("Error clearing completed todos:", error);
+        // Don't revert the UI state on error for the demo
       }
     }
   }, [todos, user]);
