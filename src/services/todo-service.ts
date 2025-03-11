@@ -1,26 +1,36 @@
-
 import { supabase } from "./supabase-client";
 import { TodoItem } from "./types";
 import { v4 as uuidv4 } from "uuid";
 
 // Todo operations
 export const getTodosByUser = async (userId: string): Promise<TodoItem[]> => {
-  const { data, error } = await supabase
-    .from("todos")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from("todos")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
-  if (error) throw error;
+    if (error) throw error;
 
-  return data.map((todo) => ({
-    id: todo.id,
-    text: todo.text,
-    completed: todo.completed,
-    userId: todo.user_id,
-    createdAt: todo.created_at,
-    updatedAt: todo.updated_at,
-  }));
+    // Return empty array if no data
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    return data.map((todo) => ({
+      id: todo.id,
+      text: todo.text,
+      completed: todo.completed,
+      userId: todo.user_id,
+      createdAt: todo.created_at,
+      updatedAt: todo.updated_at,
+    }));
+  } catch (error) {
+    console.error("Error fetching todos:", error);
+    // Return empty array on error to prevent app from getting stuck
+    return [];
+  }
 };
 
 export const storeTodo = async (todo: Omit<TodoItem, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<TodoItem> => {

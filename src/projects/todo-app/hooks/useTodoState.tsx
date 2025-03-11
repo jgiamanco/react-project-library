@@ -23,24 +23,39 @@ export const useTodoState = () => {
   // Load todos from database on mount and when user changes
   useEffect(() => {
     const loadTodos = async () => {
-      if (!user) {
-        setTodos([]);
-        setIsLoading(false);
-        return;
-      }
-
       try {
         setIsLoading(true);
+        
+        if (!user) {
+          setTodos([]);
+          setIsLoading(false);
+          return;
+        }
+
         const userTodos = await getTodosByUser(user.email);
         setTodos(userTodos);
       } catch (error) {
         console.error("Error loading todos:", error);
+        // Even if there's an error, stop the loading state
+        setTodos([]);
       } finally {
+        // Always set loading to false to prevent infinite loading
         setIsLoading(false);
       }
     };
 
+    // Set a timeout to ensure loading state doesn't get stuck
+    const loadingTimeout = setTimeout(() => {
+      if (isLoading) {
+        console.log("Todo loading taking too long, stopping loading state");
+        setIsLoading(false);
+      }
+    }, 5000);
+
     loadTodos();
+
+    // Clear timeout on cleanup
+    return () => clearTimeout(loadingTimeout);
   }, [user]);
 
   // Add a new todo (memoized)
