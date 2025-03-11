@@ -1,5 +1,6 @@
 
-import { useParams, useNavigate, useLocation, useEffect, useState, lazy, Suspense } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { projects } from "@/data/projects";
