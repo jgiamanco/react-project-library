@@ -18,41 +18,10 @@ export const ensureUsersTable = async (): Promise<boolean> => {
       return true;
     }
     
-    // If error indicates the table doesn't exist, try to create it
-    if (checkError.message.includes("relation") && checkError.message.includes("does not exist")) {
-      console.log("Users table doesn't exist, trying to create it now");
-      
-      try {
-        // Attempt to create the table with RLS enabled
-        const { error: createError } = await supabase.rpc('exec_sql', {
-          sql: `
-            CREATE TABLE IF NOT EXISTS users (
-              email VARCHAR PRIMARY KEY,
-              display_name VARCHAR NOT NULL,
-              photo_url VARCHAR,
-              created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-              updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-            );
-          `
-        });
-        
-        if (createError) {
-          console.error("Error creating users table with SQL:", createError);
-          return false;
-        }
-        
-        console.log("Users table created successfully");
-        return true;
-      } catch (createError) {
-        console.error("Exception when creating users table:", createError);
-        return false;
-      }
-    }
-    
-    console.error("Users table doesn't exist and couldn't be created:", checkError.message);
+    console.error("Users table doesn't exist:", checkError.message);
     return false;
   } catch (err) {
-    console.error("Error checking/creating users table:", err);
+    console.error("Error checking users table:", err);
     return false;
   }
 };
@@ -60,7 +29,7 @@ export const ensureUsersTable = async (): Promise<boolean> => {
 // User operations
 export const storeUser = async (userData: UserData): Promise<UserData> => {
   try {
-    // First check if the users table exists and try to create it if not
+    // First check if the users table exists
     const tableExists = await ensureUsersTable();
     
     if (!tableExists) {

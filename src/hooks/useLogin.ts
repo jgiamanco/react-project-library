@@ -56,9 +56,6 @@ export const useLogin = () => {
 
       if (data && data.user) {
         try {
-          // Try to get user profile from database
-          const userProfile = await getUser(data.user.email || '');
-          
           // Create a basic profile regardless of database access
           const basicProfile: User = {
             email: data.user.email || '',
@@ -75,8 +72,20 @@ export const useLogin = () => {
             pushNotifications: false,
           };
           
-          // Use the database profile if available, otherwise use basic profile
-          const finalProfile = userProfile || basicProfile;
+          let finalProfile: User = basicProfile;
+          
+          try {
+            // Try to get user profile from database, but don't fail if it doesn't work
+            const userProfile = await getUser(data.user.email || '');
+            
+            // Use the database profile if available, otherwise use basic profile
+            if (userProfile) {
+              finalProfile = userProfile;
+            }
+          } catch (profileError) {
+            console.error("Error getting user profile, using basic profile:", profileError);
+            // Continue with basic profile
+          }
           
           // Store in localStorage
           localStorage.setItem("user", JSON.stringify(finalProfile));

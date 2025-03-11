@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
 import { toast as sonnerToast } from "sonner";
+import { ensureUsersTable } from "@/services/user-service";
 
 export const useSignup = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -13,21 +13,11 @@ export const useSignup = () => {
 
   const createUserInSupabase = async (userData: User) => {
     try {
-      // First, try to directly create a user using SQL to ensure the table exists
-      const { data: tableData, error: tableError } = await supabase.rpc('exec_sql', {
-        sql: `
-          CREATE TABLE IF NOT EXISTS users (
-            email VARCHAR PRIMARY KEY,
-            display_name VARCHAR NOT NULL,
-            photo_url VARCHAR,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-          );
-        `
-      });
+      // Check if the users table exists
+      const tableExists = await ensureUsersTable();
       
-      if (tableError) {
-        console.error("Error creating users table:", tableError);
+      if (!tableExists) {
+        console.log("Users table doesn't exist, skipping database insertion");
         return false;
       }
       
