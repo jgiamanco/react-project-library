@@ -29,7 +29,12 @@ export const useSignup = () => {
         email,
         password,
         options: {
-          emailRedirectTo: siteUrl + '/dashboard'
+          emailRedirectTo: siteUrl + '/dashboard',
+          data: {
+            display_name: profileData.displayName,
+            photo_url: profileData.photoURL,
+            location: profileData.location
+          }
         }
       });
 
@@ -62,6 +67,7 @@ export const useSignup = () => {
           localStorage.setItem("user", JSON.stringify(newUser));
           
           // Try to store in database, but don't fail if it doesn't work
+          console.log("Attempting to store user in database");
           const storedUser = await storeUser(newUser);
           console.log("User stored in database:", storedUser);
           

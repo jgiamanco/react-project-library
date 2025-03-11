@@ -16,6 +16,7 @@ export const useLogin = () => {
     try {
       setIsLoading(true);
       sonnerToast.dismiss(); // Clear any existing toasts
+      sonnerToast.loading("Signing in...");
 
       // Sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -49,8 +50,10 @@ export const useLogin = () => {
             description: "Please check your inbox for a verification email. We've sent a new one just now.",
           });
           
+          sonnerToast.dismiss();
           throw new Error("Email not confirmed. Please check your inbox for the verification link.");
         }
+        sonnerToast.dismiss();
         throw error;
       }
 
@@ -65,12 +68,16 @@ export const useLogin = () => {
           if (!userProfile) {
             console.log("No user profile found, creating basic profile");
             
+            // Extract metadata from Supabase user if available
+            const userData = data.user.user_metadata;
+            console.log("User metadata from auth:", userData);
+            
             // If no profile exists in database, create a basic one
             const basicProfile: User = {
               email: data.user.email || '',
-              displayName: data.user.email?.split("@")[0] || 'User',
-              photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
-              location: '',
+              displayName: userData?.display_name || data.user.email?.split("@")[0] || 'User',
+              photoURL: userData?.photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+              location: userData?.location || '',
               bio: '',
               website: '',
               github: '',
@@ -81,8 +88,11 @@ export const useLogin = () => {
               pushNotifications: false,
             };
             
+            console.log("Created basic profile:", basicProfile);
+            
             // Try to store in database
             userProfile = await storeUser(basicProfile);
+            console.log("Profile stored result:", userProfile);
           }
           
           // Store in localStorage
@@ -90,6 +100,7 @@ export const useLogin = () => {
           localStorage.setItem("authenticated", "true");
           localStorage.setItem("lastLoggedInEmail", data.user.email || '');
 
+          sonnerToast.dismiss();
           toast({
             title: "Welcome back!",
             description: "You have successfully signed in.",
@@ -101,12 +112,16 @@ export const useLogin = () => {
         } catch (profileError) {
           console.error("Error handling user profile:", profileError);
           
+          // Try extracting metadata from Supabase user
+          const userData = data.user.user_metadata;
+          console.log("Falling back to user metadata:", userData);
+          
           // Create a basic profile if there's an error
           const basicProfile: User = {
             email: data.user.email || '',
-            displayName: data.user.email?.split("@")[0] || 'User',
-            photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
-            location: '',
+            displayName: userData?.display_name || data.user.email?.split("@")[0] || 'User',
+            photoURL: userData?.photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+            location: userData?.location || '',
             bio: '',
             website: '',
             github: '',
@@ -122,6 +137,7 @@ export const useLogin = () => {
           localStorage.setItem("authenticated", "true");
           localStorage.setItem("lastLoggedInEmail", data.user.email || '');
 
+          sonnerToast.dismiss();
           toast({
             title: "Welcome back!",
             description: "You have successfully signed in. Some profile features may be limited.",
@@ -132,9 +148,11 @@ export const useLogin = () => {
           return basicProfile;
         }
       }
+      sonnerToast.dismiss();
       return null;
     } catch (error: any) {
       console.error("Login error:", error);
+      sonnerToast.dismiss();
       
       // Don't clear user data for email confirmation errors
       if (error.message && !error.message.includes("Email not confirmed")) {

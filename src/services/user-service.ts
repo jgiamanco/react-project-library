@@ -58,6 +58,12 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
     }
 
     try {
+      console.log("Upserting user data:", {
+        email: userData.email,
+        display_name: userData.displayName || userData.email.split('@')[0],
+        photo_url: userData.photoURL,
+      });
+      
       // Insert or update the user record
       const { data, error } = await supabase
         .from("users")
@@ -92,6 +98,7 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
           userData.pushNotifications !== undefined) {
         
         try {
+          console.log("Storing extended profile data");
           await updateUserProfile(userData.email, userData);
         } catch (profileError) {
           console.error('Error storing extended profile data:', profileError);
@@ -155,6 +162,7 @@ export const getUser = async (email: string): Promise<UserData | null> => {
 
     // Try to get extended profile data
     try {
+      console.log("Fetching extended profile data");
       const profile = await getUserProfile(email);
       if (profile) {
         console.log("Extended profile found:", profile);

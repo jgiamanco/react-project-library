@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
+import { getUser } from "@/services/user-service";
 
 export const useAuthInit = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -8,12 +10,12 @@ export const useAuthInit = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Create a minimal fallback user profile from email
-  const createBasicUserProfile = (email: string): User => {
+  const createBasicUserProfile = (email: string, userData: any = {}): User => {
     return {
       email,
-      displayName: email.split("@")[0] || 'User',
-      photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-      location: '',
+      displayName: userData?.display_name || email.split("@")[0] || 'User',
+      photoURL: userData?.photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+      location: userData?.location || '',
       bio: '',
       website: '',
       github: '',
@@ -67,24 +69,25 @@ export const useAuthInit = () => {
           if (userData?.user) {
             console.log("Active session found for:", userData.user.email);
             
-            // Create a basic profile for the user
+            // Try to fetch user profile from database
             const email = userData.user.email || '';
-            let userProfile = createBasicUserProfile(email);
+            let userProfile = null;
             
-            // Try to use stored profile if available
-            if (storedAuth === "true" && storedUser) {
-              try {
-                const parsedProfile = JSON.parse(storedUser) as User;
-                // Use the stored profile with the basic profile as fallback fields
-                userProfile = {
-                  ...userProfile,
-                  ...parsedProfile,
-                  email, // Always use the current session email
-                };
-              } catch (e) {
-                console.error("Error parsing stored user:", e);
-                // Keep using basic profile
-              }
+            try {
+              console.log("Attempting to get user profile from database");
+              userProfile = await getUser(email);
+              console.log("Database user profile:", userProfile);
+            } catch (dbError) {
+              console.error("Error fetching user profile from database:", dbError);
+            }
+            
+            if (!userProfile) {
+              console.log("No user profile found in database, using metadata or creating basic profile");
+              // Try to use metadata from Supabase user
+              const metadata = userData.user.user_metadata;
+              console.log("User metadata:", metadata);
+              
+              userProfile = createBasicUserProfile(email, metadata);
             }
             
             // Set user and authenticated state
@@ -130,13 +133,27 @@ export const useAuthInit = () => {
         const { data } = await supabase.auth.getUser();
         if (data?.user) {
           const email = data.user.email || '';
-          const basicProfile = createBasicUserProfile(email);
+          let userProfile = null;
           
-          setUser(basicProfile);
+          try {
+            console.log("Auth state change: fetching user profile");
+            userProfile = await getUser(email);
+            console.log("User profile from database:", userProfile);
+          } catch (error) {
+            console.error("Error fetching user profile after sign in:", error);
+          }
+          
+          if (!userProfile) {
+            const metadata = data.user.user_metadata;
+            console.log("No profile found, using metadata:", metadata);
+            userProfile = createBasicUserProfile(email, metadata);
+          }
+          
+          setUser(userProfile);
           setIsAuthenticated(true);
           localStorage.setItem("authenticated", "true");
           localStorage.setItem("lastLoggedInEmail", email);
-          localStorage.setItem("user", JSON.stringify(basicProfile));
+          localStorage.setItem("user", JSON.stringify(userProfile));
         }
       } else if (event === 'SIGNED_OUT') {
         console.log("User signed out, clearing user data");
