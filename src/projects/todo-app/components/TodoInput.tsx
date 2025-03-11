@@ -24,6 +24,11 @@ const TodoInput: React.FC<TodoInputProps> = ({
     }
   };
 
+  const handleAddClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    addTodo();
+  };
+
   return (
     <div className="flex space-x-2 mb-4">
       <Input
@@ -34,7 +39,7 @@ const TodoInput: React.FC<TodoInputProps> = ({
         className={darkMode ? "bg-gray-700 text-white border-gray-600" : ""}
         disabled={disabled}
       />
-      <Button onClick={addTodo} disabled={disabled}>
+      <Button onClick={handleAddClick} disabled={disabled || !inputValue.trim()}>
         <Plus className="h-4 w-4 mr-1" /> Add
       </Button>
     </div>

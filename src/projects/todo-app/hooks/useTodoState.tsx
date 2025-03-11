@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/auth-hooks";
 import { getTodosByUser, storeTodo, deleteTodo } from "@/services/todo-service";
@@ -63,32 +62,42 @@ export const useTodoState = () => {
     if (inputValue.trim() === "" || !user) return;
 
     const newTodo = {
+      id: uuidv4(),
       text: inputValue,
       completed: false,
       userId: user.email,
     };
 
     try {
-      // Create the todo in the database first
-      const savedTodo = await storeTodo(newTodo);
-      
-      // Then update the UI with the saved todo
-      setTodos(prevTodos => [...prevTodos, savedTodo]);
+      // Optimistically update UI first for better user experience
+      setTodos(prevTodos => [...prevTodos, newTodo]);
       setInputValue("");
+      
+      // Then create the todo in the database
+      await storeTodo(newTodo);
     } catch (error) {
       console.error("Error adding todo:", error);
+      // If there's an error, remove the optimistically added todo
+      setTodos(prevTodos => prevTodos.filter(todo => todo.id !== newTodo.id));
     }
   }, [inputValue, user]);
 
   // Delete a todo (memoized)
   const deleteTodoItem = useCallback(async (id: string) => {
     try {
-      await deleteTodo(id);
+      // Optimistically update UI
       setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
+      // Then delete from database
+      await deleteTodo(id);
     } catch (error) {
       console.error("Error deleting todo:", error);
+      // If there's an error, reload the todos to restore the correct state
+      if (user) {
+        const userTodos = await getTodosByUser(user.email);
+        setTodos(userTodos);
+      }
     }
-  }, []);
+  }, [user]);
 
   // Toggle todo completion status (memoized)
   const toggleTodo = useCallback(async (id: string) => {
