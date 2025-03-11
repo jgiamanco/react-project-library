@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/auth-hooks";
 import { getTodosByUser, storeTodo, deleteTodo } from "@/services/todo-service";
 import { DropResult } from "react-beautiful-dnd";
+import { v4 as uuidv4 } from "uuid";
 
 interface Todo {
   id: string;
@@ -46,16 +47,18 @@ export const useTodoState = () => {
   const addTodo = useCallback(async () => {
     if (inputValue.trim() === "" || !user) return;
 
-    const newTodo: Todo = {
-      id: Date.now().toString(),
+    const newTodo = {
       text: inputValue,
       completed: false,
       userId: user.email,
     };
 
     try {
-      await storeTodo(newTodo);
-      setTodos(prevTodos => [...prevTodos, newTodo]);
+      // Create the todo in the database first
+      const savedTodo = await storeTodo(newTodo);
+      
+      // Then update the UI with the saved todo
+      setTodos(prevTodos => [...prevTodos, savedTodo]);
       setInputValue("");
     } catch (error) {
       console.error("Error adding todo:", error);

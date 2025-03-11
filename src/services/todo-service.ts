@@ -1,6 +1,7 @@
 
 import { supabase } from "./supabase-client";
 import { TodoItem } from "./types";
+import { v4 as uuidv4 } from "uuid";
 
 // Todo operations
 export const getTodosByUser = async (userId: string): Promise<TodoItem[]> => {
@@ -22,14 +23,21 @@ export const getTodosByUser = async (userId: string): Promise<TodoItem[]> => {
   }));
 };
 
-export const storeTodo = async (todo: TodoItem): Promise<TodoItem> => {
+export const storeTodo = async (todo: Omit<TodoItem, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<TodoItem> => {
+  // Generate a UUID if one doesn't exist
+  const todoWithId = {
+    ...todo,
+    id: todo.id || uuidv4(),
+    user_id: todo.userId,
+  };
+
   const { data, error } = await supabase
     .from("todos")
     .upsert({
-      id: todo.id,
-      text: todo.text,
-      completed: todo.completed,
-      user_id: todo.userId,
+      id: todoWithId.id,
+      text: todoWithId.text,
+      completed: todoWithId.completed,
+      user_id: todoWithId.userId,
       updated_at: new Date().toISOString(),
     })
     .select()
