@@ -1,6 +1,27 @@
-
-import { supabase, handleSupabaseError, getSupabaseClient } from "./supabase-client";
+import {
+  supabase,
+  handleSupabaseError,
+  getSupabaseClient,
+} from "./supabase-client";
 import type { UserData, UserProfile, DbResult } from "./types";
+
+// Database profile type
+type DbProfile = {
+  email: string;
+  display_name: string;
+  photo_url?: string;
+  bio?: string;
+  location?: string;
+  website?: string;
+  github?: string;
+  twitter?: string;
+  role?: string;
+  theme?: string;
+  email_notifications?: boolean;
+  push_notifications?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
 
 // Helper function to ensure the users table exists
 export const ensureUsersTable = async (): Promise<boolean> => {
@@ -53,7 +74,7 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
   try {
     // Try to use admin client first to bypass RLS
     const client = getSupabaseClient(true);
-    
+
     const { data, error } = await client
       .from("users")
       .upsert({
@@ -78,7 +99,7 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
         })
         .select()
         .single();
-        
+
       if (regularError) handleSupabaseError(regularError);
       return {
         email: regularData.email,
@@ -102,7 +123,7 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
 export const getUser = async (email: string): Promise<UserData | null> => {
   try {
     const client = getSupabaseClient(true);
-    
+
     const { data, error } = await client
       .from("users")
       .select()
@@ -111,25 +132,27 @@ export const getUser = async (email: string): Promise<UserData | null> => {
 
     if (error) {
       if (error.code === "PGRST116") return null; // Record not found
-      
+
       // Try regular client as fallback
       const { data: regularData, error: regularError } = await supabase
         .from("users")
         .select()
         .eq("email", email)
         .single();
-        
+
       if (regularError) {
         if (regularError.code === "PGRST116") return null; // Record not found
         console.warn("Error fetching user:", regularError);
         return null;
       }
-      
-      return regularData ? {
-        email: regularData.email,
-        displayName: regularData.display_name,
-        photoURL: regularData.photo_url,
-      } : null;
+
+      return regularData
+        ? {
+            email: regularData.email,
+            displayName: regularData.display_name,
+            photoURL: regularData.photo_url,
+          }
+        : null;
     }
 
     return data
@@ -148,12 +171,15 @@ export const getUser = async (email: string): Promise<UserData | null> => {
 export const deleteUser = async (email: string): Promise<void> => {
   try {
     const client = getSupabaseClient(true);
-    
+
     const { error } = await client.from("users").delete().eq("email", email);
 
     if (error) {
       // Try regular client as fallback
-      const { error: regularError } = await supabase.from("users").delete().eq("email", email);
+      const { error: regularError } = await supabase
+        .from("users")
+        .delete()
+        .eq("email", email);
       if (regularError) handleSupabaseError(regularError);
     }
   } catch (error) {
@@ -167,7 +193,7 @@ export const getUserProfile = async (
 ): Promise<UserProfile | null> => {
   try {
     const client = getSupabaseClient(true);
-    
+
     const { data, error } = await client
       .from("user_profiles")
       .select("*")
@@ -176,20 +202,20 @@ export const getUserProfile = async (
 
     if (error) {
       if (error.code === "PGRST116") return null; // Record not found
-      
+
       // Try regular client as fallback
       const { data: regularData, error: regularError } = await supabase
         .from("user_profiles")
         .select("*")
         .eq("email", email)
         .single();
-        
+
       if (regularError) {
         if (regularError.code === "PGRST116") return null; // Record not found
         console.warn("Error fetching user profile:", regularError);
         return null;
       }
-      
+
       return convertDbProfileToUserProfile(regularData);
     }
 
@@ -201,9 +227,14 @@ export const getUserProfile = async (
 };
 
 // Helper function to convert DB profile to UserProfile
-const convertDbProfileToUserProfile = (data: any): UserProfile | null => {
+const convertDbProfileToUserProfile = (data: DbProfile): UserProfile | null => {
   if (!data) return null;
-  
+
+  // Validate theme value
+  const theme = data.theme as "light" | "dark" | "system" | undefined;
+  const validTheme =
+    theme && ["light", "dark", "system"].includes(theme) ? theme : "system";
+
   return {
     email: data.email,
     displayName: data.display_name,
@@ -214,7 +245,7 @@ const convertDbProfileToUserProfile = (data: any): UserProfile | null => {
     github: data.github,
     twitter: data.twitter,
     role: data.role,
-    theme: data.theme,
+    theme: validTheme,
     emailNotifications: data.email_notifications,
     pushNotifications: data.push_notifications,
     createdAt: data.created_at,
@@ -229,7 +260,7 @@ export const updateUserProfile = async (
   try {
     // First ensure the user exists
     const client = getSupabaseClient(true);
-    
+
     // First ensure the user exists
     const { error: userError } = await client.from("users").upsert({
       email,
@@ -239,7 +270,10 @@ export const updateUserProfile = async (
     });
 
     if (userError) {
-      console.warn("Admin user update failed, trying regular client:", userError);
+      console.warn(
+        "Admin user update failed, trying regular client:",
+        userError
+      );
       // Try regular client
       const { error: regularUserError } = await supabase.from("users").upsert({
         email,
@@ -247,7 +281,7 @@ export const updateUserProfile = async (
         photo_url: profile.photoURL,
         updated_at: new Date().toISOString(),
       });
-      
+
       if (regularUserError) {
         console.error("Regular user update also failed:", regularUserError);
         // Continue anyway to try the profile update
@@ -276,7 +310,10 @@ export const updateUserProfile = async (
       .single();
 
     if (error) {
-      console.warn("Admin profile update failed, trying regular client:", error);
+      console.warn(
+        "Admin profile update failed, trying regular client:",
+        error
+      );
       // Try regular client
       const { data: regularData, error: regularError } = await supabase
         .from("user_profiles")
@@ -297,7 +334,7 @@ export const updateUserProfile = async (
         })
         .select()
         .single();
-      
+
       if (regularError) {
         console.error("Regular profile update also failed:", regularError);
         // Return a constructed profile as fallback
@@ -316,7 +353,7 @@ export const updateUserProfile = async (
           pushNotifications: profile.pushNotifications,
         };
       }
-      
+
       return convertDbProfileToUserProfile(regularData) as UserProfile;
     }
 
