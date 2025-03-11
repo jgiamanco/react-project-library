@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { projects } from "@/data/projects";
 import ProjectGrid from "@/components/projects/ProjectGrid";
@@ -6,13 +5,13 @@ import { trackRenderTime } from "@/utils/performance-monitoring";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
-  
+
   // Memoize project data to prevent unnecessary re-renders
   const projectsData = useMemo(() => projects, []);
-  
+  const projectsLength = projectsData.length - 1;
   // Track render performance
   useEffect(() => {
-    const endTracking = trackRenderTime('Dashboard');
+    const endTracking = trackRenderTime("Dashboard");
     return endTracking;
   }, []);
 
@@ -25,15 +24,17 @@ const Dashboard = () => {
         setLoading(false);
         return;
       }
-      
+
       // Set a maximum loading time to prevent indefinite loading
       const timeout = setTimeout(() => setLoading(false), 800);
       return () => clearTimeout(timeout);
     };
-    
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
       // Use requestIdleCallback to defer non-essential work
-      const idleCallbackId = requestIdleCallback(loadProjects, { timeout: 1000 });
+      const idleCallbackId = requestIdleCallback(loadProjects, {
+        timeout: 1000,
+      });
       return () => cancelIdleCallback(idleCallbackId);
     } else {
       // Fallback for browsers without requestIdleCallback
@@ -57,10 +58,12 @@ const Dashboard = () => {
       <div className="mb-8 animate-fade-in">
         <h1 className="text-3xl font-bold mb-2">Project Dashboard</h1>
         <p className="text-muted-foreground mb-2">
-          Browse our collection of 25 React TypeScript projects. Each project includes complete source code and documentation.
+          Browse our collection of {projectsLength} React TypeScript projects.
+          Each project includes complete source code and documentation.
         </p>
         <p className="text-sm text-muted-foreground">
-          All projects include GitHub repositories with full source code and live demos to explore the functionality.
+          All projects include a code viewer and live demo to explore the
+          functionality.
         </p>
       </div>
 
