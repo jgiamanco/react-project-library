@@ -247,7 +247,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-12"
+                className="h-12 w-full"
                 disabled={buttonLoading}
               />
             </div>
@@ -264,7 +264,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-12 pr-10"
+                  className="h-12 pr-10 w-full"
                   disabled={buttonLoading}
                 />
                 <button
@@ -291,7 +291,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
-                className="h-12"
+                className="h-12 w-full"
                 disabled={buttonLoading}
               />
             </div>
@@ -303,7 +303,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 placeholder="San Francisco, CA"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="h-12"
+                className="h-12 w-full"
                 disabled={buttonLoading}
               />
             </div>
@@ -379,7 +379,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-12"
+                className="h-12 w-full"
                 disabled={buttonLoading}
               />
             </div>
@@ -406,7 +406,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-12 pr-10"
+                  className="h-12 pr-10 w-full"
                   disabled={buttonLoading}
                 />
                 <button
