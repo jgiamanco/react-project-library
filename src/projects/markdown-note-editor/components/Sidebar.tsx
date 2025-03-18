@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, FolderPlus, Trash2 } from "lucide-react";
@@ -31,7 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   createNewFolder,
   deleteNote,
   darkMode,
-  filteredNotes
+  filteredNotes,
 }) => {
   return (
     <div className="w-1/4">
@@ -40,9 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           placeholder="Search notes..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className={
-            darkMode ? "bg-gray-700 text-white border-gray-600" : ""
-          }
+          className={darkMode ? "bg-gray-700 text-white border-gray-600" : ""}
         />
         <Button onClick={createNewFolder}>
           <FolderPlus className="h-4 w-4" />
@@ -51,7 +48,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="space-y-2">
         <Button
           variant={currentFolder === null ? "default" : "outline"}
-          className="w-full justify-start"
+          className="justify-start"
           onClick={() => setCurrentFolder(null)}
         >
           All Notes
@@ -60,7 +57,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <Button
             key={folder.id}
             variant={currentFolder === folder.id ? "default" : "outline"}
-            className="w-full justify-start"
+            className="justify-start"
             onClick={() => setCurrentFolder(folder.id)}
           >
             {folder.name}

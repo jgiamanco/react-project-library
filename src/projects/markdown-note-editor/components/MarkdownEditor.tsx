@@ -105,7 +105,7 @@ export const MarkdownEditor = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button onClick={createNewNote} className="w-full mb-4">
+                <Button onClick={createNewNote} className="mb-4">
                   <FileText className="h-4 w-4 mr-2" /> New Note
                 </Button>
                 <div className="space-y-2">

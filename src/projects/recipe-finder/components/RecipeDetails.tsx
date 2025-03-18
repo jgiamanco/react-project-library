@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecipeType } from "../types";
 import { Clock, Users, Heart } from "lucide-react";
@@ -15,7 +14,7 @@ const RecipeDetails = ({ recipe }: RecipeDetailsProps) => {
   const [isFavorite, setIsFavorite] = useState(false);
 
   return (
-    <Card className="sticky top-6">
+    <Card className="sticky top-6 scroll-mt-32">
       <CardHeader>
         <div className="flex justify-between items-start">
           <CardTitle>{recipe.title}</CardTitle>
@@ -26,14 +25,16 @@ const RecipeDetails = ({ recipe }: RecipeDetailsProps) => {
             className="h-8 w-8"
           >
             <Heart
-              className={`h-5 w-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`}
+              className={`h-5 w-5 ${
+                isFavorite ? "fill-red-500 text-red-500" : ""
+              }`}
             />
           </Button>
         </div>
       </CardHeader>
       <CardContent>
         <p className="text-muted-foreground mb-4">{recipe.description}</p>
-        
+
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="flex items-center">
             <Clock className="h-4 w-4 mr-2" />
@@ -57,22 +58,26 @@ const RecipeDetails = ({ recipe }: RecipeDetailsProps) => {
             </div>
           </div>
         </div>
-        
+
         <div className="flex flex-wrap gap-1 mb-6">
           {recipe.tags.map((tag) => (
-            <Badge key={tag} variant="outline">{tag}</Badge>
+            <Badge key={tag} variant="outline">
+              {tag}
+            </Badge>
           ))}
         </div>
-        
+
         <Separator className="my-4" />
-        
+
         <h3 className="font-medium text-lg mb-2">Ingredients</h3>
         <ul className="space-y-1 mb-6">
           {recipe.ingredients.map((ingredient, idx) => (
-            <li key={idx} className="text-sm">{ingredient}</li>
+            <li key={idx} className="text-sm">
+              {ingredient}
+            </li>
           ))}
         </ul>
-        
+
         <h3 className="font-medium text-lg mb-2">Instructions</h3>
         <ol className="space-y-2">
           {recipe.instructions.map((step, idx) => (
@@ -81,9 +86,9 @@ const RecipeDetails = ({ recipe }: RecipeDetailsProps) => {
             </li>
           ))}
         </ol>
-        
+
         <Separator className="my-4" />
-        
+
         <h3 className="font-medium text-lg mb-2">Nutrition Facts</h3>
         <div className="grid grid-cols-4 gap-2">
           <div className="text-center p-2 bg-muted rounded-md">
