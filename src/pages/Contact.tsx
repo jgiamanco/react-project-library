@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Mail, MapPin, Phone } from "lucide-react";
+import { ArrowLeft, Mail, MapPin } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import emailjs from "@emailjs/browser";
 
 const Contact = () => {
   const navigate = useNavigate();
@@ -29,8 +30,17 @@ const Contact = () => {
     setIsSubmitting(true);
 
     try {
-      // In a real app, this would be an API call to send the message
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await emailjs.send(
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+        {
+          from_name: formData.name,
+          from_email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+        },
+        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+      );
 
       // Show success message
       toast({
@@ -77,11 +87,7 @@ const Contact = () => {
               <MapPin className="h-5 w-5 mr-3 text-primary" />
               <div>
                 <h3 className="font-medium">Our Location</h3>
-                <p className="text-muted-foreground">
-                  123 React Street
-                  <br />
-                  San Francisco, CA 94107
-                </p>
+                <p className="text-muted-foreground">San Diego, CA</p>
               </div>
             </div>
 
@@ -89,23 +95,7 @@ const Contact = () => {
               <Mail className="h-5 w-5 mr-3 text-primary" />
               <div>
                 <h3 className="font-medium">Email Us</h3>
-                <p className="text-muted-foreground">
-                  info@reactprojectlibrary.com
-                  <br />
-                  support@reactprojectlibrary.com
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <Phone className="h-5 w-5 mr-3 text-primary" />
-              <div>
-                <h3 className="font-medium">Call Us</h3>
-                <p className="text-muted-foreground">
-                  +1 (555) 123-4567
-                  <br />
-                  Mon-Fri, 9am-5pm PST
-                </p>
+                <p className="text-muted-foreground">jacobdeansd@gmail.com</p>
               </div>
             </div>
           </div>

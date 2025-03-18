@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Card,
@@ -48,7 +47,7 @@ const MarkdownEditor = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Markdown Note Editor</CardTitle>
-            <EditorToolbar 
+            <EditorToolbar
               darkMode={darkMode}
               toggleTheme={toggleTheme}
               currentNote={currentNote}
@@ -63,24 +62,26 @@ const MarkdownEditor = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex space-x-4 mb-4">
-            <Sidebar 
-              folders={folders}
-              notes={notes}
-              currentFolder={currentFolder}
-              currentNote={currentNote}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              setCurrentFolder={setCurrentFolder}
-              setCurrentNote={setCurrentNote}
-              createNewFolder={createNewFolder}
-              deleteNote={deleteNote}
-              darkMode={darkMode}
-              filteredNotes={filteredNotes}
-            />
-            <div className="w-3/4">
+          <div className="flex flex-col lg:flex-row space-y-4 lg:space-y-0 lg:space-x-4">
+            <div className="w-full lg:w-1/4">
+              <Sidebar
+                folders={folders}
+                notes={notes}
+                currentFolder={currentFolder}
+                currentNote={currentNote}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                setCurrentFolder={setCurrentFolder}
+                setCurrentNote={setCurrentNote}
+                createNewFolder={createNewFolder}
+                deleteNote={deleteNote}
+                darkMode={darkMode}
+                filteredNotes={filteredNotes}
+              />
+            </div>
+            <div className="w-full lg:w-3/4">
               {currentNote ? (
-                <NoteEditor 
+                <NoteEditor
                   currentNote={currentNote}
                   darkMode={darkMode}
                   updateNoteTitle={updateNoteTitle}

@@ -1,5 +1,4 @@
-
-import React, { useMemo } from 'react';
+import React, { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { Input } from "@/components/ui/input";
 import { PreBlock } from "../SyntaxHighlighterPlugin";
@@ -13,20 +12,23 @@ interface NoteEditorProps {
 }
 
 const NoteEditor: React.FC<NoteEditorProps> = ({
-  currentNote, 
+  currentNote,
   darkMode,
   updateNoteTitle,
-  updateNoteContent
+  updateNoteContent,
 }) => {
   // Memoize the preview to prevent unnecessary re-renders
-  const markdownPreview = useMemo(() => (
-    <ReactMarkdown components={{ pre: PreBlock }}>
-      {currentNote.content}
-    </ReactMarkdown>
-  ), [currentNote.content]);
-  
+  const markdownPreview = useMemo(
+    () => (
+      <ReactMarkdown components={{ pre: PreBlock }}>
+        {currentNote.content}
+      </ReactMarkdown>
+    ),
+    [currentNote.content]
+  );
+
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div>
         <Input
           value={currentNote.title}
@@ -38,7 +40,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         <textarea
           value={currentNote.content}
           onChange={(e) => updateNoteContent(e.target.value)}
-          className={`w-full h-[600px] p-4 rounded border font-mono ${
+          className={`w-full h-[400px] lg:h-[600px] p-4 rounded border font-mono ${
             darkMode
               ? "bg-gray-700 text-white border-gray-600"
               : "border-gray-200"
@@ -47,7 +49,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         />
       </div>
       <div
-        className={`p-4 rounded border overflow-auto h-[600px] markdown-body ${
+        className={`p-4 rounded border overflow-auto h-[400px] lg:h-[600px] markdown-body ${
           darkMode
             ? "markdown-dark bg-gray-700 border-gray-600 text-white"
             : "bg-white border-gray-200 text-gray-900"

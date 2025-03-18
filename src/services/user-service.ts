@@ -3,7 +3,7 @@ import {
   handleSupabaseError,
   getSupabaseClient,
 } from "./supabase-client";
-import type { UserData, UserProfile, DbResult } from "./types";
+import type { UserData, UserProfile } from "./types";
 
 // Database profile type
 type DbProfile = {
@@ -258,66 +258,32 @@ export const updateUserProfile = async (
   profile: Partial<UserProfile>
 ): Promise<UserProfile> => {
   try {
-    // First ensure the user exists
     const client = getSupabaseClient(true);
 
-    // First ensure the user exists
-    const { error: userError } = await client.from("users").upsert({
-      email,
-      display_name: profile.displayName,
-      photo_url: profile.photoURL,
-      updated_at: new Date().toISOString(),
+    // Update auth metadata first
+    const { error: authError } = await supabase.auth.updateUser({
+      data: {
+        displayName: profile.displayName,
+        photoURL: profile.photoURL,
+        location: profile.location,
+      },
     });
 
-    if (userError) {
-      console.warn(
-        "Admin user update failed, trying regular client:",
-        userError
-      );
-      // Try regular client
-      const { error: regularUserError } = await supabase.from("users").upsert({
-        email,
-        display_name: profile.displayName,
-        photo_url: profile.photoURL,
-        updated_at: new Date().toISOString(),
-      });
-
-      if (regularUserError) {
-        console.error("Regular user update also failed:", regularUserError);
-        // Continue anyway to try the profile update
-      }
+    if (authError) {
+      console.warn("Auth metadata update failed:", authError);
     }
 
-    // Then update the profile
+    // Validate theme
+    const theme =
+      profile.theme && ["light", "dark", "system"].includes(profile.theme)
+        ? profile.theme
+        : "system";
+
+    // Update the profile
     const { data, error } = await client
       .from("user_profiles")
-      .upsert({
-        email,
-        display_name: profile.displayName,
-        photo_url: profile.photoURL,
-        bio: profile.bio,
-        location: profile.location,
-        website: profile.website,
-        github: profile.github,
-        twitter: profile.twitter,
-        role: profile.role,
-        theme: profile.theme,
-        email_notifications: profile.emailNotifications,
-        push_notifications: profile.pushNotifications,
-        updated_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.warn(
-        "Admin profile update failed, trying regular client:",
-        error
-      );
-      // Try regular client
-      const { data: regularData, error: regularError } = await supabase
-        .from("user_profiles")
-        .upsert({
+      .upsert(
+        {
           email,
           display_name: profile.displayName,
           photo_url: profile.photoURL,
@@ -327,53 +293,69 @@ export const updateUserProfile = async (
           github: profile.github,
           twitter: profile.twitter,
           role: profile.role,
-          theme: profile.theme,
+          theme,
           email_notifications: profile.emailNotifications,
           push_notifications: profile.pushNotifications,
           updated_at: new Date().toISOString(),
-        })
+        },
+        {
+          onConflict: "email",
+          ignoreDuplicates: false,
+        }
+      )
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Profile update failed:", error);
+      // Try regular client as fallback
+      const { data: regularData, error: regularError } = await supabase
+        .from("user_profiles")
+        .upsert(
+          {
+            email,
+            display_name: profile.displayName,
+            photo_url: profile.photoURL,
+            bio: profile.bio,
+            location: profile.location,
+            website: profile.website,
+            github: profile.github,
+            twitter: profile.twitter,
+            role: profile.role,
+            theme,
+            email_notifications: profile.emailNotifications,
+            push_notifications: profile.pushNotifications,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "email",
+            ignoreDuplicates: false,
+          }
+        )
         .select()
         .single();
 
-      if (regularError) {
-        console.error("Regular profile update also failed:", regularError);
-        // Return a constructed profile as fallback
-        return {
-          email,
-          displayName: profile.displayName || "",
-          photoURL: profile.photoURL,
-          bio: profile.bio,
-          location: profile.location,
-          website: profile.website,
-          github: profile.github,
-          twitter: profile.twitter,
-          role: profile.role,
-          theme: profile.theme,
-          emailNotifications: profile.emailNotifications,
-          pushNotifications: profile.pushNotifications,
-        };
-      }
-
+      if (regularError) throw regularError;
       return convertDbProfileToUserProfile(regularData) as UserProfile;
     }
 
     return convertDbProfileToUserProfile(data) as UserProfile;
   } catch (error) {
     console.error("Error updating user profile:", error);
-    // Return a constructed profile as fallback
+    // Return current profile as fallback
     return {
       email,
       displayName: profile.displayName || "",
       photoURL: profile.photoURL,
-      bio: profile.bio,
+      bio: profile.bio || "Tell us about yourself...",
       location: profile.location,
-      website: profile.website,
-      github: profile.github,
-      twitter: profile.twitter,
-      role: profile.role,
-      theme: profile.theme,
-      emailNotifications: profile.emailNotifications,
-      pushNotifications: profile.pushNotifications,
+      website: profile.website || "",
+      github: profile.github || "",
+      twitter: profile.twitter || "",
+      role: profile.role || "Developer",
+      theme: (profile.theme as "light" | "dark" | "system") || "system",
+      emailNotifications: profile.emailNotifications ?? true,
+      pushNotifications: profile.pushNotifications ?? false,
     };
   }
 };

@@ -1,15 +1,26 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { Eye, EyeOff, ArrowRight, ChevronRight, ChevronLeft } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ChevronRight,
+  ChevronLeft,
+} from "lucide-react";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/services/supabase-client";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { User } from "@/contexts/auth-types";
+import { updateUserProfile } from "@/services/user-service";
+
+type AuthError = {
+  message: string;
+  status?: number;
+};
 
 interface AuthFormProps {
   mode: "signin" | "signup";
@@ -20,14 +31,16 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [location, setLocation] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState(`https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`);
+  const [avatarUrl, setAvatarUrl] = useState(
+    `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, signup, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
   const [signupStep, setSignupStep] = useState(1);
   const { toast } = useToast();
-  
+
   const validateStep1 = () => {
     if (!email || !password) {
       toast({
@@ -46,10 +59,10 @@ export default function AuthForm({ mode }: AuthFormProps) {
       });
       return false;
     }
-    
+
     return true;
   };
-  
+
   const validateStep2 = () => {
     if (!fullName) {
       toast({
@@ -59,7 +72,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
       });
       return false;
     }
-    
+
     return true;
   };
 
@@ -69,16 +82,16 @@ export default function AuthForm({ mode }: AuthFormProps) {
       if (signupStep === 1 && !validateStep1()) return;
       if (signupStep === 2 && !validateStep2()) return;
     }
-    
+
     setSignupStep(step);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Prevent multiple submissions
     if (isSubmitting || isLoading) return;
-    
+
     if (mode === "signin") {
       if (!email || !password) {
         toast({
@@ -92,16 +105,23 @@ export default function AuthForm({ mode }: AuthFormProps) {
       setIsSubmitting(true);
       try {
         await login(email, password);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Auth error:", error);
-        
-        // Check if error is related to email confirmation
-        if (error.message && error.message.includes("Email not confirmed")) {
-          setNeedsVerification(true);
-        } else {
-          sonnerToast.error("Authentication failed", {
-            description: error.message || "Please try again"
-          });
+
+        // Type check and handle error
+        if (
+          error &&
+          typeof error === "object" &&
+          "message" in error &&
+          typeof error.message === "string"
+        ) {
+          if (error.message.includes("Email not confirmed")) {
+            setNeedsVerification(true);
+          } else {
+            sonnerToast.error("Authentication failed", {
+              description: error.message || "Please try again",
+            });
+          }
         }
       } finally {
         setIsSubmitting(false);
@@ -110,26 +130,37 @@ export default function AuthForm({ mode }: AuthFormProps) {
       // For signup, validate the current step
       if (signupStep === 1 && !validateStep1()) return;
       if (signupStep === 2 && !validateStep2()) return;
-      
+
       // Only proceed with signup on the final step
       if (signupStep === 3) {
         setIsSubmitting(true);
-        
+
         try {
-          // Create profile object
+          // Create complete profile object with all fields
           const userProfile: Partial<User> = {
             displayName: fullName,
             location: location || undefined,
             photoURL: avatarUrl,
+            bio: "Tell us about yourself...",
+            website: "",
+            github: "",
+            twitter: "",
+            role: "Developer",
+            theme: "system",
+            emailNotifications: true,
+            pushNotifications: false,
           };
-          
+
           console.log("Signing up with profile:", userProfile);
-          
+
           await signup(email, password, userProfile);
-          
+
+          // Ensure profile is created in database
+          await updateUserProfile(email, userProfile);
+
           // Set needs verification flag to show the verification screen
           setNeedsVerification(true);
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error("Auth error:", error);
           // The error toast is already handled in the signup hook
         } finally {
@@ -151,24 +182,29 @@ export default function AuthForm({ mode }: AuthFormProps) {
     return (
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-glass-lg">
         <div className="text-center space-y-4">
-          <h2 className="text-3xl font-bold tracking-tight">Check your email</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Check your email
+          </h2>
           <p className="text-muted-foreground">
             We've sent a verification link to <strong>{email}</strong>
           </p>
           <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg text-amber-800 text-sm">
-            <p>Please check your inbox and click the verification link to complete your account setup.</p>
+            <p>
+              Please check your inbox and click the verification link to
+              complete your account setup.
+            </p>
           </div>
         </div>
-        
+
         <div className="space-y-4">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full"
             onClick={() => setNeedsVerification(false)}
           >
             Use a different email
           </Button>
-          
+
           <Button
             variant="link"
             className="w-full"
@@ -176,7 +212,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
               try {
                 sonnerToast.loading("Resending verification email...");
                 await supabase.auth.resend({
-                  type: 'signup',
+                  type: "signup",
                   email,
                 });
                 sonnerToast.dismiss();
@@ -305,11 +341,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
         <p className="text-muted-foreground">
           {mode === "signin"
             ? "Enter your credentials to access your account"
-            : signupStep === 1 
-              ? "Step 1: Enter your account details"
-              : signupStep === 2
-                ? "Step 2: Tell us about yourself"
-                : "Step 3: Pick a profile picture"}
+            : signupStep === 1
+            ? "Step 1: Enter your account details"
+            : signupStep === 2
+            ? "Step 2: Tell us about yourself"
+            : "Step 3: Pick a profile picture"}
         </p>
       </div>
 
@@ -400,10 +436,12 @@ export default function AuthForm({ mode }: AuthFormProps) {
               Back
             </Button>
           )}
-          
+
           <Button
             type="submit"
-            className={`h-12 font-medium ${mode === "signup" && signupStep > 1 ? "" : "w-full"}`}
+            className={`h-12 font-medium ${
+              mode === "signup" && signupStep > 1 ? "" : "w-full"
+            }`}
             disabled={buttonLoading}
           >
             {buttonLoading ? (
@@ -413,7 +451,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
               </div>
             ) : (
               <div className="flex items-center justify-center">
-                {mode === "signin" ? "Sign in" : signupStep < 3 ? "Continue" : "Create account"}
+                {mode === "signin"
+                  ? "Sign in"
+                  : signupStep < 3
+                  ? "Continue"
+                  : "Create account"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </div>
             )}

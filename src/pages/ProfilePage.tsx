@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-hooks";
@@ -46,11 +45,12 @@ const ProfilePage = () => {
       try {
         console.log("Loading profile for user:", user.email);
         const dbProfile = await getUserProfile(user.email);
-        
+
         if (dbProfile) {
           console.log("Profile loaded from database:", dbProfile);
           setProfile({
-            email: dbProfile.email,
+            ...user, // Keep any auth context data
+            ...dbProfile, // Override with database values
             displayName: dbProfile.displayName || user.displayName,
             photoURL: dbProfile.photoURL || user.photoURL || "",
             bio: dbProfile.bio || "Tell us about yourself...",
@@ -64,46 +64,49 @@ const ProfilePage = () => {
             pushNotifications: dbProfile.pushNotifications ?? false,
           });
         } else {
-          console.log("No profile found in database, using user data:", user);
-          // If no profile exists, use the current user data
-          const defaultProfile = {
+          console.log("No profile found in database, creating default profile");
+          // Create a complete default profile
+          const defaultProfile: Partial<User> = {
             ...user,
-            bio: user.bio || "Tell us about yourself...",
-            role: user.role || "Developer",
-            theme: user.theme || "system",
-            emailNotifications: user.emailNotifications ?? true,
-            pushNotifications: user.pushNotifications ?? false,
+            bio: "Tell us about yourself...",
+            website: "",
+            github: "",
+            twitter: "",
+            role: "Developer",
+            theme: "system" as const,
+            emailNotifications: true,
+            pushNotifications: false,
           };
-          
-          setProfile(defaultProfile);
-          
-          // Try to create the profile in the database, but don't wait for it
-          try {
-            await updateUserProfile(user.email, defaultProfile);
-          } catch (createError) {
-            console.warn("Failed to create initial profile:", createError);
-            // This is fine, we'll try again when the user updates their profile
-          }
+
+          setProfile(defaultProfile as User);
+
+          // Create the profile in the database
+          await updateUserProfile(user.email, defaultProfile);
+          console.log("Default profile created in database");
         }
       } catch (error) {
         console.error("Error loading profile:", error);
-        
-        // Fall back to user object from auth context
+
+        // Fall back to complete user object
         if (user) {
-          console.log("Falling back to user data from auth context");
+          console.log("Falling back to user data with defaults");
           setProfile({
             ...user,
             bio: user.bio || "Tell us about yourself...",
+            website: user.website || "",
+            github: user.github || "",
+            twitter: user.twitter || "",
             role: user.role || "Developer",
             theme: user.theme || "system",
             emailNotifications: user.emailNotifications ?? true,
             pushNotifications: user.pushNotifications ?? false,
           });
         }
-        
+
         toast({
           title: "Notice",
-          description: "Using local profile data. Changes may not be saved to the server.",
+          description:
+            "Using local profile data. Changes may not be saved to the server.",
         });
       }
     };
@@ -119,10 +122,10 @@ const ProfilePage = () => {
     try {
       // Update auth context
       const updatedUser = await updateUser(updates);
-      
+
       if (updatedUser) {
         // Update local state
-        setProfile((prev) => prev ? { ...prev, ...updates } : null);
+        setProfile((prev) => (prev ? { ...prev, ...updates } : null));
       }
 
       toast({
@@ -131,13 +134,14 @@ const ProfilePage = () => {
       });
     } catch (error) {
       console.error("Error updating profile:", error);
-      
+
       // Still update the local state even if the server update failed
-      setProfile((prev) => prev ? { ...prev, ...updates } : null);
-      
+      setProfile((prev) => (prev ? { ...prev, ...updates } : null));
+
       toast({
         title: "Warning",
-        description: "Profile updated locally but changes may not be saved to the server.",
+        description:
+          "Profile updated locally but changes may not be saved to the server.",
       });
     } finally {
       setIsUpdating(false);

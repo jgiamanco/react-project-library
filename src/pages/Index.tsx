@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,7 @@ const Index = () => {
 
   // Track render performance
   useEffect(() => {
-    const endTracking = trackRenderTime('IndexPage');
+    const endTracking = trackRenderTime("IndexPage");
     return endTracking;
   }, []);
 
@@ -24,7 +23,7 @@ const Index = () => {
   useEffect(() => {
     const handleScroll = () => {
       if (scrollListenerRef.current !== null) return;
-      
+
       scrollListenerRef.current = window.requestAnimationFrame(() => {
         setScrollPosition(window.scrollY);
         scrollListenerRef.current = null;
@@ -43,27 +42,30 @@ const Index = () => {
 
   // Intersection Observer for lazy loading sections
   useEffect(() => {
-    if (!('IntersectionObserver' in window)) return;
-    
-    const sections = document.querySelectorAll('.lazy-section');
-    
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.1 });
-    
-    sections.forEach(section => observer.observe(section));
-    
+    if (!("IntersectionObserver" in window)) return;
+
+    const sections = document.querySelectorAll(".lazy-section");
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    sections.forEach((section) => observer.observe(section));
+
     return () => observer.disconnect();
   }, []);
 
   // Reveal animation with optimized timing
   useEffect(() => {
-    if (document.readyState === 'complete') {
+    if (document.readyState === "complete") {
       setImagesLoaded(true);
       const timer = setTimeout(() => setRevealed(true), 100);
       return () => clearTimeout(timer);
@@ -72,15 +74,17 @@ const Index = () => {
         setImagesLoaded(true);
         setTimeout(() => setRevealed(true), 100);
       };
-      window.addEventListener('load', handleLoad);
-      return () => window.removeEventListener('load', handleLoad);
+      window.addEventListener("load", handleLoad);
+      return () => window.removeEventListener("load", handleLoad);
     }
   }, []);
 
   // Preload projects data when user hovers over the explore button
   const preloadProjects = useCallback(() => {
     // Dynamic import to preload the projects module
-    import("@/data/projects").catch(err => console.error("Failed to preload projects", err));
+    import("@/data/projects").catch((err) =>
+      console.error("Failed to preload projects", err)
+    );
   }, []);
 
   return (
@@ -103,14 +107,14 @@ const Index = () => {
         >
           <div className="inline-block mb-6">
             <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-              25 React TypeScript Projects
+              25+ React TypeScript Projects
             </span>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">
             Master React & TypeScript with Practical Projects
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Explore a curated collection of 25 hands-on React TypeScript
+            Explore a curated collection of 25+ hands-on React TypeScript
             projects designed to help you build real-world skills.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
@@ -216,7 +220,7 @@ const Index = () => {
               Ready to Start Building?
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Sign in to access all 25 projects and start your learning journey
+              Sign in to access all 25+ projects and start your learning journey
               today.
             </p>
             <Button

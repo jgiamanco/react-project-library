@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { User } from "@/contexts/auth-types";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { toast as sonnerToast } from "sonner";
+import { updateUserProfile } from "@/services/user-service";
 
 interface ProfileInformationProps {
   profile: User;
@@ -15,7 +15,11 @@ interface ProfileInformationProps {
   updateUser: (updates: Partial<User>) => Promise<User | void>;
 }
 
-export const ProfileInformation = ({ profile, setProfile, updateUser }: ProfileInformationProps) => {
+export const ProfileInformation = ({
+  profile,
+  setProfile,
+  updateUser,
+}: ProfileInformationProps) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -25,8 +29,23 @@ export const ProfileInformation = ({ profile, setProfile, updateUser }: ProfileI
 
     try {
       console.log("Updating profile with data:", profile);
-      
-      // Update auth context with all profile data
+
+      // First update the database
+      await updateUserProfile(profile.email, {
+        displayName: profile.displayName,
+        photoURL: profile.photoURL,
+        bio: profile.bio,
+        location: profile.location,
+        website: profile.website,
+        github: profile.github,
+        twitter: profile.twitter,
+        role: profile.role,
+        theme: profile.theme,
+        emailNotifications: profile.emailNotifications,
+        pushNotifications: profile.pushNotifications,
+      });
+
+      // Then update auth context
       await updateUser({
         displayName: profile.displayName,
         photoURL: profile.photoURL,
@@ -39,12 +58,12 @@ export const ProfileInformation = ({ profile, setProfile, updateUser }: ProfileI
       });
 
       sonnerToast.success("Profile updated", {
-        description: "Your profile has been updated successfully."
+        description: "Your profile has been updated successfully.",
       });
     } catch (error) {
       console.error("Profile update error:", error);
       sonnerToast.error("Update failed", {
-        description: "Failed to update profile. Please try again."
+        description: "Failed to update profile. Please try again.",
       });
     } finally {
       setIsSaving(false);
@@ -54,25 +73,31 @@ export const ProfileInformation = ({ profile, setProfile, updateUser }: ProfileI
   const handleAvatarChange = async (newAvatarUrl: string) => {
     try {
       setIsLoading(true);
-      
+
       // Update local state
       setProfile({
         ...profile,
         photoURL: newAvatarUrl,
       });
-      
+
       console.log("Updating avatar URL:", newAvatarUrl);
-      
-      // Update auth context with new photo URL
+
+      // Update database first
+      await updateUserProfile(profile.email, {
+        ...profile,
+        photoURL: newAvatarUrl,
+      });
+
+      // Then update auth context
       await updateUser({ photoURL: newAvatarUrl });
 
       sonnerToast.success("Avatar updated", {
-        description: "Your profile picture has been updated successfully."
+        description: "Your profile picture has been updated successfully.",
       });
     } catch (error) {
       console.error("Avatar update error:", error);
       sonnerToast.error("Update failed", {
-        description: "Failed to update profile picture. Please try again."
+        description: "Failed to update profile picture. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -122,9 +147,7 @@ export const ProfileInformation = ({ profile, setProfile, updateUser }: ProfileI
             id="bio"
             rows={4}
             value={profile.bio}
-            onChange={(e) =>
-              setProfile({ ...profile, bio: e.target.value })
-            }
+            onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
           />
         </div>
       </div>

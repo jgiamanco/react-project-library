@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRecipeSearch } from "./hooks/useRecipeSearch";
@@ -17,7 +16,7 @@ const RecipeFinder = () => {
     setFilters,
     recipes,
     isLoading,
-    error
+    error,
   } = useRecipeSearch();
 
   return (
@@ -31,20 +30,22 @@ const RecipeFinder = () => {
           <FilterPanel filters={filters} onFilterChange={setFilters} />
         </CardContent>
       </Card>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
-          <RecipeList 
-            recipes={recipes} 
-            isLoading={isLoading} 
-            error={error} 
-            onRecipeSelect={setSelectedRecipe} 
+          <RecipeList
+            recipes={recipes}
+            isLoading={isLoading}
+            error={error}
+            onRecipeSelect={setSelectedRecipe}
             selectedRecipeId={selectedRecipe?.id}
           />
         </div>
         <div className="md:col-span-1">
           {selectedRecipe && (
-            <RecipeDetails recipe={selectedRecipe} />
+            <div id="recipe-details">
+              <RecipeDetails recipe={selectedRecipe} />
+            </div>
           )}
         </div>
       </div>
