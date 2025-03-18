@@ -69,7 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div key={note.id} className="flex items-center justify-between">
             <Button
               variant={currentNote?.id === note.id ? "default" : "outline"}
-              className="w-full justify-start overflow-hidden text-ellipsis"
+              className="justify-start overflow-hidden text-ellipsis"
               onClick={() => setCurrentNote(note)}
             >
               {note.title}
