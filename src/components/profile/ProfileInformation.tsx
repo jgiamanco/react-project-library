@@ -55,6 +55,9 @@ export const ProfileInformation = ({
         github: profile.github,
         twitter: profile.twitter,
         role: profile.role,
+        theme: profile.theme,
+        emailNotifications: profile.emailNotifications,
+        pushNotifications: profile.pushNotifications,
       });
 
       sonnerToast.success("Profile updated", {

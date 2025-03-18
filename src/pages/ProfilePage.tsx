@@ -49,8 +49,8 @@ const ProfilePage = () => {
         if (dbProfile) {
           console.log("Profile loaded from database:", dbProfile);
           setProfile({
-            ...user, // Keep any auth context data
-            ...dbProfile, // Override with database values
+            ...dbProfile, // Spread database values first
+            ...user, // Then override with auth context data
             displayName: dbProfile.displayName || user.displayName,
             photoURL: dbProfile.photoURL || user.photoURL || "",
             bio: dbProfile.bio || "Tell us about yourself...",
