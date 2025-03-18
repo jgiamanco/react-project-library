@@ -110,6 +110,7 @@ const Contact = () => {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
+                className="w-full"
                 placeholder="John Doe"
                 required
               />
@@ -123,6 +124,7 @@ const Contact = () => {
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
+                className="w-full"
                 placeholder="john.doe@example.com"
                 required
               />
@@ -135,6 +137,7 @@ const Contact = () => {
                 name="subject"
                 value={formData.subject}
                 onChange={handleChange}
+                className="w-full"
                 placeholder="How can we help you?"
                 required
               />
@@ -153,7 +156,7 @@ const Contact = () => {
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Sending..." : "Send Message"}
             </Button>
           </form>
