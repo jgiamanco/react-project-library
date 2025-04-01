@@ -260,17 +260,20 @@ export const updateUserProfile = async (
   try {
     const client = getSupabaseClient(true);
 
-    // Update auth metadata first
-    const { error: authError } = await supabase.auth.updateUser({
-      data: {
-        displayName: profile.displayName,
-        photoURL: profile.photoURL,
-        location: profile.location,
+    // First, ensure the user exists in the users table
+    const { error: userError } = await client.from("users").upsert(
+      {
+        email,
+        display_name: profile.displayName,
+        photo_url: profile.photoURL,
+        updated_at: new Date().toISOString(),
       },
-    });
+      { onConflict: "email" }
+    );
 
-    if (authError) {
-      console.warn("Auth metadata update failed:", authError);
+    if (userError) {
+      console.error("Error updating user:", userError);
+      throw userError;
     }
 
     // Validate theme
@@ -308,54 +311,18 @@ export const updateUserProfile = async (
 
     if (error) {
       console.error("Profile update failed:", error);
-      // Try regular client as fallback
-      const { data: regularData, error: regularError } = await supabase
-        .from("user_profiles")
-        .upsert(
-          {
-            email,
-            display_name: profile.displayName,
-            photo_url: profile.photoURL,
-            bio: profile.bio,
-            location: profile.location,
-            website: profile.website,
-            github: profile.github,
-            twitter: profile.twitter,
-            role: profile.role,
-            theme,
-            email_notifications: profile.emailNotifications,
-            push_notifications: profile.pushNotifications,
-            updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: "email",
-            ignoreDuplicates: false,
-          }
-        )
-        .select()
-        .single();
-
-      if (regularError) throw regularError;
-      return convertDbProfileToUserProfile(regularData) as UserProfile;
+      throw error;
     }
 
-    return convertDbProfileToUserProfile(data) as UserProfile;
+    // Convert and return the updated profile
+    const updatedProfile = convertDbProfileToUserProfile(data);
+    if (!updatedProfile) {
+      throw new Error("Failed to convert updated profile");
+    }
+
+    return updatedProfile;
   } catch (error) {
     console.error("Error updating user profile:", error);
-    // Return current profile as fallback
-    return {
-      email,
-      displayName: profile.displayName || "",
-      photoURL: profile.photoURL,
-      bio: profile.bio || "Tell us about yourself...",
-      location: profile.location,
-      website: profile.website || "",
-      github: profile.github || "",
-      twitter: profile.twitter || "",
-      role: profile.role || "Developer",
-      theme: (profile.theme as "light" | "dark" | "system") || "system",
-      emailNotifications: profile.emailNotifications ?? true,
-      pushNotifications: profile.pushNotifications ?? false,
-    };
+    throw error;
   }
 };

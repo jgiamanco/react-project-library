@@ -28,7 +28,8 @@ DROP FUNCTION IF EXISTS public.handle_updated_at();
 
 -- Create or update user_profiles table
 CREATE TABLE IF NOT EXISTS public.user_profiles (
-    email TEXT PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email TEXT NOT NULL REFERENCES auth.users(email) ON DELETE CASCADE,
     display_name TEXT NOT NULL,
     photo_url TEXT,
     bio TEXT,
@@ -41,7 +42,8 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
     email_notifications BOOLEAN DEFAULT true,
     push_notifications BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    UNIQUE(email)
 );
 
 -- Create or update project_sessions table
@@ -64,15 +66,19 @@ ALTER TABLE public.project_sessions ENABLE ROW LEVEL SECURITY;
 -- Create new policies for user_profiles
 CREATE POLICY "Enable read access for own profile"
     ON public.user_profiles FOR SELECT
-    USING (email = auth.jwt()->>'email');
+    USING (auth.uid()::text = email);
 
 CREATE POLICY "Enable insert access for own profile"
     ON public.user_profiles FOR INSERT
-    WITH CHECK (email = auth.jwt()->>'email');
+    WITH CHECK (auth.uid()::text = email);
 
 CREATE POLICY "Enable update access for own profile"
     ON public.user_profiles FOR UPDATE
-    USING (email = auth.jwt()->>'email');
+    USING (auth.uid()::text = email);
+
+CREATE POLICY "Enable delete access for own profile"
+    ON public.user_profiles FOR DELETE
+    USING (auth.uid()::text = email);
 
 -- Create new policies for project_sessions
 CREATE POLICY "Users can read own project sessions"

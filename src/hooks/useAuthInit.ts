@@ -1,160 +1,171 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
 import { getUser } from "@/services/user-service";
 import { measureExecutionTime } from "@/utils/performance-monitoring";
+import { Session, User as SupabaseUser } from "@supabase/supabase-js";
+
+interface UserMetadata {
+  display_name?: string;
+  photo_url?: string;
+  location?: string;
+}
 
 export const useAuthInit = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const authCheckStarted = useRef(false);
+  const authStateUpdateTimeout = useRef<NodeJS.Timeout>();
 
   // Create a minimal fallback user profile from email
-  const createBasicUserProfile = useCallback((email: string, userData: any = {}): User => {
-    return {
-      email,
-      displayName: userData?.display_name || email.split("@")[0] || 'User',
-      photoURL: userData?.photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-      location: userData?.location || '',
-      bio: '',
-      website: '',
-      github: '',
-      twitter: '',
-      role: 'User',
-      theme: 'system',
-      emailNotifications: true,
-      pushNotifications: false,
-    };
-  }, []);
+  const createBasicUserProfile = useCallback(
+    (email: string, userData: UserMetadata = {}): User => {
+      return {
+        email,
+        displayName: userData?.display_name || email.split("@")[0] || "User",
+        photoURL:
+          userData?.photo_url ||
+          `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+        location: userData?.location || "",
+        bio: "",
+        website: "",
+        github: "",
+        twitter: "",
+        role: "User",
+        theme: "system",
+        emailNotifications: true,
+        pushNotifications: false,
+      };
+    },
+    []
+  );
+
+  const updateAuthState = useCallback(
+    async (session: Session | null) => {
+      if (session?.user) {
+        const { data } = await supabase.auth.getUser();
+        if (data?.user) {
+          const email = data.user.email || "";
+          const userMetadata = data.user.user_metadata as UserMetadata;
+
+          try {
+            const userProfile = await getUser(email).catch(() => null);
+
+            const finalUserProfile =
+              userProfile || createBasicUserProfile(email, userMetadata);
+
+            setUser(finalUserProfile);
+            setIsAuthenticated(true);
+            localStorage.setItem("authenticated", "true");
+            localStorage.setItem("user", JSON.stringify(finalUserProfile));
+          } catch (error) {
+            console.error("Error updating auth state:", error);
+            // On error, clear auth state to prevent inconsistent state
+            localStorage.removeItem("authenticated");
+            localStorage.removeItem("user");
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        }
+      } else {
+        localStorage.removeItem("authenticated");
+        localStorage.removeItem("user");
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    },
+    [createBasicUserProfile]
+  );
 
   useEffect(() => {
     if (authCheckStarted.current) return;
     authCheckStarted.current = true;
-    
-    // To prevent infinite loading, set a timeout that's shorter
+
     const loadingTimeout = setTimeout(() => {
       if (isLoading) {
         console.log("Auth check is taking too long, stopping loading state");
         setIsLoading(false);
       }
-    }, 1000); // Reduced from 2000ms to 1000ms
+    }, 1000);
 
     const checkAuth = async () => {
       try {
-        // First check localStorage for faster loading
-        const storedAuth = localStorage.getItem("authenticated");
-        const storedUser = localStorage.getItem("user");
-        
-        // Immediate UI update from localStorage
-        if (storedAuth === "true" && storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser) as User;
-            setUser(parsedUser);
-            setIsAuthenticated(true);
-            // Don't set isLoading to false yet, continue checking with Supabase
-          } catch (e) {
-            console.error("Invalid stored user data:", e);
-            localStorage.removeItem("authenticated");
-            localStorage.removeItem("user");
-          }
-        }
-        
-        // Now check if there's an active Supabase session
+        // Check Supabase session first
         const { data: sessionData } = await measureExecutionTime(
           () => supabase.auth.getSession(),
           "supabase.auth.getSession"
         );
-        
+
         if (sessionData?.session) {
-          const { data: userData } = await supabase.auth.getUser();
-          
-          if (userData?.user) {
-            const email = userData.user.email || '';
-            
-            // Try to get user profile from database
-            const userProfile = await getUser(email).catch(() => null);
-            
-            const finalUserProfile = userProfile || createBasicUserProfile(
-              email, 
-              userData.user.user_metadata
-            );
-            
-            // Set user and authenticated state
-            setUser(finalUserProfile);
-            setIsAuthenticated(true);
-            localStorage.setItem("authenticated", "true");
-            localStorage.setItem("user", JSON.stringify(finalUserProfile));
-          } else {
-            // Clear auth state if no valid user
-            if (storedAuth === "true") {
+          await updateAuthState(sessionData.session);
+        } else {
+          // If no active session, check localStorage as fallback
+          const storedAuth = localStorage.getItem("authenticated");
+          const storedUser = localStorage.getItem("user");
+
+          if (storedAuth === "true" && storedUser) {
+            try {
+              const parsedUser = JSON.parse(storedUser) as User;
+              setUser(parsedUser);
+              setIsAuthenticated(true);
+            } catch (e) {
+              console.error("Invalid stored user data:", e);
               localStorage.removeItem("authenticated");
               localStorage.removeItem("user");
+              setUser(null);
+              setIsAuthenticated(false);
             }
+          } else {
             setUser(null);
             setIsAuthenticated(false);
           }
-        } else if (storedAuth !== "true") {
-          // No active session and no valid localStorage data
-          localStorage.removeItem("authenticated");
-          localStorage.removeItem("user");
-          setUser(null);
-          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error("Auth check error:", error);
-        // Don't clear localStorage on error - the user might be offline
+        // On error, clear auth state to prevent inconsistent state
+        localStorage.removeItem("authenticated");
+        localStorage.removeItem("user");
+        setUser(null);
+        setIsAuthenticated(false);
       } finally {
         clearTimeout(loadingTimeout);
         setIsLoading(false);
       }
     };
 
-    // Set up auth state change listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        const { data } = await supabase.auth.getUser();
-        if (data?.user) {
-          const email = data.user.email || '';
-          
-          try {
-            const userProfile = await getUser(email).catch(() => null);
-            
-            const finalUserProfile = userProfile || createBasicUserProfile(
-              email, 
-              data.user.user_metadata
-            );
-            
-            setUser(finalUserProfile);
-            setIsAuthenticated(true);
-            localStorage.setItem("authenticated", "true");
-            localStorage.setItem("user", JSON.stringify(finalUserProfile));
-          } catch (error) {
-            console.error("Error in auth state change:", error);
-          }
+    // Set up auth state change listener with debouncing
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (authStateUpdateTimeout.current) {
+          clearTimeout(authStateUpdateTimeout.current);
         }
-      } else if (event === 'SIGNED_OUT') {
-        localStorage.removeItem("authenticated");
-        localStorage.removeItem("user");
-        setUser(null);
-        setIsAuthenticated(false);
+
+        authStateUpdateTimeout.current = setTimeout(() => {
+          if (event === "SIGNED_IN") {
+            updateAuthState(session);
+          } else if (event === "SIGNED_OUT") {
+            localStorage.removeItem("authenticated");
+            localStorage.removeItem("user");
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        }, 300); // Debounce auth state changes
       }
-    });
+    );
 
-    // Immediately check auth state using requestIdleCallback if available
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      requestIdleCallback(() => checkAuth(), { timeout: 1000 });
-    } else {
-      checkAuth();
-    }
+    // Check auth state
+    checkAuth();
 
-    // Cleanup listener and timeout on unmount
+    // Cleanup
     return () => {
       clearTimeout(loadingTimeout);
+      if (authStateUpdateTimeout.current) {
+        clearTimeout(authStateUpdateTimeout.current);
+      }
       authListener.subscription.unsubscribe();
     };
-  }, [createBasicUserProfile]);
+  }, [updateAuthState]);
 
   return {
     user,
@@ -162,6 +173,6 @@ export const useAuthInit = () => {
     isLoading,
     setIsLoading,
     isAuthenticated,
-    setIsAuthenticated
+    setIsAuthenticated,
   };
 };

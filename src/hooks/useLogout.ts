@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -14,25 +13,31 @@ export const useLogout = () => {
     try {
       setIsLoading(true);
       sonnerToast.loading("Signing out...");
-      
-      // First clear all localStorage items to prevent auth loops
-      localStorage.clear();
-      
-      // Then sign out from Supabase
+
+      // First sign out from Supabase
       const { error } = await supabase.auth.signOut();
-      
+
       if (error) {
         console.error("Error signing out from Supabase:", error);
         throw error;
       }
-      
+
+      // Clear all auth-related localStorage items
+      localStorage.removeItem("authenticated");
+      localStorage.removeItem("user");
+      localStorage.removeItem("user_profile");
+      localStorage.removeItem("lastLoggedInEmail");
+
+      // Clear any other app-specific storage
+      sessionStorage.clear();
+
       sonnerToast.dismiss();
       toast({
         title: "Signed out",
         description: "You have been successfully signed out.",
       });
-      
-      // Ensure we navigate to home page
+
+      // Use replace to prevent back navigation to protected routes
       navigate("/", { replace: true });
     } catch (error) {
       console.error("Logout error:", error);
@@ -42,7 +47,7 @@ export const useLogout = () => {
         title: "Error signing out",
         description: "There was a problem signing you out. Please try again.",
       });
-      
+
       // Force navigation to home page even on error
       navigate("/", { replace: true });
     } finally {
@@ -52,6 +57,6 @@ export const useLogout = () => {
 
   return {
     logout,
-    isLoading
+    isLoading,
   };
 };
