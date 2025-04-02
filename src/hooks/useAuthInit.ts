@@ -11,10 +11,24 @@ interface UserMetadata {
   location?: string;
 }
 
+// Helper function to add timeout to a promise
+const withTimeout = <T>(
+  promise: Promise<T>,
+  timeoutMs: number = 5000
+): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("Operation timed out")), timeoutMs)
+    ),
+  ]);
+};
+
 export const useAuthInit = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const authCheckStarted = useRef(false);
   const authStateUpdateTimeout = useRef<NodeJS.Timeout>();
 
@@ -44,35 +58,45 @@ export const useAuthInit = () => {
   const updateAuthState = useCallback(
     async (session: Session | null) => {
       if (session?.user) {
-        const { data } = await supabase.auth.getUser();
-        if (data?.user) {
-          const email = data.user.email || "";
-          const userMetadata = data.user.user_metadata as UserMetadata;
+        try {
+          const { data } = await withTimeout(supabase.auth.getUser());
+          if (data?.user) {
+            const email = data.user.email || "";
+            const userMetadata = data.user.user_metadata as UserMetadata;
 
-          try {
-            const userProfile = await getUser(email).catch(() => null);
+            try {
+              const userProfile = await withTimeout(
+                getUser(email).catch(() => null)
+              );
 
-            const finalUserProfile =
-              userProfile || createBasicUserProfile(email, userMetadata);
+              const finalUserProfile =
+                userProfile || createBasicUserProfile(email, userMetadata);
 
-            setUser(finalUserProfile);
-            setIsAuthenticated(true);
-            localStorage.setItem("authenticated", "true");
-            localStorage.setItem("user", JSON.stringify(finalUserProfile));
-          } catch (error) {
-            console.error("Error updating auth state:", error);
-            // On error, clear auth state to prevent inconsistent state
-            localStorage.removeItem("authenticated");
-            localStorage.removeItem("user");
-            setUser(null);
-            setIsAuthenticated(false);
+              setUser(finalUserProfile);
+              setIsAuthenticated(true);
+              localStorage.setItem("authenticated", "true");
+              localStorage.setItem("user", JSON.stringify(finalUserProfile));
+              setError(null);
+            } catch (error) {
+              console.error("Error updating auth state:", error);
+              // On error, clear auth state to prevent inconsistent state
+              localStorage.removeItem("authenticated");
+              localStorage.removeItem("user");
+              setUser(null);
+              setIsAuthenticated(false);
+              setError("Failed to load user profile");
+            }
           }
+        } catch (error) {
+          console.error("Error getting user data:", error);
+          setError("Failed to get user data");
         }
       } else {
         localStorage.removeItem("authenticated");
         localStorage.removeItem("user");
         setUser(null);
         setIsAuthenticated(false);
+        setError(null);
       }
     },
     [createBasicUserProfile]
@@ -86,15 +110,18 @@ export const useAuthInit = () => {
       if (isLoading) {
         console.log("Auth check is taking too long, stopping loading state");
         setIsLoading(false);
+        setError("Authentication check timed out");
       }
-    }, 1000);
+    }, 5000); // Increased timeout to 5 seconds
 
     const checkAuth = async () => {
       try {
         // Check Supabase session first
-        const { data: sessionData } = await measureExecutionTime(
-          () => supabase.auth.getSession(),
-          "supabase.auth.getSession"
+        const { data: sessionData } = await withTimeout(
+          measureExecutionTime(
+            () => supabase.auth.getSession(),
+            "supabase.auth.getSession"
+          )
         );
 
         if (sessionData?.session) {
@@ -109,16 +136,19 @@ export const useAuthInit = () => {
               const parsedUser = JSON.parse(storedUser) as User;
               setUser(parsedUser);
               setIsAuthenticated(true);
+              setError(null);
             } catch (e) {
               console.error("Invalid stored user data:", e);
               localStorage.removeItem("authenticated");
               localStorage.removeItem("user");
               setUser(null);
               setIsAuthenticated(false);
+              setError("Invalid stored user data");
             }
           } else {
             setUser(null);
             setIsAuthenticated(false);
+            setError(null);
           }
         }
       } catch (error) {
@@ -128,6 +158,7 @@ export const useAuthInit = () => {
         localStorage.removeItem("user");
         setUser(null);
         setIsAuthenticated(false);
+        setError("Authentication check failed");
       } finally {
         clearTimeout(loadingTimeout);
         setIsLoading(false);
@@ -149,6 +180,7 @@ export const useAuthInit = () => {
             localStorage.removeItem("user");
             setUser(null);
             setIsAuthenticated(false);
+            setError(null);
           }
         }, 300); // Debounce auth state changes
       }
@@ -174,5 +206,6 @@ export const useAuthInit = () => {
     setIsLoading,
     isAuthenticated,
     setIsAuthenticated,
+    error,
   };
 };

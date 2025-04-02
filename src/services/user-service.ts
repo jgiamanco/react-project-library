@@ -69,27 +69,28 @@ export const ensureUsersTable = async (): Promise<boolean> => {
   }
 };
 
+// Helper function to add timeout to a promise
+const withTimeout = <T>(
+  promise: Promise<T>,
+  timeoutMs: number = 5000
+): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Database operation timed out")),
+        timeoutMs
+      )
+    ),
+  ]);
+};
+
 // User operations
 export const storeUser = async (userData: UserData): Promise<UserData> => {
   try {
-    // Try to use admin client first to bypass RLS
-    const client = getSupabaseClient(true);
-
-    const { data, error } = await client
-      .from("users")
-      .upsert({
-        email: userData.email,
-        display_name: userData.displayName,
-        photo_url: userData.photoURL,
-        updated_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.warn("Admin insert failed, trying regular client:", error);
-      // If admin fails or is not available, try regular client as fallback
-      const { data: regularData, error: regularError } = await supabase
+    // Try regular client first
+    const { data, error } = await withTimeout(
+      supabase
         .from("users")
         .upsert({
           email: userData.email,
@@ -98,13 +99,34 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
           updated_at: new Date().toISOString(),
         })
         .select()
-        .single();
+        .single()
+    );
 
-      if (regularError) handleSupabaseError(regularError);
+    if (error) {
+      console.warn("Regular client insert failed, trying admin client:", error);
+      // If regular client fails, try admin client as fallback
+      const { data: adminData, error: adminError } = await withTimeout(
+        getSupabaseClient(true)
+          .from("users")
+          .upsert({
+            email: userData.email,
+            display_name: userData.displayName,
+            photo_url: userData.photoURL,
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single()
+      );
+
+      if (adminError) {
+        console.error("Both regular and admin client failed:", adminError);
+        return userData; // Return input data as fallback
+      }
+
       return {
-        email: regularData.email,
-        displayName: regularData.display_name,
-        photoURL: regularData.photo_url,
+        email: adminData.email,
+        displayName: adminData.display_name,
+        photoURL: adminData.photo_url,
       };
     }
 
@@ -122,35 +144,35 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
 
 export const getUser = async (email: string): Promise<UserData | null> => {
   try {
-    const client = getSupabaseClient(true);
-
-    const { data, error } = await client
-      .from("users")
-      .select()
-      .eq("email", email)
-      .single();
+    // Try regular client first
+    const { data, error } = await withTimeout(
+      supabase.from("users").select().eq("email", email).single()
+    );
 
     if (error) {
       if (error.code === "PGRST116") return null; // Record not found
 
-      // Try regular client as fallback
-      const { data: regularData, error: regularError } = await supabase
-        .from("users")
-        .select()
-        .eq("email", email)
-        .single();
+      console.warn("Regular client fetch failed, trying admin client:", error);
+      // Try admin client as fallback
+      const { data: adminData, error: adminError } = await withTimeout(
+        getSupabaseClient(true)
+          .from("users")
+          .select()
+          .eq("email", email)
+          .single()
+      );
 
-      if (regularError) {
-        if (regularError.code === "PGRST116") return null; // Record not found
-        console.warn("Error fetching user:", regularError);
+      if (adminError) {
+        if (adminError.code === "PGRST116") return null; // Record not found
+        console.warn("Both regular and admin client failed:", adminError);
         return null;
       }
 
-      return regularData
+      return adminData
         ? {
-            email: regularData.email,
-            displayName: regularData.display_name,
-            photoURL: regularData.photo_url,
+            email: adminData.email,
+            displayName: adminData.display_name,
+            photoURL: adminData.photo_url,
           }
         : null;
     }
