@@ -14,7 +14,7 @@ interface UserMetadata {
 // Helper function to add timeout to a promise
 const withTimeout = <T>(
   promise: Promise<T>,
-  timeoutMs: number = 5000
+  timeoutMs: number = 10000
 ): Promise<T> => {
   return Promise.race([
     promise,
@@ -31,6 +31,8 @@ export const useAuthInit = () => {
   const [error, setError] = useState<string | null>(null);
   const authCheckStarted = useRef(false);
   const authStateUpdateTimeout = useRef<NodeJS.Timeout>();
+  const retryCount = useRef(0);
+  const maxRetries = 3;
 
   // Create a minimal fallback user profile from email
   const createBasicUserProfile = useCallback(
@@ -65,9 +67,20 @@ export const useAuthInit = () => {
             const userMetadata = data.user.user_metadata as UserMetadata;
 
             try {
-              const userProfile = await withTimeout(
-                getUser(email).catch(() => null)
-              );
+              // Try to get user profile with retries
+              let userProfile = null;
+              while (retryCount.current < maxRetries) {
+                try {
+                  userProfile = await withTimeout(getUser(email));
+                  if (userProfile) break;
+                } catch (err) {
+                  console.warn(
+                    `Attempt ${retryCount.current + 1} failed:`,
+                    err
+                  );
+                  retryCount.current++;
+                }
+              }
 
               const finalUserProfile =
                 userProfile || createBasicUserProfile(email, userMetadata);
@@ -77,6 +90,7 @@ export const useAuthInit = () => {
               localStorage.setItem("authenticated", "true");
               localStorage.setItem("user", JSON.stringify(finalUserProfile));
               setError(null);
+              retryCount.current = 0; // Reset retry count on success
             } catch (error) {
               console.error("Error updating auth state:", error);
               // On error, clear auth state to prevent inconsistent state
@@ -112,7 +126,7 @@ export const useAuthInit = () => {
         setIsLoading(false);
         setError("Authentication check timed out");
       }
-    }, 5000); // Increased timeout to 5 seconds
+    }, 10000); // Increased timeout to 10 seconds
 
     const checkAuth = async () => {
       try {
