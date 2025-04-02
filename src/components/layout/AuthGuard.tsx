@@ -17,6 +17,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   const redirectTimeout = useRef<NodeJS.Timeout>();
   const authCheckTimeout = useRef<NodeJS.Timeout>();
   const checksCompleted = useRef(false);
+  const isMounted = useRef(true);
 
   // Define a single, reusable function for redirecting on auth failure
   const redirectToSignIn = useCallback(
@@ -39,18 +40,20 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
 
       // Use a timeout to ensure state updates are processed
       redirectTimeout.current = setTimeout(() => {
-        navigate("/signin", {
-          replace: true,
-          state: { from: location.pathname },
-        });
-        setIsChecking(false);
+        if (isMounted.current) {
+          navigate("/signin", {
+            replace: true,
+            state: { from: location.pathname },
+          });
+          setIsChecking(false);
+        }
       }, 100);
     },
     [navigate, location.pathname]
   );
 
   useEffect(() => {
-    let isMounted = true;
+    isMounted.current = true;
 
     const checkAuth = async () => {
       // If we already verified authentication and user is authenticated, no need to check again
@@ -80,7 +83,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
 
         // Auth check passed
         checksCompleted.current = true;
-        if (isMounted) {
+        if (isMounted.current) {
           setIsChecking(false);
         }
       } catch (error) {
@@ -94,7 +97,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
 
     // Set a timeout to prevent infinite auth checks
     authCheckTimeout.current = setTimeout(() => {
-      if (isChecking && isMounted) {
+      if (isChecking && isMounted.current) {
         setIsChecking(false);
         if (!isAuthenticated) {
           redirectToSignIn("Authentication check timed out");
@@ -104,7 +107,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
 
     // Clean up
     return () => {
-      isMounted = false;
+      isMounted.current = false;
       if (redirectTimeout.current) {
         clearTimeout(redirectTimeout.current);
       }
@@ -112,7 +115,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
         clearTimeout(authCheckTimeout.current);
       }
     };
-  }, [isAuthenticated, isLoading, redirectToSignIn, user]);
+  }, [isAuthenticated, isLoading, redirectToSignIn, user, isChecking]);
 
   // If auth state is determined and user is authenticated, render children
   if (!isChecking && isAuthenticated) {

@@ -1,3 +1,4 @@
+
 import {
   supabase,
   handleSupabaseError,
@@ -142,6 +143,11 @@ export async function storeUser(profile: UserProfile): Promise<void> {
 // Get user data from the database
 export async function getUser(email: string): Promise<UserProfile | null> {
   console.log("Starting getUser for email:", email);
+  if (!email) {
+    console.error("Invalid email provided to getUser");
+    return null;
+  }
+  
   try {
     await ensureUsersTable();
 
@@ -152,6 +158,11 @@ export async function getUser(email: string): Promise<UserProfile | null> {
       .single();
 
     if (error) {
+      if (error.code === "PGRST116") {
+        // Record not found
+        console.log("No user found for email:", email);
+        return null;
+      }
       console.error("Error fetching user:", error);
       throw error;
     }
@@ -193,20 +204,37 @@ export const deleteUser = async (email: string): Promise<void> => {
 export const getUserProfile = async (
   email: string
 ): Promise<UserProfile | null> => {
+  if (!email) {
+    console.error("Invalid email provided to getUserProfile");
+    return null;
+  }
+  
   try {
-    const client = getSupabaseClient(true);
-    const { data, error } = await client
-      .from("user_profiles")
-      .select("*")
-      .eq("email", email)
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") return null; // Record not found
-      throw error;
+    // First try getting from users table
+    const userProfile = await getUser(email);
+    if (userProfile) {
+      return userProfile;
     }
+    
+    // Fall back to user_profiles table if it exists
+    const client = getSupabaseClient(true);
+    try {
+      const { data, error } = await client
+        .from("user_profiles")
+        .select("*")
+        .eq("email", email)
+        .single();
 
-    return convertDbProfileToUserProfile(data);
+      if (error) {
+        if (error.code === "PGRST116") return null; // Record not found
+        throw error;
+      }
+
+      return convertDbProfileToUserProfile(data);
+    } catch (tableError) {
+      console.warn("user_profiles table might not exist:", tableError);
+      return null;
+    }
   } catch (error) {
     console.error("Error getting user profile:", error);
     return null;
@@ -244,24 +272,15 @@ export const updateUserProfile = async (
   email: string,
   profile: Partial<UserProfile>
 ): Promise<UserProfile> => {
+  if (!email) {
+    throw new Error("Email is required for updating user profile");
+  }
+  
   try {
     const client = getSupabaseClient(true);
 
-    // First, ensure the user exists in the users table
-    const { error: userError } = await client.from("users").upsert(
-      {
-        email,
-        display_name: profile.displayName,
-        photo_url: profile.photoURL,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "email" }
-    );
-
-    if (userError) {
-      console.error("Error updating user:", userError);
-      throw userError;
-    }
+    // Ensure the users table exists
+    await ensureUsersTable();
 
     // Validate theme
     const theme =
@@ -269,30 +288,30 @@ export const updateUserProfile = async (
         ? profile.theme
         : "system";
 
-    // Update the profile
+    // Convert profile to DB format
+    const dbProfile = {
+      email,
+      display_name: profile.displayName || "",
+      photo_url: profile.photoURL || "",
+      bio: profile.bio || "",
+      location: profile.location || "",
+      website: profile.website || "",
+      github: profile.github || "",
+      twitter: profile.twitter || "",
+      role: profile.role || "User",
+      theme,
+      email_notifications: profile.emailNotifications ?? true,
+      push_notifications: profile.pushNotifications ?? false,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Update the profile in users table
     const { data, error } = await client
-      .from("user_profiles")
-      .upsert(
-        {
-          email,
-          display_name: profile.displayName,
-          photo_url: profile.photoURL,
-          bio: profile.bio,
-          location: profile.location,
-          website: profile.website,
-          github: profile.github,
-          twitter: profile.twitter,
-          role: profile.role,
-          theme,
-          email_notifications: profile.emailNotifications,
-          push_notifications: profile.pushNotifications,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "email",
-          ignoreDuplicates: false,
-        }
-      )
+      .from("users")
+      .upsert(dbProfile, {
+        onConflict: "email",
+        ignoreDuplicates: false,
+      })
       .select()
       .single();
 
@@ -306,6 +325,10 @@ export const updateUserProfile = async (
     if (!updatedProfile) {
       throw new Error("Failed to convert updated profile");
     }
+
+    // Update local storage
+    localStorage.setItem("user", JSON.stringify(updatedProfile));
+    localStorage.setItem("user_profile", JSON.stringify(updatedProfile));
 
     return updatedProfile;
   } catch (error) {

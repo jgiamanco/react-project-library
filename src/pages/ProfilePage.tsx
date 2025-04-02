@@ -39,6 +39,7 @@ const ProfilePage = () => {
       if (!authUser?.email) {
         if (!authLoading) {
           console.log("No user found in auth context, redirecting to sign in");
+          toast.error("Authentication required");
           navigate("/signin", { replace: true });
         }
         return;
@@ -68,7 +69,7 @@ const ProfilePage = () => {
         } else {
           console.log("No profile found in database, creating default profile");
           // Create a complete default profile
-          const defaultProfile: Partial<User> = {
+          const defaultProfile: User = {
             ...authUser,
             bio: "Tell us about yourself...",
             website: "",
@@ -80,7 +81,7 @@ const ProfilePage = () => {
             pushNotifications: false,
           };
 
-          setProfile(defaultProfile as User);
+          setProfile(defaultProfile);
 
           // Create the profile in the database
           await updateUserProfile(authUser.email, defaultProfile);
@@ -120,15 +121,19 @@ const ProfilePage = () => {
 
     setIsUpdating(true);
     try {
-      // Update auth context
+      // First update the database
+      console.log("Updating profile in database:", updates);
+      await updateUserProfile(authUser.email, updates);
+      
+      // Then update auth context
+      console.log("Updating profile in auth context");
       const updatedUser = await updateUser(updates);
 
-      if (updatedUser) {
-        // Update local state
-        setProfile((prev) => (prev ? { ...prev, ...updates } : null));
-      }
+      // Update local state
+      setProfile((prev) => (prev ? { ...prev, ...updates } : null));
 
       toast.success("Profile updated successfully");
+      return updatedUser;
     } catch (error) {
       console.error("Error updating profile:", error);
 
