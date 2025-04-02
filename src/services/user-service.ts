@@ -88,6 +88,13 @@ const withTimeout = <T>(
 // User operations
 export const storeUser = async (userData: UserData): Promise<UserData> => {
   try {
+    // First, ensure the users table exists
+    const tableExists = await ensureUsersTable();
+    if (!tableExists) {
+      console.error("Users table does not exist");
+      return userData; // Return input data as fallback
+    }
+
     // First, ensure the user exists in the public.users table
     const { data: existingUser, error: checkError } = await withTimeout(
       supabase

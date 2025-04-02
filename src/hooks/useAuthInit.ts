@@ -71,39 +71,45 @@ export const useAuthInit = () => {
             const userMetadata = data.user.user_metadata as UserMetadata;
 
             try {
+              // Create basic profile first
+              const basicProfile = createBasicUserProfile(email, userMetadata);
+
               // Try to get user profile with retries
               let userProfile = null;
-              while (retryCount.current < maxRetries) {
-                try {
-                  userProfile = await withTimeout(getUser(email));
-                  if (userProfile) break;
-                } catch (err) {
-                  console.warn(
-                    `Attempt ${retryCount.current + 1} failed:`,
-                    err
-                  );
-                  retryCount.current++;
-                  if (retryCount.current < maxRetries) {
-                    // Add delay between retries
-                    await new Promise((resolve) => setTimeout(resolve, 1000));
+              let dbError = false;
+
+              try {
+                while (retryCount.current < maxRetries) {
+                  try {
+                    userProfile = await withTimeout(getUser(email));
+                    if (userProfile) break;
+                  } catch (err) {
+                    console.warn(
+                      `Attempt ${retryCount.current + 1} failed:`,
+                      err
+                    );
+                    retryCount.current++;
+                    if (retryCount.current < maxRetries) {
+                      // Add delay between retries
+                      await new Promise((resolve) => setTimeout(resolve, 1000));
+                    }
                   }
                 }
+              } catch (error) {
+                console.error("Database operation failed:", error);
+                dbError = true;
               }
 
-              // If no profile exists, create one from auth metadata
-              if (!userProfile) {
-                console.log(
-                  "No user profile found, creating from auth metadata"
-                );
-                const basicProfile = createBasicUserProfile(
-                  email,
-                  userMetadata
-                );
+              // If database operations failed or no profile exists, use basic profile
+              if (dbError || !userProfile) {
+                console.log("Using basic profile due to database issues");
+                userProfile = basicProfile;
+
+                // Try to store the basic profile in the background
                 try {
-                  userProfile = await withTimeout(storeUser(basicProfile));
+                  await withTimeout(storeUser(basicProfile));
                 } catch (storeErr) {
                   console.error("Error storing basic profile:", storeErr);
-                  userProfile = basicProfile; // Use basic profile as fallback
                 }
               }
 
@@ -115,7 +121,7 @@ export const useAuthInit = () => {
               retryCount.current = 0; // Reset retry count on success
             } catch (error) {
               console.error("Error updating auth state:", error);
-              // On error, create and use basic profile
+              // On error, use basic profile
               const basicProfile = createBasicUserProfile(email, userMetadata);
               setUser(basicProfile);
               setIsAuthenticated(true);
