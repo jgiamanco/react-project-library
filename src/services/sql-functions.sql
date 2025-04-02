@@ -73,4 +73,32 @@ BEGIN
   FROM pg_policies p
   WHERE p.tablename = table_name;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER; 
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view their own profile" ON public.users;
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.users;
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.users;
+DROP POLICY IF EXISTS "Users can delete their own profile" ON public.users;
+
+-- Create new policies
+CREATE POLICY "Users can view their own profile"
+  ON public.users FOR SELECT
+  USING (auth.uid()::text = email);
+
+CREATE POLICY "Users can update their own profile"
+  ON public.users FOR UPDATE
+  USING (auth.uid()::text = email);
+
+CREATE POLICY "Users can insert their own profile"
+  ON public.users FOR INSERT
+  WITH CHECK (auth.uid()::text = email);
+
+CREATE POLICY "Users can delete their own profile"
+  ON public.users FOR DELETE
+  USING (auth.uid()::text = email);
+
+-- Grant necessary permissions
+GRANT ALL ON public.users TO authenticated;
+GRANT ALL ON public.users TO service_role;
+GRANT ALL ON public.users TO anon; 
