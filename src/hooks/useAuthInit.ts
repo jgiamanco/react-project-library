@@ -70,65 +70,68 @@ export const useAuthInit = () => {
             const email = data.user.email || "";
             const userMetadata = data.user.user_metadata as UserMetadata;
 
-            try {
-              // Create basic profile first
-              const basicProfile = createBasicUserProfile(email, userMetadata);
+            // Create basic profile immediately
+            const basicProfile = createBasicUserProfile(email, userMetadata);
+            setUser(basicProfile);
+            setIsAuthenticated(true);
+            localStorage.setItem("authenticated", "true");
+            localStorage.setItem("user", JSON.stringify(basicProfile));
 
-              // Try to get user profile with retries
-              let userProfile = null;
-              let dbError = false;
-
+            // Try to get/update database profile in the background
+            const updateDatabaseProfile = async () => {
               try {
-                while (retryCount.current < maxRetries) {
-                  try {
-                    userProfile = await withTimeout(getUser(email));
-                    if (userProfile) break;
-                  } catch (err) {
-                    console.warn(
-                      `Attempt ${retryCount.current + 1} failed:`,
-                      err
-                    );
-                    retryCount.current++;
-                    if (retryCount.current < maxRetries) {
-                      // Add delay between retries
-                      await new Promise((resolve) => setTimeout(resolve, 1000));
+                let userProfile = null;
+                let dbError = false;
+
+                try {
+                  while (retryCount.current < maxRetries) {
+                    try {
+                      userProfile = await withTimeout(getUser(email));
+                      if (userProfile) break;
+                    } catch (err) {
+                      console.warn(
+                        `Attempt ${retryCount.current + 1} failed:`,
+                        err
+                      );
+                      retryCount.current++;
+                      if (retryCount.current < maxRetries) {
+                        await new Promise((resolve) =>
+                          setTimeout(resolve, 1000)
+                        );
+                      }
                     }
                   }
+                } catch (error) {
+                  console.error("Database operation failed:", error);
+                  dbError = true;
                 }
+
+                if (dbError || !userProfile) {
+                  console.log("Using basic profile due to database issues");
+                  userProfile = basicProfile;
+
+                  try {
+                    await withTimeout(storeUser(basicProfile));
+                  } catch (storeErr) {
+                    console.error("Error storing basic profile:", storeErr);
+                  }
+                }
+
+                // Update state with database profile if available
+                if (userProfile) {
+                  setUser(userProfile);
+                  localStorage.setItem("user", JSON.stringify(userProfile));
+                }
+                setError(null);
+                retryCount.current = 0;
               } catch (error) {
-                console.error("Database operation failed:", error);
-                dbError = true;
+                console.error("Error updating database profile:", error);
+                setError("Failed to load user profile");
               }
+            };
 
-              // If database operations failed or no profile exists, use basic profile
-              if (dbError || !userProfile) {
-                console.log("Using basic profile due to database issues");
-                userProfile = basicProfile;
-
-                // Try to store the basic profile in the background
-                try {
-                  await withTimeout(storeUser(basicProfile));
-                } catch (storeErr) {
-                  console.error("Error storing basic profile:", storeErr);
-                }
-              }
-
-              setUser(userProfile);
-              setIsAuthenticated(true);
-              localStorage.setItem("authenticated", "true");
-              localStorage.setItem("user", JSON.stringify(userProfile));
-              setError(null);
-              retryCount.current = 0; // Reset retry count on success
-            } catch (error) {
-              console.error("Error updating auth state:", error);
-              // On error, use basic profile
-              const basicProfile = createBasicUserProfile(email, userMetadata);
-              setUser(basicProfile);
-              setIsAuthenticated(true);
-              localStorage.setItem("authenticated", "true");
-              localStorage.setItem("user", JSON.stringify(basicProfile));
-              setError("Failed to load user profile");
-            }
+            // Start background update
+            updateDatabaseProfile();
           }
         } else {
           localStorage.removeItem("authenticated");
@@ -139,7 +142,6 @@ export const useAuthInit = () => {
         }
       } catch (error) {
         console.error("Error getting user data:", error);
-        // On error, keep the current state if it exists
         if (!user) {
           setError("Failed to get user data");
         }
@@ -158,16 +160,36 @@ export const useAuthInit = () => {
       if (isLoading) {
         console.log("Auth check is taking too long, stopping loading state");
         setIsLoading(false);
-        // Don't set error if we have a user
         if (!user) {
           setError("Authentication check timed out");
         }
       }
-    }, 15000); // Increased timeout to 15 seconds
+    }, 5000); // Reduced timeout to 5 seconds for initial check
 
     const checkAuth = async () => {
       try {
-        // Check Supabase session first
+        // Check localStorage first for faster initial load
+        const storedAuth = localStorage.getItem("authenticated");
+        const storedUser = localStorage.getItem("user");
+
+        if (storedAuth === "true" && storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser) as User;
+            setUser(parsedUser);
+            setIsAuthenticated(true);
+            setError(null);
+            setIsLoading(false);
+          } catch (e) {
+            console.error("Invalid stored user data:", e);
+            localStorage.removeItem("authenticated");
+            localStorage.removeItem("user");
+            setUser(null);
+            setIsAuthenticated(false);
+            setError("Invalid stored user data");
+          }
+        }
+
+        // Then check Supabase session in the background
         const { data: sessionData } = await withTimeout(
           measureExecutionTime(
             () => supabase.auth.getSession(),
@@ -177,34 +199,13 @@ export const useAuthInit = () => {
 
         if (sessionData?.session) {
           await updateAuthState(sessionData.session);
-        } else {
-          // If no active session, check localStorage as fallback
-          const storedAuth = localStorage.getItem("authenticated");
-          const storedUser = localStorage.getItem("user");
-
-          if (storedAuth === "true" && storedUser) {
-            try {
-              const parsedUser = JSON.parse(storedUser) as User;
-              setUser(parsedUser);
-              setIsAuthenticated(true);
-              setError(null);
-            } catch (e) {
-              console.error("Invalid stored user data:", e);
-              localStorage.removeItem("authenticated");
-              localStorage.removeItem("user");
-              setUser(null);
-              setIsAuthenticated(false);
-              setError("Invalid stored user data");
-            }
-          } else {
-            setUser(null);
-            setIsAuthenticated(false);
-            setError(null);
-          }
+        } else if (!storedAuth) {
+          setUser(null);
+          setIsAuthenticated(false);
+          setError(null);
         }
       } catch (error) {
         console.error("Auth check error:", error);
-        // On error, keep the current state if it exists
         if (!user) {
           localStorage.removeItem("authenticated");
           localStorage.removeItem("user");
@@ -235,7 +236,7 @@ export const useAuthInit = () => {
             setIsAuthenticated(false);
             setError(null);
           }
-        }, 300); // Debounce auth state changes
+        }, 300);
       }
     );
 

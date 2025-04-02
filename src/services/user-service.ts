@@ -4,6 +4,7 @@ import {
   getSupabaseClient,
 } from "./supabase-client";
 import type { UserData, UserProfile } from "./types";
+import { PostgrestResponse } from "@supabase/supabase-js";
 
 // Database profile type
 type DbProfile = {
@@ -23,16 +24,35 @@ type DbProfile = {
   updated_at?: string;
 };
 
+// Helper function to add timeout to a promise
+const withTimeout = <T>(
+  promise: Promise<T>,
+  timeoutMs: number = 5000 // Reduced timeout to 5 seconds
+): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Database operation timed out")),
+        timeoutMs
+      )
+    ),
+  ]);
+};
+
 // Helper function to ensure the users table exists
 export const ensureUsersTable = async (): Promise<boolean> => {
   try {
     console.log("Checking if users table exists...");
 
     // Check if the table exists by querying for its records
-    const { error: checkError } = await supabase
-      .from("users")
-      .select("email")
-      .limit(1);
+    const { error: checkError } = await withTimeout(
+      supabase
+        .from("users")
+        .select("email")
+        .limit(1)
+        .then((res) => res)
+    );
 
     // If no error, then the table exists
     if (!checkError) {
@@ -69,22 +89,6 @@ export const ensureUsersTable = async (): Promise<boolean> => {
   }
 };
 
-// Helper function to add timeout to a promise
-const withTimeout = <T>(
-  promise: Promise<T>,
-  timeoutMs: number = 15000 // Increased timeout to 15 seconds
-): Promise<T> => {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(
-        () => reject(new Error("Database operation timed out")),
-        timeoutMs
-      )
-    ),
-  ]);
-};
-
 // User operations
 export const storeUser = async (userData: UserData): Promise<UserData> => {
   try {
@@ -95,174 +99,140 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
       return userData; // Return input data as fallback
     }
 
-    // First, ensure the user exists in the public.users table
-    const { data: existingUser, error: checkError } = await withTimeout(
+    // Try to upsert the user data directly
+    const { data, error } = await withTimeout(
       supabase
         .from("users")
-        .select("email")
-        .eq("email", userData.email)
-        .single()
-    );
-
-    if (checkError && checkError.code !== "PGRST116") {
-      console.error("Error checking existing user:", checkError);
-      throw checkError;
-    }
-
-    // If user doesn't exist, create them
-    if (!existingUser) {
-      const { error: insertError } = await withTimeout(
-        supabase.from("users").insert({
-          email: userData.email,
-          display_name: userData.displayName,
-          photo_url: userData.photoURL,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-      );
-
-      if (insertError) {
-        console.error("Error creating user:", insertError);
-        throw insertError;
-      }
-    } else {
-      // Update existing user
-      const { error: updateError } = await withTimeout(
-        supabase
-          .from("users")
-          .update({
-            display_name: userData.displayName,
-            photo_url: userData.photoURL,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("email", userData.email)
-      );
-
-      if (updateError) {
-        console.error("Error updating user:", updateError);
-        throw updateError;
-      }
-    }
-
-    // Return the user data
-    return {
-      email: userData.email,
-      displayName: userData.displayName,
-      photoURL: userData.photoURL,
-    };
-  } catch (error) {
-    console.error("Error storing user:", error);
-    // If regular client fails, try admin client as last resort
-    try {
-      const { data: adminData, error: adminError } = await withTimeout(
-        getSupabaseClient(true)
-          .from("users")
-          .upsert({
+        .upsert(
+          {
             email: userData.email,
             display_name: userData.displayName,
             photo_url: userData.photoURL,
             updated_at: new Date().toISOString(),
-          })
-          .select()
-          .single()
-      );
+          },
+          { onConflict: "email" }
+        )
+        .select()
+        .single()
+        .then((res) => res)
+    );
 
-      if (adminError) {
-        console.error("Admin client operation failed:", adminError);
+    if (error) {
+      console.error("Error storing user:", error);
+      // If regular client fails, try admin client as last resort
+      try {
+        const { data: adminData, error: adminError } = await withTimeout(
+          getSupabaseClient(true)
+            .from("users")
+            .upsert(
+              {
+                email: userData.email,
+                display_name: userData.displayName,
+                photo_url: userData.photoURL,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "email" }
+            )
+            .select()
+            .single()
+            .then((res) => res)
+        );
+
+        if (adminError) {
+          console.error("Admin client operation failed:", adminError);
+          return userData; // Return input data as fallback
+        }
+
+        return {
+          email: adminData.email,
+          displayName: adminData.display_name,
+          photoURL: adminData.photo_url,
+        };
+      } catch (adminErr) {
+        console.error("Admin client operation failed:", adminErr);
         return userData; // Return input data as fallback
       }
-
-      return {
-        email: adminData.email,
-        displayName: adminData.display_name,
-        photoURL: adminData.photo_url,
-      };
-    } catch (adminErr) {
-      console.error("Admin client operation failed:", adminErr);
-      return userData; // Return input data as fallback
     }
+
+    return {
+      email: data.email,
+      displayName: data.display_name,
+      photoURL: data.photo_url,
+    };
+  } catch (error) {
+    console.error("Error storing user:", error);
+    return userData; // Return input data as fallback
   }
 };
 
 export const getUser = async (email: string): Promise<UserData | null> => {
   try {
-    // Try regular client first with retry
-    let attempts = 0;
-    const maxAttempts = 3;
-    let lastError: Error | null = null;
+    // Try to get user data directly
+    const { data, error } = await withTimeout(
+      supabase
+        .from("users")
+        .select()
+        .eq("email", email)
+        .single()
+        .then((res) => res)
+    );
 
-    while (attempts < maxAttempts) {
-      try {
-        const { data, error } = await withTimeout(
-          supabase.from("users").select().eq("email", email).single()
-        );
-
-        if (!error) {
-          return data
-            ? {
-                email: data.email,
-                displayName: data.display_name,
-                photoURL: data.photo_url,
-              }
-            : null;
-        }
-
-        if (error.code === "PGRST116") {
-          // If user doesn't exist in public.users, try to create them
-          const { data: authUser, error: authError } = await withTimeout(
-            supabase.auth.getUser()
-          );
-
-          if (authError) {
-            console.error("Error getting auth user:", authError);
-            return null;
+    if (!error) {
+      return data
+        ? {
+            email: data.email,
+            displayName: data.display_name,
+            photoURL: data.photo_url,
           }
+        : null;
+    }
 
-          if (authUser?.user?.email === email) {
-            // Create user in public.users table
-            const { error: createError } = await withTimeout(
-              supabase.from("users").insert({
-                email: email,
-                display_name:
-                  authUser.user.user_metadata?.display_name ||
-                  email.split("@")[0],
-                photo_url: authUser.user.user_metadata?.photo_url,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              })
-            );
+    if (error.code === "PGRST116") {
+      // If user doesn't exist in public.users, try to create them
+      const { data: authUser, error: authError } = await withTimeout(
+        supabase.auth.getUser()
+      );
 
-            if (createError) {
-              console.error("Error creating user:", createError);
-              return null;
-            }
+      if (authError) {
+        console.error("Error getting auth user:", authError);
+        return null;
+      }
 
-            // Return the newly created user data
-            return {
+      if (authUser?.user?.email === email) {
+        // Create user in public.users table
+        const { error: createError } = await withTimeout(
+          supabase
+            .from("users")
+            .insert({
               email: email,
-              displayName:
+              display_name:
                 authUser.user.user_metadata?.display_name ||
                 email.split("@")[0],
-              photoURL: authUser.user.user_metadata?.photo_url,
-            };
-          }
+              photo_url: authUser.user.user_metadata?.photo_url,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .then((res) => res)
+        );
+
+        if (createError) {
+          console.error("Error creating user:", createError);
           return null;
         }
 
-        lastError = error;
-      } catch (err) {
-        console.warn(`Attempt ${attempts + 1} failed:`, err);
-        lastError = err as Error;
+        // Return the newly created user data
+        return {
+          email: email,
+          displayName:
+            authUser.user.user_metadata?.display_name || email.split("@")[0],
+          photoURL: authUser.user.user_metadata?.photo_url,
+        };
       }
-      attempts++;
-      if (attempts < maxAttempts) {
-        // Add delay between retries
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
+      return null;
     }
 
-    // If all attempts failed, try admin client as last resort
-    console.warn("All regular client attempts failed, trying admin client");
+    // If regular client fails, try admin client as last resort
+    console.warn("Regular client failed, trying admin client");
     try {
       const { data: adminData, error: adminError } = await withTimeout(
         getSupabaseClient(true)
@@ -270,6 +240,7 @@ export const getUser = async (email: string): Promise<UserData | null> => {
           .select()
           .eq("email", email)
           .single()
+          .then((res) => res)
       );
 
       if (adminError) {
