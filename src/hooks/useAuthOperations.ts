@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
 import { useLogin } from "./useLogin";
-import { useSignup } from "./useSignup";
+import { useSignUp } from "./useSignup";
 import { useLogout } from "./useLogout";
 import { useUpdateUser } from "./useUpdateUser";
-import { User } from "@/contexts/auth-types";
+import { UserProfile } from "@/services/types";
 import { toast } from "sonner";
 import { AuthError } from "@supabase/supabase-js";
 
@@ -13,14 +13,13 @@ interface AuthErrorResponse {
 }
 
 export const useAuthOperations = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Import individual hooks
-  const { login: performLogin, isLoading: loginLoading } = useLogin();
-  const { signup: performSignup, isLoading: signupLoading } = useSignup();
-  const { logout: performLogout, isLoading: logoutLoading } = useLogout();
-  const { updateUser: performUpdateUser, isLoading: updateLoading } =
-    useUpdateUser();
+  const { login, isLoading: loginLoading } = useLogin();
+  const { signUp, loading: signUpLoading } = useSignUp();
+  const { logout } = useLogout();
+  const { updateUser, isLoading: updateLoading } = useUpdateUser();
 
   // Helper function to handle auth errors
   const handleAuthError = (error: unknown): AuthErrorResponse => {
@@ -36,53 +35,51 @@ export const useAuthOperations = () => {
     };
   };
 
-  // Proxy the individual hook operations
-  const login = useCallback(
+  const handleLogin = useCallback(
     async (email: string, password: string) => {
-      setIsLoading(true);
       try {
-        return await performLogin(email, password);
-      } catch (error) {
-        const { message } = handleAuthError(error);
+        setLoading(true);
+        setError(null);
+        await login(email, password);
+      } catch (err) {
+        const { message } = handleAuthError(err);
         toast.error("Login failed", {
           description: message || "Please check your credentials and try again",
         });
-        throw error;
+        throw err;
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     },
-    [performLogin]
+    [login]
   );
 
-  const signup = useCallback(
-    async (
-      email: string,
-      password: string,
-      profileData: Partial<User> = {}
-    ) => {
-      setIsLoading(true);
+  const handleSignUp = useCallback(
+    async (email: string, password: string, profile: UserProfile) => {
       try {
-        return await performSignup(email, password, profileData);
-      } catch (error) {
-        const { message } = handleAuthError(error);
+        setLoading(true);
+        setError(null);
+        await signUp(email, password, profile);
+      } catch (err) {
+        const { message } = handleAuthError(err);
         toast.error("Signup failed", {
           description: message || "Please try again or contact support",
         });
-        throw error;
+        throw err;
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     },
-    [performSignup]
+    [signUp]
   );
 
-  const logout = useCallback(async () => {
-    setIsLoading(true);
+  const handleLogout = useCallback(async () => {
     try {
-      await performLogout();
-    } catch (error) {
-      const { message } = handleAuthError(error);
+      setLoading(true);
+      setError(null);
+      await logout();
+    } catch (err) {
+      const { message } = handleAuthError(err);
       toast.error("Logout failed", {
         description: message || "Your session may have already expired",
       });
@@ -90,43 +87,37 @@ export const useAuthOperations = () => {
       localStorage.removeItem("authenticated");
       localStorage.removeItem("user");
       localStorage.removeItem("lastLoggedInEmail");
-      throw error;
+      throw err;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [performLogout]);
+  }, [logout]);
 
-  const updateUser = useCallback(
-    async (user: User, updates: Partial<User>) => {
-      setIsLoading(true);
+  const handleUpdateUser = useCallback(
+    async (profile: UserProfile) => {
       try {
-        return await performUpdateUser(user, updates);
-      } catch (error) {
-        const { message } = handleAuthError(error);
+        setLoading(true);
+        setError(null);
+        await updateUser(profile, profile);
+      } catch (err) {
+        const { message } = handleAuthError(err);
         toast.error("Profile update failed", {
           description: message || "Please try again",
         });
-        throw error;
+        throw err;
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     },
-    [performUpdateUser]
+    [updateUser]
   );
 
-  // Calculate overall loading state
-  const combinedIsLoading =
-    isLoading ||
-    loginLoading ||
-    signupLoading ||
-    logoutLoading ||
-    updateLoading;
-
   return {
-    login,
-    signup,
-    logout,
-    updateUser,
-    isLoading: combinedIsLoading,
+    loading: loading || loginLoading || signUpLoading || updateLoading,
+    error,
+    login: handleLogin,
+    signUp: handleSignUp,
+    logout: handleLogout,
+    updateUser: handleUpdateUser,
   };
 };

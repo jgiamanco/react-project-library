@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Session } from "@supabase/supabase-js";
 import { supabase, supabaseAdmin } from "@/services/supabase-client";
 import { UserProfile } from "@/services/types";
 import { getUser } from "@/services/user-service";
@@ -8,12 +9,37 @@ export const useAuthInit = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
+  const sessionTimeout = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
-    const updateAuthState = async (session: any) => {
+    const updateAuthState = async (session: Session | null) => {
       try {
         if (session?.user) {
           console.log("Active session found, updating auth state...");
+
+          // Clear any existing timeout
+          if (sessionTimeout.current) {
+            clearTimeout(sessionTimeout.current);
+          }
+
+          // Set a new timeout to refresh the session
+          sessionTimeout.current = setTimeout(async () => {
+            const {
+              data: { session: newSession },
+              error: refreshError,
+            } = await supabase.auth.refreshSession();
+
+            if (refreshError) {
+              console.error("Session refresh error:", refreshError);
+              setUser(null);
+              return;
+            }
+
+            if (newSession) {
+              await updateAuthState(newSession);
+            }
+          }, 1000 * 60 * 10); // Refresh every 10 minutes
+
           const userProfile = await getUser(session.user.email);
 
           if (userProfile) {
@@ -76,6 +102,9 @@ export const useAuthInit = () => {
 
     return () => {
       mounted.current = false;
+      if (sessionTimeout.current) {
+        clearTimeout(sessionTimeout.current);
+      }
       subscription.unsubscribe();
     };
   }, []);

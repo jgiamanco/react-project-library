@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase, supabaseAdmin } from "@/services/supabase-client";
-import { UserProfile } from "../services/types";
+import { UserProfile } from "@/services/types";
 
 export const useSignUp = () => {
   const [loading, setLoading] = useState(false);
@@ -20,6 +20,22 @@ export const useSignUp = () => {
         title: "Creating your account...",
         description: "Please wait while we set up your profile.",
       });
+
+      // Check if user already exists
+      const { data: existingUser } = await supabaseAdmin
+        .from("users")
+        .select("email")
+        .eq("email", email)
+        .single();
+
+      if (existingUser) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "An account with this email already exists.",
+        });
+        return;
+      }
 
       // Create the user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -49,22 +65,6 @@ export const useSignUp = () => {
           variant: "destructive",
           title: "Error",
           description: "Failed to create account",
-        });
-        return;
-      }
-
-      // Wait for the session to be established
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session) {
-        console.error("Session error:", sessionError);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to establish session",
         });
         return;
       }

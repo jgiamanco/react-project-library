@@ -88,22 +88,34 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view their own profile"
 ON public.users
 FOR SELECT
-USING (auth.uid()::text = email);
+USING (
+  auth.uid()::text = email OR
+  auth.role() = 'authenticated'
+);
 
 CREATE POLICY "Users can update their own profile"
 ON public.users
 FOR UPDATE
-USING (auth.uid()::text = email);
+USING (
+  auth.uid()::text = email OR
+  auth.role() = 'service_role'
+);
 
 CREATE POLICY "Users can insert their own profile"
 ON public.users
 FOR INSERT
-WITH CHECK (auth.uid()::text = email);
+WITH CHECK (
+  auth.uid()::text = email OR
+  auth.role() = 'service_role'
+);
 
 CREATE POLICY "Users can delete their own profile"
 ON public.users
 FOR DELETE
-USING (auth.uid()::text = email);
+USING (
+  auth.uid()::text = email OR
+  auth.role() = 'service_role'
+);
 
 -- Grant necessary permissions
 GRANT ALL ON public.users TO authenticated;
