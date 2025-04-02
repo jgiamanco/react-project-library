@@ -65,50 +65,42 @@ export const ensureUsersTable = async (): Promise<boolean> => {
       console.log("Creating users table...");
 
       // Create the table with proper schema and RLS policies
-      const { error: createError } = await adminClient
-        .from("users")
-        .select()
-        .limit(1)
-        .then(async () => {
-          // Create the table
-          const { error: tableError } = await adminClient.rpc("exec_sql", {
-            sql: `
-              CREATE TABLE IF NOT EXISTS public.users (
-                email VARCHAR PRIMARY KEY,
-                display_name VARCHAR NOT NULL,
-                photo_url VARCHAR,
-                bio TEXT,
-                location VARCHAR,
-                website VARCHAR,
-                github VARCHAR,
-                twitter VARCHAR,
-                role VARCHAR DEFAULT 'User',
-                theme VARCHAR DEFAULT 'system',
-                email_notifications BOOLEAN DEFAULT true,
-                push_notifications BOOLEAN DEFAULT false,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-              );
+      const { error: createError } = await adminClient.rpc("exec_sql", {
+        sql: `
+          CREATE TABLE IF NOT EXISTS public.users (
+            email VARCHAR PRIMARY KEY,
+            display_name VARCHAR NOT NULL,
+            photo_url VARCHAR,
+            bio TEXT,
+            location VARCHAR,
+            website VARCHAR,
+            github VARCHAR,
+            twitter VARCHAR,
+            role VARCHAR DEFAULT 'User',
+            theme VARCHAR DEFAULT 'system',
+            email_notifications BOOLEAN DEFAULT true,
+            push_notifications BOOLEAN DEFAULT false,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+          );
 
-              -- Enable RLS
-              ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+          -- Enable RLS
+          ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
-              -- Create policies
-              CREATE POLICY "Users can view their own data" ON public.users
-                FOR SELECT USING (auth.jwt()->>'email' = email);
+          -- Create policies
+          CREATE POLICY "Users can view their own data" ON public.users
+            FOR SELECT USING (auth.jwt()->>'email' = email);
 
-              CREATE POLICY "Users can update their own data" ON public.users
-                FOR UPDATE USING (auth.jwt()->>'email' = email);
+          CREATE POLICY "Users can update their own data" ON public.users
+            FOR UPDATE USING (auth.jwt()->>'email' = email);
 
-              CREATE POLICY "Users can insert their own data" ON public.users
-                FOR INSERT WITH CHECK (auth.jwt()->>'email' = email);
+          CREATE POLICY "Users can insert their own data" ON public.users
+            FOR INSERT WITH CHECK (auth.jwt()->>'email' = email);
 
-              -- Grant access to authenticated users
-              GRANT ALL ON public.users TO authenticated;
-            `,
-          });
-          return tableError;
-        });
+          -- Grant access to authenticated users
+          GRANT ALL ON public.users TO authenticated;
+        `,
+      });
 
       if (createError) {
         console.error("Error creating users table:", createError);
@@ -133,11 +125,10 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
     // First, ensure the users table exists
     const tableExists = await ensureUsersTable();
     if (!tableExists) {
-      console.error("Users table does not exist");
-      return userData; // Return input data as fallback
+      throw new Error("Users table does not exist");
     }
 
-    // Try to upsert the user data using admin client
+    // Use admin client for database operations
     const adminClient = getSupabaseClient(true);
     const { data, error } = await adminClient
       .from("users")
@@ -164,36 +155,7 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
 
     if (error) {
       console.error("Error storing user:", error);
-      // If admin client fails, try regular client as fallback
-      try {
-        const { data: regularData, error: regularError } = await supabase
-          .from("users")
-          .upsert(
-            {
-              email: userData.email,
-              display_name: userData.displayName,
-              photo_url: userData.photoURL,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "email" }
-          )
-          .select()
-          .single();
-
-        if (regularError) {
-          console.error("Regular client operation failed:", regularError);
-          return userData; // Return input data as fallback
-        }
-
-        return {
-          email: regularData.email,
-          displayName: regularData.display_name,
-          photoURL: regularData.photo_url,
-        };
-      } catch (regularErr) {
-        console.error("Regular client operation failed:", regularErr);
-        return userData; // Return input data as fallback
-      }
+      throw error;
     }
 
     return {
@@ -212,13 +174,12 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
     };
   } catch (error) {
     console.error("Error storing user:", error);
-    return userData; // Return input data as fallback
+    throw error;
   }
 };
 
 export const getUser = async (email: string): Promise<UserData | null> => {
   try {
-    // Try to get user data using admin client first
     const adminClient = getSupabaseClient(true);
     const { data, error } = await adminClient
       .from("users")
@@ -226,110 +187,86 @@ export const getUser = async (email: string): Promise<UserData | null> => {
       .eq("email", email)
       .single();
 
-    if (!error) {
-      return data
-        ? {
-            email: data.email,
-            displayName: data.display_name,
-            photoURL: data.photo_url,
-            bio: data.bio,
-            location: data.location,
-            website: data.website,
-            github: data.github,
-            twitter: data.twitter,
-            role: data.role,
-            theme: data.theme,
-            emailNotifications: data.email_notifications,
-            pushNotifications: data.push_notifications,
-          }
-        : null;
-    }
+    if (error) {
+      if (error.code === "PGRST116") {
+        // If user doesn't exist in public.users, try to create them
+        const { data: authUser, error: authError } =
+          await supabase.auth.getUser();
 
-    if (error.code === "PGRST116") {
-      // If user doesn't exist in public.users, try to create them
-      const { data: authUser, error: authError } =
-        await supabase.auth.getUser();
-
-      if (authError) {
-        console.error("Error getting auth user:", authError);
-        return null;
-      }
-
-      if (authUser?.user?.email === email) {
-        // Create user in public.users table using admin client
-        const { error: createError } = await adminClient.from("users").insert({
-          email: email,
-          display_name:
-            authUser.user.user_metadata?.display_name || email.split("@")[0],
-          photo_url: authUser.user.user_metadata?.photo_url,
-          bio: authUser.user.user_metadata?.bio || "",
-          location: authUser.user.user_metadata?.location || "",
-          website: authUser.user.user_metadata?.website || "",
-          github: authUser.user.user_metadata?.github || "",
-          twitter: authUser.user.user_metadata?.twitter || "",
-          role: authUser.user.user_metadata?.role || "User",
-          theme: authUser.user.user_metadata?.theme || "system",
-          email_notifications:
-            authUser.user.user_metadata?.email_notifications ?? true,
-          push_notifications:
-            authUser.user.user_metadata?.push_notifications ?? false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-
-        if (createError) {
-          console.error("Error creating user:", createError);
+        if (authError) {
+          console.error("Error getting auth user:", authError);
           return null;
         }
 
-        // Return the newly created user data
-        return {
-          email: email,
-          displayName:
-            authUser.user.user_metadata?.display_name || email.split("@")[0],
-          photoURL: authUser.user.user_metadata?.photo_url,
-          bio: authUser.user.user_metadata?.bio || "",
-          location: authUser.user.user_metadata?.location || "",
-          website: authUser.user.user_metadata?.website || "",
-          github: authUser.user.user_metadata?.github || "",
-          twitter: authUser.user.user_metadata?.twitter || "",
-          role: authUser.user.user_metadata?.role || "User",
-          theme: authUser.user.user_metadata?.theme || "system",
-          emailNotifications:
-            authUser.user.user_metadata?.email_notifications ?? true,
-          pushNotifications:
-            authUser.user.user_metadata?.push_notifications ?? false,
-        };
-      }
-      return null;
-    }
+        if (authUser?.user?.email === email) {
+          // Create user in public.users table using admin client
+          const { error: createError } = await adminClient
+            .from("users")
+            .insert({
+              email: email,
+              display_name:
+                authUser.user.user_metadata?.display_name ||
+                email.split("@")[0],
+              photo_url: authUser.user.user_metadata?.photo_url,
+              bio: authUser.user.user_metadata?.bio || "",
+              location: authUser.user.user_metadata?.location || "",
+              website: authUser.user.user_metadata?.website || "",
+              github: authUser.user.user_metadata?.github || "",
+              twitter: authUser.user.user_metadata?.twitter || "",
+              role: authUser.user.user_metadata?.role || "User",
+              theme: authUser.user.user_metadata?.theme || "system",
+              email_notifications:
+                authUser.user.user_metadata?.email_notifications ?? true,
+              push_notifications:
+                authUser.user.user_metadata?.push_notifications ?? false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
 
-    // If admin client fails, try regular client as fallback
-    console.warn("Admin client failed, trying regular client");
-    try {
-      const { data: regularData, error: regularError } = await supabase
-        .from("users")
-        .select()
-        .eq("email", email)
-        .single();
-
-      if (regularError) {
-        if (regularError.code === "PGRST116") return null; // Record not found
-        console.warn("Both admin and regular client failed:", regularError);
-        return null;
-      }
-
-      return regularData
-        ? {
-            email: regularData.email,
-            displayName: regularData.display_name,
-            photoURL: regularData.photo_url,
+          if (createError) {
+            console.error("Error creating user:", createError);
+            return null;
           }
-        : null;
-    } catch (regularErr) {
-      console.error("Regular client operation failed:", regularErr);
+
+          // Return the newly created user data
+          return {
+            email: email,
+            displayName:
+              authUser.user.user_metadata?.display_name || email.split("@")[0],
+            photoURL: authUser.user.user_metadata?.photo_url,
+            bio: authUser.user.user_metadata?.bio || "",
+            location: authUser.user.user_metadata?.location || "",
+            website: authUser.user.user_metadata?.website || "",
+            github: authUser.user.user_metadata?.github || "",
+            twitter: authUser.user.user_metadata?.twitter || "",
+            role: authUser.user.user_metadata?.role || "User",
+            theme: authUser.user.user_metadata?.theme || "system",
+            emailNotifications:
+              authUser.user.user_metadata?.email_notifications ?? true,
+            pushNotifications:
+              authUser.user.user_metadata?.push_notifications ?? false,
+          };
+        }
+      }
       return null;
     }
+
+    return data
+      ? {
+          email: data.email,
+          displayName: data.display_name,
+          photoURL: data.photo_url,
+          bio: data.bio,
+          location: data.location,
+          website: data.website,
+          github: data.github,
+          twitter: data.twitter,
+          role: data.role,
+          theme: data.theme,
+          emailNotifications: data.email_notifications,
+          pushNotifications: data.push_notifications,
+        }
+      : null;
   } catch (error) {
     console.error("Error getting user:", error);
     return null;
@@ -339,19 +276,14 @@ export const getUser = async (email: string): Promise<UserData | null> => {
 export const deleteUser = async (email: string): Promise<void> => {
   try {
     const client = getSupabaseClient(true);
-
     const { error } = await client.from("users").delete().eq("email", email);
 
     if (error) {
-      // Try regular client as fallback
-      const { error: regularError } = await supabase
-        .from("users")
-        .delete()
-        .eq("email", email);
-      if (regularError) handleSupabaseError(regularError);
+      throw error;
     }
   } catch (error) {
     console.error("Error deleting user:", error);
+    throw error;
   }
 };
 
@@ -361,7 +293,6 @@ export const getUserProfile = async (
 ): Promise<UserProfile | null> => {
   try {
     const client = getSupabaseClient(true);
-
     const { data, error } = await client
       .from("user_profiles")
       .select("*")
@@ -370,21 +301,7 @@ export const getUserProfile = async (
 
     if (error) {
       if (error.code === "PGRST116") return null; // Record not found
-
-      // Try regular client as fallback
-      const { data: regularData, error: regularError } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("email", email)
-        .single();
-
-      if (regularError) {
-        if (regularError.code === "PGRST116") return null; // Record not found
-        console.warn("Error fetching user profile:", regularError);
-        return null;
-      }
-
-      return convertDbProfileToUserProfile(regularData);
+      throw error;
     }
 
     return convertDbProfileToUserProfile(data);
