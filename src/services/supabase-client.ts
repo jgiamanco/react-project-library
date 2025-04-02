@@ -8,21 +8,31 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables");
 }
 
-// Create the regular client with proper configuration
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-  db: {
-    schema: "public",
-  },
-});
+// Create a single instance of the regular client
+let supabaseInstance: ReturnType<typeof createClient> | null = null;
+let supabaseAdminInstance: ReturnType<typeof createClient> | null = null;
 
-// Create the admin client with service role for bypassing RLS
-export const supabaseAdmin = supabaseServiceRoleKey
-  ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+export const supabase = (() => {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: "supabase.auth.token",
+      },
+      db: {
+        schema: "public",
+      },
+    });
+  }
+  return supabaseInstance;
+})();
+
+// Create a single instance of the admin client
+export const supabaseAdmin = (() => {
+  if (!supabaseAdminInstance && supabaseServiceRoleKey) {
+    supabaseAdminInstance = createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -30,8 +40,10 @@ export const supabaseAdmin = supabaseServiceRoleKey
       db: {
         schema: "public",
       },
-    })
-  : null;
+    });
+  }
+  return supabaseAdminInstance;
+})();
 
 // Helper function to handle Supabase errors
 export const handleSupabaseError = (error: PostgrestError) => {

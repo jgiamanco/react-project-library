@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
 import { getUser } from "@/services/user-service";
@@ -9,6 +9,7 @@ export const useAuthInit = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const initialized = useRef(false);
 
   const updateAuthState = useCallback(async (session: Session | null) => {
     try {
@@ -70,6 +71,9 @@ export const useAuthInit = () => {
   }, []);
 
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
     console.log("Initializing auth state...");
     let mounted = true;
 
@@ -83,45 +87,36 @@ export const useAuthInit = () => {
       }
     });
 
-    // Initial session check with timeout
-    const timeoutId = setTimeout(() => {
-      if (mounted && isLoading) {
-        console.log("Auth initialization timed out");
-        setError(
-          "Authentication check timed out. Please try refreshing the page."
-        );
-        setIsLoading(false);
-      }
-    }, 5000); // 5 second timeout
-
     // Initial session check
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
+    const initializeAuth = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         console.log("Initial session check completed");
+
         if (mounted) {
-          updateAuthState(session).finally(() => {
-            clearTimeout(timeoutId);
-            if (mounted) {
-              setIsLoading(false);
-            }
-          });
+          await updateAuthState(session);
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Error checking initial session:", error);
         if (mounted) {
           setError("Failed to check authentication status");
+        }
+      } finally {
+        if (mounted) {
           setIsLoading(false);
         }
-      });
+      }
+    };
+
+    initializeAuth();
 
     return () => {
       mounted = false;
-      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
-  }, [updateAuthState, isLoading]);
+  }, [updateAuthState]);
 
   return {
     user,
