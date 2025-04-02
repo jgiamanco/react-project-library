@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
-import { getUser } from "@/services/user-service";
+import { getUser, storeUser } from "@/services/user-service";
 import { measureExecutionTime } from "@/utils/performance-monitoring";
 import { Session, User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -90,28 +90,37 @@ export const useAuthInit = () => {
                 }
               }
 
-              const finalUserProfile =
-                userProfile || createBasicUserProfile(email, userMetadata);
+              // If no profile exists, create one from auth metadata
+              if (!userProfile) {
+                console.log(
+                  "No user profile found, creating from auth metadata"
+                );
+                const basicProfile = createBasicUserProfile(
+                  email,
+                  userMetadata
+                );
+                try {
+                  userProfile = await withTimeout(storeUser(basicProfile));
+                } catch (storeErr) {
+                  console.error("Error storing basic profile:", storeErr);
+                  userProfile = basicProfile; // Use basic profile as fallback
+                }
+              }
 
-              setUser(finalUserProfile);
+              setUser(userProfile);
               setIsAuthenticated(true);
               localStorage.setItem("authenticated", "true");
-              localStorage.setItem("user", JSON.stringify(finalUserProfile));
+              localStorage.setItem("user", JSON.stringify(userProfile));
               setError(null);
               retryCount.current = 0; // Reset retry count on success
             } catch (error) {
               console.error("Error updating auth state:", error);
-              // On error, keep the current state if it exists
-              if (!user) {
-                const finalUserProfile = createBasicUserProfile(
-                  email,
-                  userMetadata
-                );
-                setUser(finalUserProfile);
-                setIsAuthenticated(true);
-                localStorage.setItem("authenticated", "true");
-                localStorage.setItem("user", JSON.stringify(finalUserProfile));
-              }
+              // On error, create and use basic profile
+              const basicProfile = createBasicUserProfile(email, userMetadata);
+              setUser(basicProfile);
+              setIsAuthenticated(true);
+              localStorage.setItem("authenticated", "true");
+              localStorage.setItem("user", JSON.stringify(basicProfile));
               setError("Failed to load user profile");
             }
           }

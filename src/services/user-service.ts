@@ -88,47 +88,64 @@ const withTimeout = <T>(
 // User operations
 export const storeUser = async (userData: UserData): Promise<UserData> => {
   try {
-    // Try regular client first with retry
-    let attempts = 0;
-    const maxAttempts = 3;
-    let lastError: Error | null = null;
+    // First, ensure the user exists in the public.users table
+    const { data: existingUser, error: checkError } = await withTimeout(
+      supabase
+        .from("users")
+        .select("email")
+        .eq("email", userData.email)
+        .single()
+    );
 
-    while (attempts < maxAttempts) {
-      try {
-        const { data, error } = await withTimeout(
-          supabase
-            .from("users")
-            .upsert({
-              email: userData.email,
-              display_name: userData.displayName,
-              photo_url: userData.photoURL,
-              updated_at: new Date().toISOString(),
-            })
-            .select()
-            .single()
-        );
+    if (checkError && checkError.code !== "PGRST116") {
+      console.error("Error checking existing user:", checkError);
+      throw checkError;
+    }
 
-        if (!error) {
-          return {
-            email: data.email,
-            displayName: data.display_name,
-            photoURL: data.photo_url,
-          };
-        }
-        lastError = error;
-      } catch (err) {
-        console.warn(`Attempt ${attempts + 1} failed:`, err);
-        lastError = err as Error;
+    // If user doesn't exist, create them
+    if (!existingUser) {
+      const { error: insertError } = await withTimeout(
+        supabase.from("users").insert({
+          email: userData.email,
+          display_name: userData.displayName,
+          photo_url: userData.photoURL,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+      );
+
+      if (insertError) {
+        console.error("Error creating user:", insertError);
+        throw insertError;
       }
-      attempts++;
-      if (attempts < maxAttempts) {
-        // Add delay between retries
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+    } else {
+      // Update existing user
+      const { error: updateError } = await withTimeout(
+        supabase
+          .from("users")
+          .update({
+            display_name: userData.displayName,
+            photo_url: userData.photoURL,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("email", userData.email)
+      );
+
+      if (updateError) {
+        console.error("Error updating user:", updateError);
+        throw updateError;
       }
     }
 
-    // If all attempts failed, try admin client as last resort
-    console.warn("All regular client attempts failed, trying admin client");
+    // Return the user data
+    return {
+      email: userData.email,
+      displayName: userData.displayName,
+      photoURL: userData.photoURL,
+    };
+  } catch (error) {
+    console.error("Error storing user:", error);
+    // If regular client fails, try admin client as last resort
     try {
       const { data: adminData, error: adminError } = await withTimeout(
         getSupabaseClient(true)
@@ -144,7 +161,7 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
       );
 
       if (adminError) {
-        console.error("Both regular and admin client failed:", adminError);
+        console.error("Admin client operation failed:", adminError);
         return userData; // Return input data as fallback
       }
 
@@ -157,10 +174,6 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
       console.error("Admin client operation failed:", adminErr);
       return userData; // Return input data as fallback
     }
-  } catch (error) {
-    console.error("Error storing user:", error);
-    // Return the input data as a fallback
-    return userData;
   }
 };
 
@@ -187,7 +200,48 @@ export const getUser = async (email: string): Promise<UserData | null> => {
             : null;
         }
 
-        if (error.code === "PGRST116") return null; // Record not found
+        if (error.code === "PGRST116") {
+          // If user doesn't exist in public.users, try to create them
+          const { data: authUser, error: authError } = await withTimeout(
+            supabase.auth.getUser()
+          );
+
+          if (authError) {
+            console.error("Error getting auth user:", authError);
+            return null;
+          }
+
+          if (authUser?.user?.email === email) {
+            // Create user in public.users table
+            const { error: createError } = await withTimeout(
+              supabase.from("users").insert({
+                email: email,
+                display_name:
+                  authUser.user.user_metadata?.display_name ||
+                  email.split("@")[0],
+                photo_url: authUser.user.user_metadata?.photo_url,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+            );
+
+            if (createError) {
+              console.error("Error creating user:", createError);
+              return null;
+            }
+
+            // Return the newly created user data
+            return {
+              email: email,
+              displayName:
+                authUser.user.user_metadata?.display_name ||
+                email.split("@")[0],
+              photoURL: authUser.user.user_metadata?.photo_url,
+            };
+          }
+          return null;
+        }
+
         lastError = error;
       } catch (err) {
         console.warn(`Attempt ${attempts + 1} failed:`, err);
