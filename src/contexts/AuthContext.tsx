@@ -1,8 +1,9 @@
 
-import React, { createContext, useCallback } from "react";
+import React, { createContext, useCallback, useState, useEffect } from "react";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { useAuthOperations } from "@/hooks/useAuthOperations";
-import { AuthContextType } from "./auth-types";
+import { AuthContextType, User } from "./auth-types";
+import { UserProfile } from "@/services/types";
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -12,66 +13,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const {
     user,
     setUser,
-    isLoading,
+    loading,
     isAuthenticated,
     setIsAuthenticated
   } = useAuthInit();
   
   const {
     login: performLogin,
-    signup: performSignup,
+    signUp: performSignup,
     logout: performLogout,
     updateUser: performUpdateUser,
-    isLoading: operationsLoading
+    loading: operationsLoading
   } = useAuthOperations();
 
   // Wrap the auth operations to update our state
   const login = useCallback(async (email: string, password: string) => {
     try {
-      const userProfile = await performLogin(email, password);
-      if (userProfile) {
-        setUser(userProfile);
-        setIsAuthenticated(true);
-      }
+      await performLogin(email, password);
+      return true;
     } catch (error) {
-      setUser(null);
-      setIsAuthenticated(false);
+      console.error("Login error in context:", error);
+      return false;
     }
-  }, [performLogin, setUser, setIsAuthenticated]);
+  }, [performLogin]);
 
-  const signup = useCallback(async (email: string, password: string) => {
+  const signup = useCallback(async (email: string, password: string, profile: UserProfile) => {
     try {
-      const userProfile = await performSignup(email, password);
-      if (userProfile) {
-        setUser(userProfile);
-        setIsAuthenticated(true);
-      }
+      await performSignup(email, password, profile);
+      return true;
     } catch (error) {
-      // Error already handled in performSignup
+      console.error("Signup error in context:", error);
+      return false;
     }
-  }, [performSignup, setUser, setIsAuthenticated]);
+  }, [performSignup]);
 
   const logout = useCallback(async () => {
-    await performLogout();
-    setUser(null);
-    setIsAuthenticated(false);
+    try {
+      await performLogout();
+      setUser(null);
+      setIsAuthenticated(false);
+      return true;
+    } catch (error) {
+      console.error("Logout error in context:", error);
+      return false;
+    }
   }, [performLogout, setUser, setIsAuthenticated]);
 
-  const updateUser = useCallback(async (updates: Partial<typeof user>) => {
-    if (!user) return;
+  const updateUser = useCallback(async (updates: Partial<User>) => {
+    if (!user) return null;
     
-    const updatedUser = await performUpdateUser(user, updates);
-    if (updatedUser) {
-      setUser(updatedUser);
+    try {
+      const updatedUser = await performUpdateUser(user, updates);
+      if (updatedUser) {
+        setUser(updatedUser);
+      }
+      return updatedUser;
+    } catch (error) {
+      console.error("Update user error in context:", error);
+      return null;
     }
-    
-    return updatedUser;
   }, [user, performUpdateUser, setUser]);
 
   const contextValue: AuthContextType = {
     user,
     isAuthenticated,
-    isLoading: isLoading || operationsLoading,
+    isLoading: loading || operationsLoading,
     login,
     signup,
     logout,

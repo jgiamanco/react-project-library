@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   const { isAuthenticated, isLoading } = useAuth();
   const redirectTimeout = useRef<NodeJS.Timeout>();
   const authCheckTimeout = useRef<NodeJS.Timeout>();
+  const checksCompleted = useRef(false);
 
   // Define a single, reusable function for redirecting on auth failure
   const redirectToSignIn = useCallback(
@@ -51,8 +53,14 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
     let isMounted = true;
 
     const checkAuth = async () => {
+      // If we already verified authentication and user is authenticated, no need to check again
+      if (checksCompleted.current && isAuthenticated) {
+        setIsChecking(false);
+        return;
+      }
+
       try {
-        // Only proceed with check if not already loading auth state
+        // Wait for auth state to be determined
         if (isLoading) {
           return;
         }
@@ -71,6 +79,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
         }
 
         // Auth check passed
+        checksCompleted.current = true;
         if (isMounted) {
           setIsChecking(false);
         }
@@ -84,9 +93,11 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
     authCheckTimeout.current = setTimeout(() => {
       if (isChecking && isMounted) {
         setIsChecking(false);
-        redirectToSignIn("Authentication check timed out");
+        if (!isAuthenticated) {
+          redirectToSignIn("Authentication check timed out");
+        }
       }
-    }, 5000); // Increased timeout to 5 seconds
+    }, 5000); // Timeout to 5 seconds
 
     // Run the auth check
     checkAuth();
@@ -103,6 +114,11 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
     };
   }, [isAuthenticated, isLoading, redirectToSignIn]);
 
+  // If auth state is determined and user is authenticated, render children
+  if (!isChecking && isAuthenticated) {
+    return <>{children}</>;
+  }
+
   // Show loading state while checking
   if (isChecking) {
     return (
@@ -112,7 +128,8 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
     );
   }
 
-  return <>{children}</>;
+  // This should not be reached, but as a fallback
+  return null;
 };
 
 export default AuthGuard;

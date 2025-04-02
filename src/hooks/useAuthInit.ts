@@ -1,6 +1,7 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Session } from "@supabase/supabase-js";
-import { supabase, supabaseAdmin } from "@/services/supabase-client";
+import { supabase } from "@/services/supabase-client";
 import { UserProfile } from "@/services/types";
 import { getUser } from "@/services/user-service";
 
@@ -8,6 +9,7 @@ export const useAuthInit = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const mounted = useRef(true);
   const sessionTimeout = useRef<NodeJS.Timeout>();
 
@@ -32,6 +34,7 @@ export const useAuthInit = () => {
             if (refreshError) {
               console.error("Session refresh error:", refreshError);
               setUser(null);
+              setIsAuthenticated(false);
               return;
             }
 
@@ -45,18 +48,31 @@ export const useAuthInit = () => {
           if (userProfile) {
             console.log("User data found in database");
             setUser(userProfile);
+            setIsAuthenticated(true);
+            // Update localStorage for backward compatibility
+            localStorage.setItem("authenticated", "true");
+            localStorage.setItem("user", JSON.stringify(userProfile));
           } else {
             console.log("No user profile found in database");
             setUser(null);
+            setIsAuthenticated(false);
+            // Clear localStorage 
+            localStorage.removeItem("authenticated");
+            localStorage.removeItem("user");
           }
         } else {
           console.log("No active session found");
           setUser(null);
+          setIsAuthenticated(false);
+          // Clear localStorage
+          localStorage.removeItem("authenticated");
+          localStorage.removeItem("user");
         }
       } catch (err) {
         console.error("Error updating auth state:", err);
         setError(err instanceof Error ? err.message : "An error occurred");
         setUser(null);
+        setIsAuthenticated(false);
       } finally {
         if (mounted.current) {
           setLoading(false);
@@ -83,6 +99,7 @@ export const useAuthInit = () => {
         console.error("Error in initial session check:", err);
         setError(err instanceof Error ? err.message : "An error occurred");
         setUser(null);
+        setIsAuthenticated(false);
       } finally {
         if (mounted.current) {
           setLoading(false);
@@ -109,5 +126,5 @@ export const useAuthInit = () => {
     };
   }, []);
 
-  return { user, loading, error };
+  return { user, setUser, loading, error, isAuthenticated, setIsAuthenticated };
 };
