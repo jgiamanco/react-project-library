@@ -3,26 +3,14 @@ import {
   handleSupabaseError,
   getSupabaseClient,
 } from "./supabase-client";
-import type { UserData, UserProfile } from "./types";
+import {
+  UserProfile,
+  DbProfile,
+  appToDbProfile,
+  dbToAppProfile,
+  isDbProfile,
+} from "./types";
 import { PostgrestResponse } from "@supabase/supabase-js";
-
-// Database profile type
-type DbProfile = {
-  email: string;
-  display_name: string;
-  photo_url?: string;
-  bio?: string;
-  location?: string;
-  website?: string;
-  github?: string;
-  twitter?: string;
-  role?: string;
-  theme?: string;
-  email_notifications?: boolean;
-  push_notifications?: boolean;
-  created_at?: string;
-  updated_at?: string;
-};
 
 // Helper function to add timeout to a promise
 const withTimeout = <T>(
@@ -107,17 +95,6 @@ export const ensureUsersTable = async (): Promise<boolean> => {
         return false;
       }
 
-      // Verify the table was created
-      const { error: verifyError } = await adminClient
-        .from("users")
-        .select("email")
-        .limit(1);
-
-      if (verifyError) {
-        console.error("Error verifying table creation:", verifyError);
-        return false;
-      }
-
       console.log("Users table created successfully");
       return true;
     }
@@ -130,175 +107,87 @@ export const ensureUsersTable = async (): Promise<boolean> => {
   }
 };
 
-// User operations
-export const storeUser = async (userData: UserData): Promise<UserData> => {
+// Store user data in the database
+export const storeUser = async (
+  user: UserProfile
+): Promise<UserProfile | null> => {
   try {
-    // First, ensure the users table exists
+    console.log("Attempting to store user in database");
+
+    // Ensure the users table exists
     const tableExists = await ensureUsersTable();
     if (!tableExists) {
-      throw new Error("Users table does not exist");
+      console.error("Failed to ensure users table exists");
+      return null;
     }
 
-    // Use admin client for database operations
+    // Use the admin client for database operations
     const adminClient = getSupabaseClient(true);
+
+    // Convert application profile to database profile
+    const dbProfile = appToDbProfile(user);
+
+    // Insert or update the user data
     const { data, error } = await adminClient
       .from("users")
-      .upsert(
-        {
-          email: userData.email,
-          display_name: userData.displayName,
-          photo_url: userData.photoURL,
-          bio: userData.bio || "",
-          location: userData.location || "",
-          website: userData.website || "",
-          github: userData.github || "",
-          twitter: userData.twitter || "",
-          role: userData.role || "User",
-          theme: userData.theme || "system",
-          email_notifications: userData.emailNotifications ?? true,
-          push_notifications: userData.pushNotifications ?? false,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "email" }
-      )
+      .upsert(dbProfile)
       .select()
       .single();
 
     if (error) {
       console.error("Error storing user:", error);
-      throw error;
-    }
-
-    return {
-      email: data.email,
-      displayName: data.display_name,
-      photoURL: data.photo_url,
-      bio: data.bio,
-      location: data.location,
-      website: data.website,
-      github: data.github,
-      twitter: data.twitter,
-      role: data.role,
-      theme: data.theme,
-      emailNotifications: data.email_notifications,
-      pushNotifications: data.push_notifications,
-    };
-  } catch (error) {
-    console.error("Error storing user:", error);
-    throw error;
-  }
-};
-
-export const getUser = async (email: string): Promise<UserData | null> => {
-  try {
-    console.log("Attempting to get user data for email:", email);
-
-    // First ensure the users table exists
-    const tableExists = await ensureUsersTable();
-    if (!tableExists) {
-      console.error("Users table does not exist");
       return null;
     }
 
-    // Use admin client for database operations
-    const adminClient = getSupabaseClient(true);
-    console.log("Using admin client to fetch user data");
+    if (!isDbProfile(data)) {
+      console.error("Invalid user data received from database");
+      return null;
+    }
 
-    // Try to get user data
+    console.log("Successfully stored user in database:", data);
+    return dbToAppProfile(data);
+  } catch (err) {
+    console.error("Error in storeUser:", err);
+    return null;
+  }
+};
+
+// Get user data from the database
+export const getUser = async (email: string): Promise<UserProfile | null> => {
+  try {
+    console.log("Attempting to get user data for email:", email);
+
+    // Ensure the users table exists
+    const tableExists = await ensureUsersTable();
+    if (!tableExists) {
+      console.error("Failed to ensure users table exists");
+      return null;
+    }
+
+    // Use the admin client for database operations
+    const adminClient = getSupabaseClient(true);
+
+    // Get the user data
     const { data, error } = await adminClient
       .from("users")
-      .select()
+      .select("*")
       .eq("email", email)
       .single();
 
     if (error) {
-      console.error("Error fetching user data:", error);
-
-      if (error.code === "PGRST116") {
-        // If user doesn't exist in public.users, try to create them
-        console.log("User not found in database, checking auth user...");
-        const { data: authUser, error: authError } =
-          await supabase.auth.getUser();
-
-        if (authError) {
-          console.error("Error getting auth user:", authError);
-          return null;
-        }
-
-        if (authUser?.user?.email === email) {
-          console.log("Creating new user in database...");
-          // Create user in public.users table using admin client
-          const { error: createError } = await adminClient
-            .from("users")
-            .insert({
-              email: email,
-              display_name:
-                authUser.user.user_metadata?.display_name ||
-                email.split("@")[0],
-              photo_url: authUser.user.user_metadata?.photo_url,
-              bio: authUser.user.user_metadata?.bio || "",
-              location: authUser.user.user_metadata?.location || "",
-              website: authUser.user.user_metadata?.website || "",
-              github: authUser.user.user_metadata?.github || "",
-              twitter: authUser.user.user_metadata?.twitter || "",
-              role: authUser.user.user_metadata?.role || "User",
-              theme: authUser.user.user_metadata?.theme || "system",
-              email_notifications:
-                authUser.user.user_metadata?.email_notifications ?? true,
-              push_notifications:
-                authUser.user.user_metadata?.push_notifications ?? false,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            });
-
-          if (createError) {
-            console.error("Error creating user:", createError);
-            return null;
-          }
-
-          console.log("Successfully created new user in database");
-          // Return the newly created user data
-          return {
-            email: email,
-            displayName:
-              authUser.user.user_metadata?.display_name || email.split("@")[0],
-            photoURL: authUser.user.user_metadata?.photo_url,
-            bio: authUser.user.user_metadata?.bio || "",
-            location: authUser.user.user_metadata?.location || "",
-            website: authUser.user.user_metadata?.website || "",
-            github: authUser.user.user_metadata?.github || "",
-            twitter: authUser.user.user_metadata?.twitter || "",
-            role: authUser.user.user_metadata?.role || "User",
-            theme: authUser.user.user_metadata?.theme || "system",
-            emailNotifications:
-              authUser.user.user_metadata?.email_notifications ?? true,
-            pushNotifications:
-              authUser.user.user_metadata?.push_notifications ?? false,
-          };
-        }
-      }
+      console.error("Error getting user:", error);
       return null;
     }
 
-    console.log("Successfully retrieved user data from database");
-    return data
-      ? {
-          email: data.email,
-          displayName: data.display_name,
-          photoURL: data.photo_url,
-          bio: data.bio,
-          location: data.location,
-          website: data.website,
-          github: data.github,
-          twitter: data.twitter,
-          role: data.role,
-          theme: data.theme,
-          emailNotifications: data.email_notifications,
-          pushNotifications: data.push_notifications,
-        }
-      : null;
-  } catch (error) {
-    console.error("Error in getUser:", error);
+    if (!isDbProfile(data)) {
+      console.error("Invalid user data received from database");
+      return null;
+    }
+
+    console.log("Successfully retrieved user data from database:", data);
+    return dbToAppProfile(data);
+  } catch (err) {
+    console.error("Error in getUser:", err);
     return null;
   }
 };

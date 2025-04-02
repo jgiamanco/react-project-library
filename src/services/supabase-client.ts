@@ -1,28 +1,41 @@
-import { createClient, PostgrestError } from "@supabase/supabase-js";
+import {
+  createClient,
+  PostgrestError,
+  SupabaseClient,
+} from "@supabase/supabase-js";
+import { Database } from "./database.types";
 
+// Environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing Supabase environment variables");
+// Validate environment variables
+if (!supabaseUrl) {
+  throw new Error("Missing VITE_SUPABASE_URL environment variable");
+}
+
+if (!supabaseAnonKey) {
+  throw new Error("Missing VITE_SUPABASE_ANON_KEY environment variable");
+}
+
+if (!supabaseServiceRoleKey) {
+  throw new Error(
+    "Missing VITE_SUPABASE_SERVICE_ROLE_KEY environment variable"
+  );
 }
 
 // Create a single instance of the regular client
-let supabaseInstance: ReturnType<typeof createClient> | null = null;
-let supabaseAdminInstance: ReturnType<typeof createClient> | null = null;
+let supabaseInstance: SupabaseClient<Database> | null = null;
 
 export const supabase = (() => {
   if (!supabaseInstance) {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
         storageKey: "supabase.auth.token",
-      },
-      db: {
-        schema: "public",
       },
     });
   }
@@ -30,17 +43,20 @@ export const supabase = (() => {
 })();
 
 // Create a single instance of the admin client
+let supabaseAdminInstance: SupabaseClient<Database> | null = null;
+
 export const supabaseAdmin = (() => {
-  if (!supabaseAdminInstance && supabaseServiceRoleKey) {
-    supabaseAdminInstance = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      db: {
-        schema: "public",
-      },
-    });
+  if (!supabaseAdminInstance) {
+    supabaseAdminInstance = createClient<Database>(
+      supabaseUrl,
+      supabaseServiceRoleKey,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
+    );
   }
   return supabaseAdminInstance;
 })();
@@ -54,9 +70,14 @@ export const handleSupabaseError = (error: PostgrestError) => {
 };
 
 // Helper function to get the appropriate Supabase client
-export const getSupabaseClient = (bypassRLS: boolean = false) => {
-  if (bypassRLS && supabaseAdmin) {
-    return supabaseAdmin;
+export const getSupabaseClient = (
+  bypassRLS: boolean = false
+): SupabaseClient<Database> => {
+  if (bypassRLS) {
+    if (!supabaseAdminInstance) {
+      throw new Error("Admin client not initialized");
+    }
+    return supabaseAdminInstance;
   }
-  return supabase;
+  return supabaseInstance;
 };

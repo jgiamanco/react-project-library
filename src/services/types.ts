@@ -1,6 +1,24 @@
 import { PostgrestError } from "@supabase/supabase-js";
 
-// Common types for services
+// Database types
+export interface DbProfile {
+  email: string;
+  display_name: string;
+  photo_url: string | null;
+  bio: string | null;
+  location: string | null;
+  website: string | null;
+  github: string | null;
+  twitter: string | null;
+  role: string;
+  theme: string;
+  email_notifications: boolean;
+  push_notifications: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Application types
 export interface UserProfile {
   email: string;
   displayName: string;
@@ -11,12 +29,70 @@ export interface UserProfile {
   github?: string;
   twitter?: string;
   role?: string;
-  theme?: "light" | "dark" | "system";
+  theme?: string;
   emailNotifications?: boolean;
   pushNotifications?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
+
+// Type guard for DbProfile
+export function isDbProfile(obj: unknown): obj is DbProfile {
+  if (!obj || typeof obj !== "object") return false;
+  const profile = obj as Record<string, unknown>;
+  return (
+    typeof profile.email === "string" &&
+    typeof profile.display_name === "string" &&
+    (profile.photo_url === null || typeof profile.photo_url === "string") &&
+    (profile.bio === null || typeof profile.bio === "string") &&
+    (profile.location === null || typeof profile.location === "string") &&
+    (profile.website === null || typeof profile.website === "string") &&
+    (profile.github === null || typeof profile.github === "string") &&
+    (profile.twitter === null || typeof profile.twitter === "string") &&
+    typeof profile.role === "string" &&
+    typeof profile.theme === "string" &&
+    typeof profile.email_notifications === "boolean" &&
+    typeof profile.push_notifications === "boolean" &&
+    typeof profile.created_at === "string" &&
+    typeof profile.updated_at === "string"
+  );
+}
+
+// Helper function to convert database profile to application profile
+export const dbToAppProfile = (dbProfile: DbProfile): UserProfile => ({
+  email: dbProfile.email,
+  displayName: dbProfile.display_name,
+  photoURL: dbProfile.photo_url || undefined,
+  bio: dbProfile.bio || undefined,
+  location: dbProfile.location || undefined,
+  website: dbProfile.website || undefined,
+  github: dbProfile.github || undefined,
+  twitter: dbProfile.twitter || undefined,
+  role: dbProfile.role,
+  theme: dbProfile.theme,
+  emailNotifications: dbProfile.email_notifications,
+  pushNotifications: dbProfile.push_notifications,
+  createdAt: dbProfile.created_at,
+  updatedAt: dbProfile.updated_at,
+});
+
+// Helper function to convert application profile to database profile
+export const appToDbProfile = (appProfile: UserProfile): DbProfile => ({
+  email: appProfile.email,
+  display_name: appProfile.displayName,
+  photo_url: appProfile.photoURL || null,
+  bio: appProfile.bio || null,
+  location: appProfile.location || null,
+  website: appProfile.website || null,
+  github: appProfile.github || null,
+  twitter: appProfile.twitter || null,
+  role: appProfile.role || "User",
+  theme: appProfile.theme || "system",
+  email_notifications: appProfile.emailNotifications ?? true,
+  push_notifications: appProfile.pushNotifications ?? false,
+  created_at: appProfile.createdAt || new Date().toISOString(),
+  updated_at: appProfile.updatedAt || new Date().toISOString(),
+});
 
 // UserData is now an alias of UserProfile for backward compatibility
 export type UserData = UserProfile;
