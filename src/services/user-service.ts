@@ -107,6 +107,17 @@ export const ensureUsersTable = async (): Promise<boolean> => {
         return false;
       }
 
+      // Verify the table was created
+      const { error: verifyError } = await adminClient
+        .from("users")
+        .select("email")
+        .limit(1);
+
+      if (verifyError) {
+        console.error("Error verifying table creation:", verifyError);
+        return false;
+      }
+
       console.log("Users table created successfully");
       return true;
     }
@@ -180,7 +191,20 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
 
 export const getUser = async (email: string): Promise<UserData | null> => {
   try {
+    console.log("Attempting to get user data for email:", email);
+
+    // First ensure the users table exists
+    const tableExists = await ensureUsersTable();
+    if (!tableExists) {
+      console.error("Users table does not exist");
+      return null;
+    }
+
+    // Use admin client for database operations
     const adminClient = getSupabaseClient(true);
+    console.log("Using admin client to fetch user data");
+
+    // Try to get user data
     const { data, error } = await adminClient
       .from("users")
       .select()
@@ -188,8 +212,11 @@ export const getUser = async (email: string): Promise<UserData | null> => {
       .single();
 
     if (error) {
+      console.error("Error fetching user data:", error);
+
       if (error.code === "PGRST116") {
         // If user doesn't exist in public.users, try to create them
+        console.log("User not found in database, checking auth user...");
         const { data: authUser, error: authError } =
           await supabase.auth.getUser();
 
@@ -199,6 +226,7 @@ export const getUser = async (email: string): Promise<UserData | null> => {
         }
 
         if (authUser?.user?.email === email) {
+          console.log("Creating new user in database...");
           // Create user in public.users table using admin client
           const { error: createError } = await adminClient
             .from("users")
@@ -228,6 +256,7 @@ export const getUser = async (email: string): Promise<UserData | null> => {
             return null;
           }
 
+          console.log("Successfully created new user in database");
           // Return the newly created user data
           return {
             email: email,
@@ -251,6 +280,7 @@ export const getUser = async (email: string): Promise<UserData | null> => {
       return null;
     }
 
+    console.log("Successfully retrieved user data from database");
     return data
       ? {
           email: data.email,
@@ -268,7 +298,7 @@ export const getUser = async (email: string): Promise<UserData | null> => {
         }
       : null;
   } catch (error) {
-    console.error("Error getting user:", error);
+    console.error("Error in getUser:", error);
     return null;
   }
 };
