@@ -71,27 +71,57 @@ export const useAuthInit = () => {
 
   useEffect(() => {
     console.log("Initializing auth state...");
+    let mounted = true;
 
     // Set up auth state listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event);
-      await updateAuthState(session);
+      if (mounted) {
+        await updateAuthState(session);
+      }
     });
+
+    // Initial session check with timeout
+    const timeoutId = setTimeout(() => {
+      if (mounted && isLoading) {
+        console.log("Auth initialization timed out");
+        setError(
+          "Authentication check timed out. Please try refreshing the page."
+        );
+        setIsLoading(false);
+      }
+    }, 5000); // 5 second timeout
 
     // Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Initial session check completed");
-      updateAuthState(session).finally(() => {
-        setIsLoading(false);
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        console.log("Initial session check completed");
+        if (mounted) {
+          updateAuthState(session).finally(() => {
+            clearTimeout(timeoutId);
+            if (mounted) {
+              setIsLoading(false);
+            }
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Error checking initial session:", error);
+        if (mounted) {
+          setError("Failed to check authentication status");
+          setIsLoading(false);
+        }
       });
-    });
 
     return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
-  }, [updateAuthState]);
+  }, [updateAuthState, isLoading]);
 
   return {
     user,
