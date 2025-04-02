@@ -28,169 +28,152 @@ const withTimeout = <T>(
   ]);
 };
 
-// Helper function to ensure the users table exists
-export const ensureUsersTable = async (): Promise<boolean> => {
+// Helper function to ensure the users table exists with proper schema and RLS
+export async function ensureUsersTable(): Promise<void> {
+  console.log("Starting ensureUsersTable...");
   try {
-    console.log("Checking if users table exists...");
-    const adminClient = getSupabaseClient(true);
-
-    // Check if the table exists by querying for its records
-    const { error: checkError } = await adminClient
+    // First check if the table exists
+    const { data: tableCheck, error: checkError } = await supabase
       .from("users")
       .select("email")
       .limit(1);
 
-    // If no error, then the table exists
-    if (!checkError) {
-      console.log("Users table exists");
-      return true;
-    }
+    if (checkError) {
+      console.log("Table check error:", checkError);
+      if (checkError.code === "42P01") {
+        // Table doesn't exist, create it
+        console.log("Users table does not exist, creating...");
+        const { error: createError } = await supabase.rpc("exec_sql", {
+          sql: `
+            CREATE TABLE IF NOT EXISTS public.users (
+              email TEXT PRIMARY KEY,
+              display_name TEXT NOT NULL,
+              photo_url TEXT,
+              bio TEXT,
+              location TEXT,
+              website TEXT,
+              github TEXT,
+              twitter TEXT,
+              role TEXT NOT NULL DEFAULT 'user',
+              theme TEXT NOT NULL DEFAULT 'system',
+              email_notifications BOOLEAN NOT NULL DEFAULT true,
+              push_notifications BOOLEAN NOT NULL DEFAULT false,
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+              updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+            );
 
-    if (
-      checkError.message.includes("relation") &&
-      checkError.message.includes("does not exist")
-    ) {
-      console.log("Creating users table...");
+            -- Enable RLS
+            ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
-      // Create the table with proper schema and RLS policies
-      const { error: createError } = await adminClient.rpc("exec_sql", {
-        sql: `
-          CREATE TABLE IF NOT EXISTS public.users (
-            email VARCHAR PRIMARY KEY,
-            display_name VARCHAR NOT NULL,
-            photo_url VARCHAR,
-            bio TEXT,
-            location VARCHAR,
-            website VARCHAR,
-            github VARCHAR,
-            twitter VARCHAR,
-            role VARCHAR DEFAULT 'User',
-            theme VARCHAR DEFAULT 'system',
-            email_notifications BOOLEAN DEFAULT true,
-            push_notifications BOOLEAN DEFAULT false,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-          );
+            -- Create policies
+            CREATE POLICY "Users can view their own profile"
+              ON public.users FOR SELECT
+              USING (auth.uid()::text = email);
 
-          -- Enable RLS
-          ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY "Users can update their own profile"
+              ON public.users FOR UPDATE
+              USING (auth.uid()::text = email);
 
-          -- Create policies
-          CREATE POLICY "Users can view their own data" ON public.users
-            FOR SELECT USING (auth.jwt()->>'email' = email);
+            CREATE POLICY "Users can insert their own profile"
+              ON public.users FOR INSERT
+              WITH CHECK (auth.uid()::text = email);
 
-          CREATE POLICY "Users can update their own data" ON public.users
-            FOR UPDATE USING (auth.jwt()->>'email' = email);
+            -- Grant permissions
+            GRANT ALL ON public.users TO authenticated;
+            GRANT ALL ON public.users TO service_role;
+          `,
+        });
 
-          CREATE POLICY "Users can insert their own data" ON public.users
-            FOR INSERT WITH CHECK (auth.jwt()->>'email' = email);
+        if (createError) {
+          console.error("Error creating users table:", createError);
+          throw createError;
+        }
 
-          -- Grant access to authenticated users
-          GRANT ALL ON public.users TO authenticated;
-        `,
-      });
-
-      if (createError) {
-        console.error("Error creating users table:", createError);
-        return false;
+        console.log("Users table created successfully");
+      } else {
+        console.error("Unexpected error checking table:", checkError);
+        throw checkError;
       }
-
-      console.log("Users table created successfully");
-      return true;
+    } else {
+      console.log("Users table exists");
     }
 
-    console.error("Error checking users table:", checkError);
-    return false;
-  } catch (err) {
-    console.error("Error checking users table:", err);
-    return false;
+    // Verify table structure
+    const { data: structureCheck, error: structureError } = await supabase
+      .from("users")
+      .select("*")
+      .limit(1);
+
+    if (structureError) {
+      console.error("Error verifying table structure:", structureError);
+      throw structureError;
+    }
+
+    console.log("Table structure verified successfully");
+  } catch (error) {
+    console.error("Error in ensureUsersTable:", error);
+    throw error;
   }
-};
+}
 
 // Store user data in the database
-export const storeUser = async (
-  user: UserProfile
-): Promise<UserProfile | null> => {
+export async function storeUser(profile: UserProfile): Promise<void> {
+  console.log("Starting storeUser with profile:", profile);
   try {
-    console.log("Attempting to store user in database");
+    await ensureUsersTable();
 
-    // Ensure the users table exists
-    const tableExists = await ensureUsersTable();
-    if (!tableExists) {
-      console.error("Failed to ensure users table exists");
-      return null;
-    }
+    const dbProfile = appToDbProfile(profile);
+    console.log("Converted to DB profile:", dbProfile);
 
-    // Use the admin client for database operations
-    const adminClient = getSupabaseClient(true);
-
-    // Convert application profile to database profile
-    const dbProfile = appToDbProfile(user);
-
-    // Insert or update the user data
-    const { data, error } = await adminClient
-      .from("users")
-      .upsert(dbProfile)
-      .select()
-      .single();
+    const { error } = await supabase.from("users").upsert(dbProfile);
 
     if (error) {
       console.error("Error storing user:", error);
-      return null;
+      throw error;
     }
 
-    if (!isDbProfile(data)) {
-      console.error("Invalid user data received from database");
-      return null;
-    }
-
-    console.log("Successfully stored user in database:", data);
-    return dbToAppProfile(data);
-  } catch (err) {
-    console.error("Error in storeUser:", err);
-    return null;
+    console.log("Successfully stored user in database");
+  } catch (error) {
+    console.error("Error in storeUser:", error);
+    throw error;
   }
-};
+}
 
 // Get user data from the database
-export const getUser = async (email: string): Promise<UserProfile | null> => {
+export async function getUser(email: string): Promise<UserProfile | null> {
+  console.log("Starting getUser for email:", email);
   try {
-    console.log("Attempting to get user data for email:", email);
+    await ensureUsersTable();
 
-    // Ensure the users table exists
-    const tableExists = await ensureUsersTable();
-    if (!tableExists) {
-      console.error("Failed to ensure users table exists");
-      return null;
-    }
-
-    // Use the admin client for database operations
-    const adminClient = getSupabaseClient(true);
-
-    // Get the user data
-    const { data, error } = await adminClient
+    const { data, error } = await supabase
       .from("users")
       .select("*")
       .eq("email", email)
       .single();
 
     if (error) {
-      console.error("Error getting user:", error);
+      console.error("Error fetching user:", error);
+      throw error;
+    }
+
+    if (!data) {
+      console.log("No user found for email:", email);
       return null;
     }
 
     if (!isDbProfile(data)) {
-      console.error("Invalid user data received from database");
-      return null;
+      console.error("Invalid profile data received:", data);
+      throw new Error("Invalid profile data received from database");
     }
 
-    console.log("Successfully retrieved user data from database:", data);
-    return dbToAppProfile(data);
-  } catch (err) {
-    console.error("Error in getUser:", err);
-    return null;
+    const userProfile = dbToAppProfile(data);
+    console.log("Successfully retrieved user profile:", userProfile);
+    return userProfile;
+  } catch (error) {
+    console.error("Error in getUser:", error);
+    throw error;
   }
-};
+}
 
 export const deleteUser = async (email: string): Promise<void> => {
   try {

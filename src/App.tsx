@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Routes, Route } from "react-router-dom";
@@ -14,6 +13,7 @@ import ProfilePage from "./pages/ProfilePage";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Contact from "./pages/Contact";
+import DatabaseTest from "@/pages/DatabaseTest";
 
 // Removed duplicate providers that are already in main.tsx
 const App = () => (
@@ -71,6 +71,14 @@ const App = () => (
         element={
           <Layout>
             <Contact />
+          </Layout>
+        }
+      />
+      <Route
+        path="/db-test"
+        element={
+          <Layout>
+            <DatabaseTest />
           </Layout>
         }
       />
