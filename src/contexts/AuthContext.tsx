@@ -41,8 +41,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const signup = useCallback(async (email: string, password: string, profile: Partial<User>) => {
     try {
-      const result = await performSignup(email, password, profile as UserProfile);
-      console.log("Signup completed with result:", result);
+      // Fixed: performSignup expects profile as UserProfile, not as two separate arguments
+      await performSignup(email, password, profile as UserProfile);
+      console.log("Signup completed successfully");
       // Return type void to match the AuthContextType
     } catch (error) {
       console.error("Signup error in context:", error);
