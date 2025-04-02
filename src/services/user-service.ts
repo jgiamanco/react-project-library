@@ -72,7 +72,7 @@ export const ensureUsersTable = async (): Promise<boolean> => {
 // Helper function to add timeout to a promise
 const withTimeout = <T>(
   promise: Promise<T>,
-  timeoutMs: number = 10000
+  timeoutMs: number = 15000 // Increased timeout to 15 seconds
 ): Promise<T> => {
   return Promise.race([
     promise,
@@ -91,6 +91,7 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
     // Try regular client first with retry
     let attempts = 0;
     const maxAttempts = 3;
+    let lastError: Error | null = null;
 
     while (attempts < maxAttempts) {
       try {
@@ -114,37 +115,48 @@ export const storeUser = async (userData: UserData): Promise<UserData> => {
             photoURL: data.photo_url,
           };
         }
+        lastError = error;
       } catch (err) {
         console.warn(`Attempt ${attempts + 1} failed:`, err);
+        lastError = err as Error;
       }
       attempts++;
+      if (attempts < maxAttempts) {
+        // Add delay between retries
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
     }
 
     // If all attempts failed, try admin client as last resort
     console.warn("All regular client attempts failed, trying admin client");
-    const { data: adminData, error: adminError } = await withTimeout(
-      getSupabaseClient(true)
-        .from("users")
-        .upsert({
-          email: userData.email,
-          display_name: userData.displayName,
-          photo_url: userData.photoURL,
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single()
-    );
+    try {
+      const { data: adminData, error: adminError } = await withTimeout(
+        getSupabaseClient(true)
+          .from("users")
+          .upsert({
+            email: userData.email,
+            display_name: userData.displayName,
+            photo_url: userData.photoURL,
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single()
+      );
 
-    if (adminError) {
-      console.error("Both regular and admin client failed:", adminError);
+      if (adminError) {
+        console.error("Both regular and admin client failed:", adminError);
+        return userData; // Return input data as fallback
+      }
+
+      return {
+        email: adminData.email,
+        displayName: adminData.display_name,
+        photoURL: adminData.photo_url,
+      };
+    } catch (adminErr) {
+      console.error("Admin client operation failed:", adminErr);
       return userData; // Return input data as fallback
     }
-
-    return {
-      email: adminData.email,
-      displayName: adminData.display_name,
-      photoURL: adminData.photo_url,
-    };
   } catch (error) {
     console.error("Error storing user:", error);
     // Return the input data as a fallback
@@ -157,6 +169,7 @@ export const getUser = async (email: string): Promise<UserData | null> => {
     // Try regular client first with retry
     let attempts = 0;
     const maxAttempts = 3;
+    let lastError: Error | null = null;
 
     while (attempts < maxAttempts) {
       try {
@@ -175,31 +188,46 @@ export const getUser = async (email: string): Promise<UserData | null> => {
         }
 
         if (error.code === "PGRST116") return null; // Record not found
+        lastError = error;
       } catch (err) {
         console.warn(`Attempt ${attempts + 1} failed:`, err);
+        lastError = err as Error;
       }
       attempts++;
+      if (attempts < maxAttempts) {
+        // Add delay between retries
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
     }
 
     // If all attempts failed, try admin client as last resort
     console.warn("All regular client attempts failed, trying admin client");
-    const { data: adminData, error: adminError } = await withTimeout(
-      getSupabaseClient(true).from("users").select().eq("email", email).single()
-    );
+    try {
+      const { data: adminData, error: adminError } = await withTimeout(
+        getSupabaseClient(true)
+          .from("users")
+          .select()
+          .eq("email", email)
+          .single()
+      );
 
-    if (adminError) {
-      if (adminError.code === "PGRST116") return null; // Record not found
-      console.warn("Both regular and admin client failed:", adminError);
+      if (adminError) {
+        if (adminError.code === "PGRST116") return null; // Record not found
+        console.warn("Both regular and admin client failed:", adminError);
+        return null;
+      }
+
+      return adminData
+        ? {
+            email: adminData.email,
+            displayName: adminData.display_name,
+            photoURL: adminData.photo_url,
+          }
+        : null;
+    } catch (adminErr) {
+      console.error("Admin client operation failed:", adminErr);
       return null;
     }
-
-    return adminData
-      ? {
-          email: adminData.email,
-          displayName: adminData.display_name,
-          photoURL: adminData.photo_url,
-        }
-      : null;
   } catch (error) {
     console.error("Error getting user:", error);
     return null;

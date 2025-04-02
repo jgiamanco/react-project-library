@@ -14,7 +14,7 @@ interface UserMetadata {
 // Helper function to add timeout to a promise
 const withTimeout = <T>(
   promise: Promise<T>,
-  timeoutMs: number = 10000
+  timeoutMs: number = 15000 // Increased timeout to 15 seconds
 ): Promise<T> => {
   return Promise.race([
     promise,
@@ -33,6 +33,7 @@ export const useAuthInit = () => {
   const authStateUpdateTimeout = useRef<NodeJS.Timeout>();
   const retryCount = useRef(0);
   const maxRetries = 3;
+  const isUpdating = useRef(false);
 
   // Create a minimal fallback user profile from email
   const createBasicUserProfile = useCallback(
@@ -59,8 +60,11 @@ export const useAuthInit = () => {
 
   const updateAuthState = useCallback(
     async (session: Session | null) => {
-      if (session?.user) {
-        try {
+      if (isUpdating.current) return;
+      isUpdating.current = true;
+
+      try {
+        if (session?.user) {
           const { data } = await withTimeout(supabase.auth.getUser());
           if (data?.user) {
             const email = data.user.email || "";
@@ -79,6 +83,10 @@ export const useAuthInit = () => {
                     err
                   );
                   retryCount.current++;
+                  if (retryCount.current < maxRetries) {
+                    // Add delay between retries
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                  }
                 }
               }
 
@@ -93,27 +101,38 @@ export const useAuthInit = () => {
               retryCount.current = 0; // Reset retry count on success
             } catch (error) {
               console.error("Error updating auth state:", error);
-              // On error, clear auth state to prevent inconsistent state
-              localStorage.removeItem("authenticated");
-              localStorage.removeItem("user");
-              setUser(null);
-              setIsAuthenticated(false);
+              // On error, keep the current state if it exists
+              if (!user) {
+                const finalUserProfile = createBasicUserProfile(
+                  email,
+                  userMetadata
+                );
+                setUser(finalUserProfile);
+                setIsAuthenticated(true);
+                localStorage.setItem("authenticated", "true");
+                localStorage.setItem("user", JSON.stringify(finalUserProfile));
+              }
               setError("Failed to load user profile");
             }
           }
-        } catch (error) {
-          console.error("Error getting user data:", error);
+        } else {
+          localStorage.removeItem("authenticated");
+          localStorage.removeItem("user");
+          setUser(null);
+          setIsAuthenticated(false);
+          setError(null);
+        }
+      } catch (error) {
+        console.error("Error getting user data:", error);
+        // On error, keep the current state if it exists
+        if (!user) {
           setError("Failed to get user data");
         }
-      } else {
-        localStorage.removeItem("authenticated");
-        localStorage.removeItem("user");
-        setUser(null);
-        setIsAuthenticated(false);
-        setError(null);
+      } finally {
+        isUpdating.current = false;
       }
     },
-    [createBasicUserProfile]
+    [createBasicUserProfile, user]
   );
 
   useEffect(() => {
@@ -124,9 +143,12 @@ export const useAuthInit = () => {
       if (isLoading) {
         console.log("Auth check is taking too long, stopping loading state");
         setIsLoading(false);
-        setError("Authentication check timed out");
+        // Don't set error if we have a user
+        if (!user) {
+          setError("Authentication check timed out");
+        }
       }
-    }, 10000); // Increased timeout to 10 seconds
+    }, 15000); // Increased timeout to 15 seconds
 
     const checkAuth = async () => {
       try {
@@ -167,12 +189,14 @@ export const useAuthInit = () => {
         }
       } catch (error) {
         console.error("Auth check error:", error);
-        // On error, clear auth state to prevent inconsistent state
-        localStorage.removeItem("authenticated");
-        localStorage.removeItem("user");
-        setUser(null);
-        setIsAuthenticated(false);
-        setError("Authentication check failed");
+        // On error, keep the current state if it exists
+        if (!user) {
+          localStorage.removeItem("authenticated");
+          localStorage.removeItem("user");
+          setUser(null);
+          setIsAuthenticated(false);
+          setError("Authentication check failed");
+        }
       } finally {
         clearTimeout(loadingTimeout);
         setIsLoading(false);
@@ -211,7 +235,7 @@ export const useAuthInit = () => {
       }
       authListener.subscription.unsubscribe();
     };
-  }, [updateAuthState]);
+  }, [updateAuthState, user]);
 
   return {
     user,
