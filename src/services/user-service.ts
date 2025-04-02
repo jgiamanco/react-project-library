@@ -136,7 +136,7 @@ export async function getUser(email: string): Promise<UserProfile | null> {
     console.error("Invalid email provided to getUser");
     return null;
   }
-  
+
   try {
     await ensureUsersTable();
 
@@ -195,13 +195,13 @@ export const getUserProfile = async (
     console.error("Invalid email provided to getUserProfile");
     return null;
   }
-  
+
   try {
     const userProfile = await getUser(email);
     if (userProfile) {
       return userProfile;
     }
-    
+
     const client = getSupabaseClient(true);
     try {
       const { data, error } = await client
@@ -258,10 +258,15 @@ export const updateUserProfile = async (
   if (!email) {
     throw new Error("Email is required for updating user profile");
   }
-  
+
   try {
-    console.log("updateUserProfile: Starting update for", email, "with data:", profile);
-    
+    console.log(
+      "updateUserProfile: Starting update for",
+      email,
+      "with data:",
+      profile
+    );
+
     await ensureUsersTable();
 
     const currentProfile = await getUser(email);
@@ -276,21 +281,36 @@ export const updateUserProfile = async (
       displayName: profile.displayName || currentProfile?.displayName || "",
       role: profile.role || currentProfile?.role || "User",
       theme: profile.theme || currentProfile?.theme || "system",
-      emailNotifications: profile.emailNotifications ?? currentProfile?.emailNotifications ?? true,
-      pushNotifications: profile.pushNotifications ?? currentProfile?.pushNotifications ?? false,
+      emailNotifications:
+        profile.emailNotifications ??
+        currentProfile?.emailNotifications ??
+        true,
+      pushNotifications:
+        profile.pushNotifications ?? currentProfile?.pushNotifications ?? false,
       updatedAt: new Date().toISOString(),
     };
 
     console.log("Merged profile data:", mergedProfile);
 
     const dbProfile = appToDbProfile(mergedProfile as UserProfile);
-    
+
     const client = getSupabaseClient(true);
 
-    console.log("Sending upsert to database:", dbProfile);
-    
-    const { data, error } = await client
-      .from("users")
+    // Update both tables to ensure consistency
+    console.log("Sending upsert to users table:", dbProfile);
+    const { error: usersError } = await client.from("users").upsert(dbProfile, {
+      onConflict: "email",
+      ignoreDuplicates: false,
+    });
+
+    if (usersError) {
+      console.error("Users table update failed:", usersError);
+      throw usersError;
+    }
+
+    console.log("Sending upsert to user_profiles table:", dbProfile);
+    const { data, error: profilesError } = await client
+      .from("user_profiles")
       .upsert(dbProfile, {
         onConflict: "email",
         ignoreDuplicates: false,
@@ -298,9 +318,9 @@ export const updateUserProfile = async (
       .select("*")
       .single();
 
-    if (error) {
-      console.error("Profile update failed:", error);
-      throw error;
+    if (profilesError) {
+      console.error("User_profiles table update failed:", profilesError);
+      throw profilesError;
     }
 
     if (!data) {
@@ -308,8 +328,8 @@ export const updateUserProfile = async (
     }
 
     const updatedProfile = dbToAppProfile(data as DbProfile);
-    
-    localStorage.setItem("user", JSON.stringify(updatedProfile));
+
+    // Update localStorage with consistent key
     localStorage.setItem("user_profile", JSON.stringify(updatedProfile));
 
     console.log("Profile successfully updated:", updatedProfile);

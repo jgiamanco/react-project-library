@@ -1,9 +1,8 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/services/supabase-client";
 import { UserProfile } from "@/services/types";
-import { getUser } from "@/services/user-service";
+import { getUser, updateUserProfile } from "@/services/user-service";
 import { toast } from "sonner";
 
 export const useAuthInit = () => {
@@ -17,7 +16,7 @@ export const useAuthInit = () => {
 
   useEffect(() => {
     console.log("useAuthInit: Initializing auth...");
-    
+
     const updateAuthState = async (session: Session | null) => {
       try {
         if (session?.user) {
@@ -54,18 +53,22 @@ export const useAuthInit = () => {
               console.log("User profile found in database:", userProfile.email);
               setUser(userProfile);
               setIsAuthenticated(true);
-              // Update localStorage for backward compatibility
+              // Update localStorage with consistent key
               localStorage.setItem("authenticated", "true");
-              localStorage.setItem("user", JSON.stringify(userProfile));
+              localStorage.setItem("user_profile", JSON.stringify(userProfile));
             } else {
               console.log("No user profile found in database");
-              
+
               // Create a basic profile from session data
               const basicProfile: UserProfile = {
                 email: session.user.email || "",
-                displayName: session.user.user_metadata?.display_name || session.user.email?.split("@")[0] || "User",
-                photoURL: session.user.user_metadata?.photo_url || 
-                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`,
+                displayName:
+                  session.user.user_metadata?.display_name ||
+                  session.user.email?.split("@")[0] ||
+                  "User",
+                photoURL:
+                  session.user.user_metadata?.photo_url ||
+                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`,
                 location: session.user.user_metadata?.location || "",
                 bio: "",
                 website: "",
@@ -76,21 +79,35 @@ export const useAuthInit = () => {
                 emailNotifications: true,
                 pushNotifications: false,
               };
-              
+
+              // Store the basic profile in the database
+              try {
+                await updateUserProfile(session.user.email || "", basicProfile);
+              } catch (dbError) {
+                console.error("Error storing basic profile:", dbError);
+              }
+
               setUser(basicProfile);
               setIsAuthenticated(true);
               localStorage.setItem("authenticated", "true");
-              localStorage.setItem("user", JSON.stringify(basicProfile));
+              localStorage.setItem(
+                "user_profile",
+                JSON.stringify(basicProfile)
+              );
             }
           } catch (profileError) {
             console.error("Error getting user profile:", profileError);
-            
+
             // Use session data as fallback
             const fallbackProfile: UserProfile = {
               email: session.user.email || "",
-              displayName: session.user.user_metadata?.display_name || session.user.email?.split("@")[0] || "User",
-              photoURL: session.user.user_metadata?.photo_url || 
-                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`,
+              displayName:
+                session.user.user_metadata?.display_name ||
+                session.user.email?.split("@")[0] ||
+                "User",
+              photoURL:
+                session.user.user_metadata?.photo_url ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`,
               location: session.user.user_metadata?.location || "",
               bio: "",
               website: "",
@@ -101,14 +118,17 @@ export const useAuthInit = () => {
               emailNotifications: true,
               pushNotifications: false,
             };
-            
+
             setUser(fallbackProfile);
             setIsAuthenticated(true);
             localStorage.setItem("authenticated", "true");
-            localStorage.setItem("user", JSON.stringify(fallbackProfile));
-            
+            localStorage.setItem(
+              "user_profile",
+              JSON.stringify(fallbackProfile)
+            );
+
             toast.error("Error loading profile", {
-              description: "Using basic profile information"
+              description: "Using basic profile information",
             });
           }
         } else {
@@ -117,7 +137,7 @@ export const useAuthInit = () => {
           setIsAuthenticated(false);
           // Clear localStorage
           localStorage.removeItem("authenticated");
-          localStorage.removeItem("user");
+          localStorage.removeItem("user_profile");
         }
       } catch (err) {
         console.error("Error updating auth state:", err);
@@ -167,9 +187,9 @@ export const useAuthInit = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event);
-      if (event === 'SIGNED_IN') {
+      if (event === "SIGNED_IN") {
         toast.success("Signed in successfully");
-      } else if (event === 'SIGNED_OUT') {
+      } else if (event === "SIGNED_OUT") {
         toast.info("Signed out");
       }
       await updateAuthState(session);

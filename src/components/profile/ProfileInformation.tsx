@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { User } from "@/contexts/auth-types";
 import { Button } from "@/components/ui/button";
@@ -39,6 +38,10 @@ export const ProfileInformation = ({
         website: profile.website,
         github: profile.github,
         twitter: profile.twitter,
+        role: profile.role,
+        theme: profile.theme,
+        emailNotifications: profile.emailNotifications,
+        pushNotifications: profile.pushNotifications,
       };
 
       // Update auth context (which will update database via updateUser function)
