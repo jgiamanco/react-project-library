@@ -1,4 +1,3 @@
-
 import {
   supabase,
   handleSupabaseError,
@@ -13,10 +12,9 @@ import {
 } from "./types";
 import { PostgrestResponse } from "@supabase/supabase-js";
 
-// Helper function to add timeout to a promise
 const withTimeout = <T>(
   promise: Promise<T>,
-  timeoutMs: number = 5000 // Reduced timeout to 5 seconds
+  timeoutMs: number = 5000
 ): Promise<T> => {
   return Promise.race([
     promise,
@@ -29,11 +27,9 @@ const withTimeout = <T>(
   ]);
 };
 
-// Helper function to ensure the users table exists with proper schema and RLS
 export async function ensureUsersTable(): Promise<void> {
   console.log("Starting ensureUsersTable...");
   try {
-    // First check if the table exists
     const { data: tableCheck, error: checkError } = await supabase
       .from("users")
       .select("email")
@@ -42,7 +38,6 @@ export async function ensureUsersTable(): Promise<void> {
     if (checkError) {
       console.log("Table check error:", checkError);
       if (checkError.code === "42P01") {
-        // Table doesn't exist, create it
         console.log("Users table does not exist, creating...");
         const { error: createError } = await supabase.rpc("exec_sql", {
           sql: `
@@ -63,10 +58,8 @@ export async function ensureUsersTable(): Promise<void> {
               updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
             );
 
-            -- Enable RLS
             ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
-            -- Create policies
             CREATE POLICY "Users can view their own profile"
               ON public.users FOR SELECT
               USING (auth.uid()::text = email);
@@ -79,7 +72,6 @@ export async function ensureUsersTable(): Promise<void> {
               ON public.users FOR INSERT
               WITH CHECK (auth.uid()::text = email);
 
-            -- Grant permissions
             GRANT ALL ON public.users TO authenticated;
             GRANT ALL ON public.users TO service_role;
           `,
@@ -99,7 +91,6 @@ export async function ensureUsersTable(): Promise<void> {
       console.log("Users table exists");
     }
 
-    // Verify table structure
     const { data: structureCheck, error: structureError } = await supabase
       .from("users")
       .select("*")
@@ -117,7 +108,6 @@ export async function ensureUsersTable(): Promise<void> {
   }
 }
 
-// Store user data in the database
 export async function storeUser(profile: UserProfile): Promise<void> {
   console.log("Starting storeUser with profile:", profile);
   try {
@@ -140,7 +130,6 @@ export async function storeUser(profile: UserProfile): Promise<void> {
   }
 }
 
-// Get user data from the database
 export async function getUser(email: string): Promise<UserProfile | null> {
   console.log("Starting getUser for email:", email);
   if (!email) {
@@ -159,7 +148,6 @@ export async function getUser(email: string): Promise<UserProfile | null> {
 
     if (error) {
       if (error.code === "PGRST116") {
-        // Record not found
         console.log("No user found for email:", email);
         return null;
       }
@@ -200,7 +188,6 @@ export const deleteUser = async (email: string): Promise<void> => {
   }
 };
 
-// User Profile operations
 export const getUserProfile = async (
   email: string
 ): Promise<UserProfile | null> => {
@@ -210,13 +197,11 @@ export const getUserProfile = async (
   }
   
   try {
-    // First try getting from users table
     const userProfile = await getUser(email);
     if (userProfile) {
       return userProfile;
     }
     
-    // Fall back to user_profiles table if it exists
     const client = getSupabaseClient(true);
     try {
       const { data, error } = await client
@@ -226,7 +211,7 @@ export const getUserProfile = async (
         .single();
 
       if (error) {
-        if (error.code === "PGRST116") return null; // Record not found
+        if (error.code === "PGRST116") return null;
         throw error;
       }
 
@@ -241,11 +226,9 @@ export const getUserProfile = async (
   }
 };
 
-// Helper function to convert DB profile to UserProfile
 const convertDbProfileToUserProfile = (data: DbProfile): UserProfile | null => {
   if (!data) return null;
 
-  // Validate theme value
   const theme = data.theme as "light" | "dark" | "system" | undefined;
   const validTheme =
     theme && ["light", "dark", "system"].includes(theme) ? theme : "system";
@@ -277,42 +260,41 @@ export const updateUserProfile = async (
   }
   
   try {
-    const client = getSupabaseClient(true);
-
-    // Ensure the users table exists
+    console.log("updateUserProfile: Starting update for", email, "with data:", profile);
+    
     await ensureUsersTable();
 
-    // Validate theme
-    const theme =
-      profile.theme && ["light", "dark", "system"].includes(profile.theme)
-        ? profile.theme
-        : "system";
+    const currentProfile = await getUser(email);
+    if (!currentProfile) {
+      console.log("No existing profile found, creating new profile");
+    }
 
-    // Convert profile to DB format
-    const dbProfile = {
+    const mergedProfile = {
+      ...(currentProfile || {}),
+      ...profile,
       email,
-      display_name: profile.displayName || "",
-      photo_url: profile.photoURL || "",
-      bio: profile.bio || "",
-      location: profile.location || "",
-      website: profile.website || "",
-      github: profile.github || "",
-      twitter: profile.twitter || "",
-      role: profile.role || "User",
-      theme,
-      email_notifications: profile.emailNotifications ?? true,
-      push_notifications: profile.pushNotifications ?? false,
-      updated_at: new Date().toISOString(),
+      displayName: profile.displayName || currentProfile?.displayName || "",
+      role: profile.role || currentProfile?.role || "User",
+      theme: profile.theme || currentProfile?.theme || "system",
+      emailNotifications: profile.emailNotifications ?? currentProfile?.emailNotifications ?? true,
+      pushNotifications: profile.pushNotifications ?? currentProfile?.pushNotifications ?? false,
+      updatedAt: new Date().toISOString(),
     };
 
-    // Update the profile in users table
+    console.log("Merged profile data:", mergedProfile);
+
+    const dbProfile = appToDbProfile(mergedProfile as UserProfile);
+    
+    const client = getSupabaseClient(true);
+
+    console.log("Sending upsert to database:", dbProfile);
     const { data, error } = await client
       .from("users")
       .upsert(dbProfile, {
         onConflict: "email",
         ignoreDuplicates: false,
       })
-      .select()
+      .select("*")
       .single();
 
     if (error) {
@@ -320,16 +302,16 @@ export const updateUserProfile = async (
       throw error;
     }
 
-    // Convert and return the updated profile
-    const updatedProfile = convertDbProfileToUserProfile(data);
-    if (!updatedProfile) {
-      throw new Error("Failed to convert updated profile");
+    if (!data) {
+      throw new Error("No data returned from profile update");
     }
 
-    // Update local storage
+    const updatedProfile = dbToAppProfile(data as DbProfile);
+    
     localStorage.setItem("user", JSON.stringify(updatedProfile));
     localStorage.setItem("user_profile", JSON.stringify(updatedProfile));
 
+    console.log("Profile successfully updated:", updatedProfile);
     return updatedProfile;
   } catch (error) {
     console.error("Error updating user profile:", error);

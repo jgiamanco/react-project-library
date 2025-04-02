@@ -29,8 +29,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // Wrap the auth operations to update our state
   const login = useCallback(async (email: string, password: string) => {
     try {
-      const result = await performLogin(email, password);
-      console.log("Login completed with result:", result);
+      await performLogin(email, password);
+      console.log("Login completed successfully");
       // Return type void to match the AuthContextType
     } catch (error) {
       console.error("Login error in context:", error);
@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const signup = useCallback(async (email: string, password: string, profile: Partial<User>) => {
     try {
-      // Fix: performSignup expects (email, password, profile)
+      // Note: performSignup expects UserProfile type
       await performSignup(email, password, profile as UserProfile);
       console.log("Signup completed successfully");
     } catch (error) {

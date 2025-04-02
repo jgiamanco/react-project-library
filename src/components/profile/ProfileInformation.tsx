@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { toast as sonnerToast } from "sonner";
-import { updateUserProfile } from "@/services/user-service";
 
 interface ProfileInformationProps {
   profile: User;
@@ -30,22 +29,7 @@ export const ProfileInformation = ({
     try {
       console.log("Updating profile with data:", profile);
 
-      // First update the database
-      await updateUserProfile(profile.email, {
-        displayName: profile.displayName,
-        photoURL: profile.photoURL,
-        bio: profile.bio,
-        location: profile.location,
-        website: profile.website,
-        github: profile.github,
-        twitter: profile.twitter,
-        role: profile.role,
-        theme: profile.theme,
-        emailNotifications: profile.emailNotifications,
-        pushNotifications: profile.pushNotifications,
-      });
-
-      // Then update auth context
+      // Update auth context (which will update database via updateUser function)
       await updateUser({
         displayName: profile.displayName,
         photoURL: profile.photoURL,
@@ -54,10 +38,6 @@ export const ProfileInformation = ({
         website: profile.website,
         github: profile.github,
         twitter: profile.twitter,
-        role: profile.role,
-        theme: profile.theme,
-        emailNotifications: profile.emailNotifications,
-        pushNotifications: profile.pushNotifications,
       });
 
       sonnerToast.success("Profile updated", {
@@ -85,13 +65,7 @@ export const ProfileInformation = ({
 
       console.log("Updating avatar URL:", newAvatarUrl);
 
-      // Update database first
-      await updateUserProfile(profile.email, {
-        ...profile,
-        photoURL: newAvatarUrl,
-      });
-
-      // Then update auth context
+      // Update auth context (which will update database)
       await updateUser({ photoURL: newAvatarUrl });
 
       sonnerToast.success("Avatar updated", {
