@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const signup = useCallback(async (email: string, password: string, profile: Partial<User>) => {
     try {
-      // Note: performSignup expects UserProfile type
+      // Fix: Pass profile as UserProfile, not as two separate arguments
       await performSignup(email, password, profile as UserProfile);
       console.log("Signup completed successfully");
     } catch (error) {

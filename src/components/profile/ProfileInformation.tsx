@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { User } from "@/contexts/auth-types";
 import { Button } from "@/components/ui/button";
@@ -29,8 +30,8 @@ export const ProfileInformation = ({
     try {
       console.log("Updating profile with data:", profile);
 
-      // Update auth context (which will update database via updateUser function)
-      await updateUser({
+      // Create an updates object with only the profile fields
+      const updates: Partial<User> = {
         displayName: profile.displayName,
         photoURL: profile.photoURL,
         bio: profile.bio,
@@ -38,7 +39,10 @@ export const ProfileInformation = ({
         website: profile.website,
         github: profile.github,
         twitter: profile.twitter,
-      });
+      };
+
+      // Update auth context (which will update database via updateUser function)
+      await updateUser(updates);
 
       sonnerToast.success("Profile updated", {
         description: "Your profile has been updated successfully.",

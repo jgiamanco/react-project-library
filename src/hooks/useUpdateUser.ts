@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { updateUserProfile } from "@/services/user-service";
@@ -11,11 +12,16 @@ export const useUpdateUser = () => {
 
   const updateUser = useCallback(
     async (user: User, updates: Partial<User>): Promise<User | null> => {
-      if (!user) return null;
+      if (!user || !user.email) {
+        console.error("Cannot update user: No user or email provided");
+        return null;
+      }
 
       try {
         setIsLoading(true);
+        console.log("useUpdateUser: Updating user with:", updates);
 
+        // Create a merged user object for updates
         const updatedUser = { ...user, ...updates };
 
         // First, update user metadata in Supabase Auth
@@ -43,6 +49,8 @@ export const useUpdateUser = () => {
               `Auth metadata update warning: ${authUpdateError.message}`
             );
             // Continue anyway to update the profile in database
+          } else {
+            console.log("Auth metadata updated successfully");
           }
         } catch (authError) {
           console.warn("Error updating auth metadata:", authError);
@@ -53,8 +61,12 @@ export const useUpdateUser = () => {
         let result;
         try {
           result = await updateUserProfile(user.email, updatedUser);
+          console.log("Profile updated in database:", result);
         } catch (dbError) {
           console.error("Failed to update profile in database:", dbError);
+          sonnerToast.error("Database update failed", {
+            description: "Profile was only updated locally. Changes may not persist.",
+          });
           // We'll still update localStorage and consider it a success from the user's perspective
         }
 

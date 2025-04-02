@@ -288,6 +288,7 @@ export const updateUserProfile = async (
     const client = getSupabaseClient(true);
 
     console.log("Sending upsert to database:", dbProfile);
+    
     const { data, error } = await client
       .from("users")
       .upsert(dbProfile, {
