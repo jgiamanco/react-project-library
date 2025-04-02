@@ -4,7 +4,28 @@ import { Database } from "./database.types";
 interface TestResult {
   success: boolean;
   message: string;
-  details?: any;
+  details?: unknown;
+}
+
+interface TableInfo {
+  table_name: string;
+  table_type: string;
+}
+
+interface ColumnInfo {
+  column_name: string;
+  data_type: string;
+  is_nullable: string;
+  column_default: string | null;
+}
+
+interface PolicyInfo {
+  policyname: string;
+  permissive: string;
+  roles: string[];
+  cmd: string;
+  qual: string;
+  with_check: string;
 }
 
 export async function testDatabaseConnection(): Promise<TestResult> {
@@ -37,7 +58,21 @@ export async function testDatabaseConnection(): Promise<TestResult> {
 
 export async function testTableStructure(): Promise<TestResult> {
   try {
-    // Test 1: Check if users table exists
+    // Test 1: Get all tables in the database
+    const { data: tables, error: tablesError } = (await supabaseAdmin.rpc(
+      "get_tables",
+      { schema_name: "public" }
+    )) as { data: TableInfo[] | null; error: Error | null };
+
+    if (tablesError) {
+      return {
+        success: false,
+        message: "Error getting tables",
+        details: tablesError,
+      };
+    }
+
+    // Test 2: Check if users table exists and get its structure
     const { data: tableCheck, error: tableError } = await supabaseAdmin
       .from("users")
       .select("email")
@@ -48,41 +83,53 @@ export async function testTableStructure(): Promise<TestResult> {
         return {
           success: false,
           message: "Users table does not exist",
-          details: "Table needs to be created",
+          details: {
+            availableTables: tables,
+            message: "Table needs to be created",
+          },
         };
       }
       return {
         success: false,
         message: "Error checking users table",
-        details: tableError,
+        details: {
+          availableTables: tables,
+          error: tableError,
+        },
       };
     }
 
-    // Test 2: Check table structure
-    const { data: structureCheck, error: structureError } = await supabaseAdmin
-      .from("users")
-      .select("*")
-      .limit(1);
+    // Test 3: Get table structure without data
+    const { data: structure, error: structureError } = (await supabaseAdmin.rpc(
+      "get_table_structure",
+      { table_name: "users" }
+    )) as { data: ColumnInfo[] | null; error: Error | null };
 
     if (structureError) {
       return {
         success: false,
-        message: "Error checking table structure",
-        details: structureError,
+        message: "Error getting table structure",
+        details: {
+          availableTables: tables,
+          error: structureError,
+        },
       };
     }
 
-    // Test 3: Check RLS policies
-    const { data: policies, error: policiesError } = await supabaseAdmin.rpc(
+    // Test 4: Check RLS policies
+    const { data: policies, error: policiesError } = (await supabaseAdmin.rpc(
       "get_policies",
       { table_name: "users" }
-    );
+    )) as { data: PolicyInfo[] | null; error: Error | null };
 
     if (policiesError) {
       return {
         success: false,
         message: "Error checking RLS policies",
-        details: policiesError,
+        details: {
+          availableTables: tables,
+          error: policiesError,
+        },
       };
     }
 
@@ -90,9 +137,13 @@ export async function testTableStructure(): Promise<TestResult> {
       success: true,
       message: "Table structure and policies verified successfully",
       details: {
-        tableExists: true,
-        structure: structureCheck,
-        policies,
+        availableTables: tables,
+        usersTableStructure: structure,
+        policies: policies?.map((p) => ({
+          name: p.policyname,
+          command: p.cmd,
+          roles: p.roles,
+        })),
       },
     };
   } catch (error) {
@@ -107,10 +158,10 @@ export async function testTableStructure(): Promise<TestResult> {
 export async function testRLSPolicies(): Promise<TestResult> {
   try {
     // Test 1: Check if RLS is enabled
-    const { data: rlsCheck, error: rlsError } = await supabaseAdmin.rpc(
+    const { data: rlsCheck, error: rlsError } = (await supabaseAdmin.rpc(
       "is_rls_enabled",
       { table_name: "users" }
-    );
+    )) as { data: boolean | null; error: Error | null };
 
     if (rlsError) {
       return {
@@ -135,10 +186,10 @@ export async function testRLSPolicies(): Promise<TestResult> {
       "Users can insert their own profile",
     ];
 
-    const { data: policies, error: policiesError } = await supabaseAdmin.rpc(
+    const { data: policies, error: policiesError } = (await supabaseAdmin.rpc(
       "get_policies",
       { table_name: "users" }
-    );
+    )) as { data: PolicyInfo[] | null; error: Error | null };
 
     if (policiesError) {
       return {
@@ -149,7 +200,7 @@ export async function testRLSPolicies(): Promise<TestResult> {
     }
 
     const missingPolicies = requiredPolicies.filter(
-      (policy) => !policies.some((p: any) => p.policyname === policy)
+      (policy) => !policies?.some((p) => p.policyname === policy)
     );
 
     if (missingPolicies.length > 0) {
