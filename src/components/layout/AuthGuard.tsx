@@ -13,7 +13,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isChecking, setIsChecking] = useState(true);
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const redirectTimeout = useRef<NodeJS.Timeout>();
   const authCheckTimeout = useRef<NodeJS.Timeout>();
   const checksCompleted = useRef(false);
@@ -54,7 +54,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
 
     const checkAuth = async () => {
       // If we already verified authentication and user is authenticated, no need to check again
-      if (checksCompleted.current && isAuthenticated) {
+      if (checksCompleted.current && isAuthenticated && user) {
         setIsChecking(false);
         return;
       }
@@ -89,6 +89,9 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
       }
     };
 
+    // Run the auth check
+    checkAuth();
+
     // Set a timeout to prevent infinite auth checks
     authCheckTimeout.current = setTimeout(() => {
       if (isChecking && isMounted) {
@@ -98,9 +101,6 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
         }
       }
     }, 5000); // Timeout to 5 seconds
-
-    // Run the auth check
-    checkAuth();
 
     // Clean up
     return () => {
@@ -112,7 +112,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
         clearTimeout(authCheckTimeout.current);
       }
     };
-  }, [isAuthenticated, isLoading, redirectToSignIn]);
+  }, [isAuthenticated, isLoading, redirectToSignIn, user]);
 
   // If auth state is determined and user is authenticated, render children
   if (!isChecking && isAuthenticated) {

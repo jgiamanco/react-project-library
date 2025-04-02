@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Routes, Route } from "react-router-dom";
@@ -49,7 +50,14 @@ const App = () => (
       />
       <Route path="/projects/:id/demo" element={<ProjectDemo />} />
       <Route path="/projects/:id/demo/code" element={<ProjectDemo />} />
-      <Route path="/profile" element={<ProfilePage />} />
+      <Route 
+        path="/profile" 
+        element={
+          <Layout requireAuth>
+            <ProfilePage />
+          </Layout>
+        }
+      />
       <Route
         path="/terms"
         element={

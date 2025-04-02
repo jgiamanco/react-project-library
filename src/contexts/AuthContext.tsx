@@ -29,21 +29,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // Wrap the auth operations to update our state
   const login = useCallback(async (email: string, password: string) => {
     try {
-      await performLogin(email, password);
-      return true;
+      const result = await performLogin(email, password);
+      console.log("Login completed with result:", result);
+      // Return type void to match the AuthContextType
     } catch (error) {
       console.error("Login error in context:", error);
-      return false;
+      // Re-throw to allow component to handle
+      throw error;
     }
   }, [performLogin]);
 
-  const signup = useCallback(async (email: string, password: string, profile: UserProfile) => {
+  const signup = useCallback(async (email: string, password: string, profile: Partial<User>) => {
     try {
-      await performSignup(email, password, profile);
-      return true;
+      const result = await performSignup(email, password, profile as UserProfile);
+      console.log("Signup completed with result:", result);
+      // Return type void to match the AuthContextType
     } catch (error) {
       console.error("Signup error in context:", error);
-      return false;
+      // Re-throw to allow component to handle
+      throw error;
     }
   }, [performSignup]);
 
@@ -52,15 +56,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       await performLogout();
       setUser(null);
       setIsAuthenticated(false);
-      return true;
     } catch (error) {
       console.error("Logout error in context:", error);
-      return false;
+      throw error;
     }
   }, [performLogout, setUser, setIsAuthenticated]);
 
   const updateUser = useCallback(async (updates: Partial<User>) => {
-    if (!user) return null;
+    if (!user) return;
     
     try {
       const updatedUser = await performUpdateUser(user, updates);
@@ -70,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       return updatedUser;
     } catch (error) {
       console.error("Update user error in context:", error);
-      return null;
+      throw error;
     }
   }, [user, performUpdateUser, setUser]);
 

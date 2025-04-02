@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-hooks";
@@ -16,12 +17,12 @@ import { AccountSettings } from "@/components/profile/AccountSettings";
 import { NotificationSettings } from "@/components/profile/NotificationSettings";
 import { ProfileLoading } from "@/components/profile/ProfileLoading";
 import { getUserProfile, updateUserProfile } from "@/services/user-service";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, updateUser, isLoading: authLoading } = useAuth();
+  const { user: authUser, updateUser, isLoading: authLoading } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Get the tab from the URL query parameters
@@ -35,26 +36,27 @@ const ProfilePage = () => {
   // Load user profile from database
   useEffect(() => {
     const loadUserProfile = async () => {
-      if (!user?.email) {
+      if (!authUser?.email) {
         if (!authLoading) {
+          console.log("No user found in auth context, redirecting to sign in");
           navigate("/signin", { replace: true });
         }
         return;
       }
 
       try {
-        console.log("Loading profile for user:", user.email);
-        const dbProfile = await getUserProfile(user.email);
+        console.log("Loading profile for user:", authUser.email);
+        const dbProfile = await getUserProfile(authUser.email);
 
         if (dbProfile) {
           console.log("Profile loaded from database:", dbProfile);
           setProfile({
             ...dbProfile, // Spread database values first
-            ...user, // Then override with auth context data
-            displayName: dbProfile.displayName || user.displayName,
-            photoURL: dbProfile.photoURL || user.photoURL || "",
+            ...authUser, // Then override with auth context data
+            displayName: dbProfile.displayName || authUser.displayName,
+            photoURL: dbProfile.photoURL || authUser.photoURL || "",
             bio: dbProfile.bio || "Tell us about yourself...",
-            location: dbProfile.location || user.location || "",
+            location: dbProfile.location || authUser.location || "",
             website: dbProfile.website || "",
             github: dbProfile.github || "",
             twitter: dbProfile.twitter || "",
@@ -67,7 +69,7 @@ const ProfilePage = () => {
           console.log("No profile found in database, creating default profile");
           // Create a complete default profile
           const defaultProfile: Partial<User> = {
-            ...user,
+            ...authUser,
             bio: "Tell us about yourself...",
             website: "",
             github: "",
@@ -81,42 +83,40 @@ const ProfilePage = () => {
           setProfile(defaultProfile as User);
 
           // Create the profile in the database
-          await updateUserProfile(user.email, defaultProfile);
+          await updateUserProfile(authUser.email, defaultProfile);
           console.log("Default profile created in database");
         }
       } catch (error) {
         console.error("Error loading profile:", error);
 
         // Fall back to complete user object
-        if (user) {
+        if (authUser) {
           console.log("Falling back to user data with defaults");
           setProfile({
-            ...user,
-            bio: user.bio || "Tell us about yourself...",
-            website: user.website || "",
-            github: user.github || "",
-            twitter: user.twitter || "",
-            role: user.role || "Developer",
-            theme: user.theme || "system",
-            emailNotifications: user.emailNotifications ?? true,
-            pushNotifications: user.pushNotifications ?? false,
+            ...authUser,
+            bio: authUser.bio || "Tell us about yourself...",
+            website: authUser.website || "",
+            github: authUser.github || "",
+            twitter: authUser.twitter || "",
+            role: authUser.role || "Developer",
+            theme: authUser.theme || "system",
+            emailNotifications: authUser.emailNotifications ?? true,
+            pushNotifications: authUser.pushNotifications ?? false,
           });
         }
 
-        toast({
-          title: "Notice",
-          description:
-            "Using local profile data. Changes may not be saved to the server.",
+        toast.error("Error loading profile data", {
+          description: "Using local profile data. Changes may not be saved to the server."
         });
       }
     };
 
     loadUserProfile();
-  }, [user, authLoading, navigate]);
+  }, [authUser, authLoading, navigate]);
 
   // Handle profile updates
   const handleProfileUpdate = async (updates: Partial<User>) => {
-    if (!user?.email || !profile) return;
+    if (!authUser?.email || !profile) return;
 
     setIsUpdating(true);
     try {
@@ -128,21 +128,14 @@ const ProfilePage = () => {
         setProfile((prev) => (prev ? { ...prev, ...updates } : null));
       }
 
-      toast({
-        title: "Success",
-        description: "Profile updated successfully.",
-      });
+      toast.success("Profile updated successfully");
     } catch (error) {
       console.error("Error updating profile:", error);
 
       // Still update the local state even if the server update failed
       setProfile((prev) => (prev ? { ...prev, ...updates } : null));
 
-      toast({
-        title: "Warning",
-        description:
-          "Profile updated locally but changes may not be saved to the server.",
-      });
+      toast.error("Warning: Profile updated locally but changes may not be saved to the server");
     } finally {
       setIsUpdating(false);
     }
@@ -158,10 +151,6 @@ const ProfilePage = () => {
 
   if (authLoading || isUpdating || !profile) {
     return <ProfileLoading />;
-  }
-
-  if (!user && !authLoading) {
-    return null;
   }
 
   return (
