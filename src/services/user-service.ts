@@ -249,6 +249,14 @@ export const updateUserProfile = async (
   }
 
   try {
+    // Get the auth user
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      throw new Error("No authenticated user found");
+    }
+
     // Get current profile from database
     const currentProfile = await getUser(email);
 
@@ -276,18 +284,10 @@ export const updateUserProfile = async (
       const dbProfile = appToDbProfile(newProfile);
       console.log("Creating new profile:", dbProfile);
 
-      // Get the auth user ID
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("No authenticated user found");
-      }
-
       // Insert new profile with auth user reference
       const { error: insertError } = await supabase.from("users").insert({
         ...dbProfile,
-        id: user.id,
+        id: authUser.id,
       });
 
       if (insertError) {
@@ -310,13 +310,17 @@ export const updateUserProfile = async (
     const dbProfile = appToDbProfile(updatedProfile);
     console.log("Converted to DB profile:", dbProfile);
 
-    // Update the users table
+    // Update the users table with auth user ID
     console.log("Sending upsert to users table:", dbProfile);
-    const { error: usersError } = await supabase
-      .from("users")
-      .upsert(dbProfile, {
+    const { error: usersError } = await supabase.from("users").upsert(
+      {
+        ...dbProfile,
+        id: authUser.id,
+      },
+      {
         onConflict: "email",
-      });
+      }
+    );
 
     if (usersError) {
       console.error("Users table update failed:", usersError);
