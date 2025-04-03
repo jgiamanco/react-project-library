@@ -44,6 +44,8 @@ export const ProfileInformation = ({
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return; // Prevent multiple submissions
+
     setIsSaving(true);
 
     try {
@@ -74,6 +76,15 @@ export const ProfileInformation = ({
       sonnerToast.error("Update failed", {
         description: "Failed to update profile. Please try again.",
       });
+      // Reset form data to current profile values
+      setFormData({
+        displayName: profile.displayName,
+        bio: profile.bio,
+        location: profile.location,
+        website: profile.website,
+        github: profile.github,
+        twitter: profile.twitter,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -90,6 +101,8 @@ export const ProfileInformation = ({
   };
 
   const handleAvatarChange = async (newAvatarUrl: string) => {
+    if (isLoading) return; // Prevent multiple submissions
+
     try {
       setIsLoading(true);
 
@@ -102,11 +115,14 @@ export const ProfileInformation = ({
       console.log("Updating avatar URL:", newAvatarUrl);
 
       // Update auth context (which will update database)
-      await updateUser({ photoURL: newAvatarUrl });
+      const updatedUser = await updateUser({ photoURL: newAvatarUrl });
 
-      sonnerToast.success("Avatar updated", {
-        description: "Your profile picture has been updated successfully.",
-      });
+      if (updatedUser) {
+        setProfile(updatedUser);
+        sonnerToast.success("Avatar updated", {
+          description: "Your profile picture has been updated successfully.",
+        });
+      }
     } catch (error) {
       console.error("Avatar update error:", error);
       sonnerToast.error("Update failed", {
@@ -124,6 +140,7 @@ export const ProfileInformation = ({
           currentAvatar={profile.photoURL || ""}
           onAvatarChange={handleAvatarChange}
           name={profile.displayName}
+          isLoading={isLoading}
         />
         <div>
           <p className="text-sm font-medium">Profile Picture</p>
@@ -140,6 +157,7 @@ export const ProfileInformation = ({
             id="displayName"
             value={formData.displayName}
             onChange={handleInputChange}
+            disabled={isSaving}
           />
         </div>
         <div className="space-y-2">
@@ -148,6 +166,7 @@ export const ProfileInformation = ({
             id="location"
             value={formData.location}
             onChange={handleInputChange}
+            disabled={isSaving}
           />
         </div>
         <div className="space-y-2 md:col-span-2">
@@ -157,6 +176,7 @@ export const ProfileInformation = ({
             rows={4}
             value={formData.bio}
             onChange={handleInputChange}
+            disabled={isSaving}
           />
         </div>
       </div>
@@ -172,6 +192,7 @@ export const ProfileInformation = ({
               id="website"
               value={formData.website}
               onChange={handleInputChange}
+              disabled={isSaving}
             />
           </div>
           <div className="space-y-2">
@@ -180,6 +201,7 @@ export const ProfileInformation = ({
               id="github"
               value={formData.github}
               onChange={handleInputChange}
+              disabled={isSaving}
             />
           </div>
           <div className="space-y-2">
@@ -188,6 +210,7 @@ export const ProfileInformation = ({
               id="twitter"
               value={formData.twitter}
               onChange={handleInputChange}
+              disabled={isSaving}
             />
           </div>
         </div>

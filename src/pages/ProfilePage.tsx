@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-hooks";
@@ -107,7 +106,8 @@ const ProfilePage = () => {
         }
 
         toast.error("Error loading profile data", {
-          description: "Using local profile data. Changes may not be saved to the server."
+          description:
+            "Using local profile data. Changes may not be saved to the server.",
         });
       }
     };
@@ -123,24 +123,23 @@ const ProfilePage = () => {
     try {
       // First update the database
       console.log("Updating profile in database:", updates);
-      await updateUserProfile(authUser.email, updates);
-      
+      const updatedProfile = await updateUserProfile(authUser.email, updates);
+
       // Then update auth context
       console.log("Updating profile in auth context");
       const updatedUser = await updateUser(updates);
 
       // Update local state
-      setProfile((prev) => (prev ? { ...prev, ...updates } : null));
+      setProfile(updatedProfile);
 
       toast.success("Profile updated successfully");
       return updatedUser;
     } catch (error) {
       console.error("Error updating profile:", error);
-
-      // Still update the local state even if the server update failed
-      setProfile((prev) => (prev ? { ...prev, ...updates } : null));
-
-      toast.error("Warning: Profile updated locally but changes may not be saved to the server");
+      toast.error("Failed to update profile", {
+        description: "Please try again later.",
+      });
+      throw error; // Re-throw to let the ProfileInformation component handle it
     } finally {
       setIsUpdating(false);
     }
