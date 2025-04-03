@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User } from "@/contexts/auth-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,23 +21,38 @@ export const ProfileInformation = ({
 }: ProfileInformationProps) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    displayName: profile.displayName,
+    bio: profile.bio,
+    location: profile.location,
+    website: profile.website,
+    github: profile.github,
+    twitter: profile.twitter,
+  });
+
+  // Update form data when profile changes
+  useEffect(() => {
+    setFormData({
+      displayName: profile.displayName,
+      bio: profile.bio,
+      location: profile.location,
+      website: profile.website,
+      github: profile.github,
+      twitter: profile.twitter,
+    });
+  }, [profile]);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
 
     try {
-      console.log("Updating profile with data:", profile);
+      console.log("Updating profile with form data:", formData);
 
-      // Create an updates object with only the profile fields
+      // Create an updates object with the form data
       const updates: Partial<User> = {
-        displayName: profile.displayName,
+        ...formData,
         photoURL: profile.photoURL,
-        bio: profile.bio,
-        location: profile.location,
-        website: profile.website,
-        github: profile.github,
-        twitter: profile.twitter,
         role: profile.role,
         theme: profile.theme,
         emailNotifications: profile.emailNotifications,
@@ -45,11 +60,15 @@ export const ProfileInformation = ({
       };
 
       // Update auth context (which will update database via updateUser function)
-      await updateUser(updates);
+      const updatedUser = await updateUser(updates);
 
-      sonnerToast.success("Profile updated", {
-        description: "Your profile has been updated successfully.",
-      });
+      if (updatedUser) {
+        // Update local state with the returned user data
+        setProfile(updatedUser);
+        sonnerToast.success("Profile updated", {
+          description: "Your profile has been updated successfully.",
+        });
+      }
     } catch (error) {
       console.error("Profile update error:", error);
       sonnerToast.error("Update failed", {
@@ -58,6 +77,16 @@ export const ProfileInformation = ({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
   };
 
   const handleAvatarChange = async (newAvatarUrl: string) => {
@@ -106,23 +135,19 @@ export const ProfileInformation = ({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="name">Full Name</Label>
+          <Label htmlFor="displayName">Full Name</Label>
           <Input
-            id="name"
-            value={profile.displayName}
-            onChange={(e) =>
-              setProfile({ ...profile, displayName: e.target.value })
-            }
+            id="displayName"
+            value={formData.displayName}
+            onChange={handleInputChange}
           />
         </div>
         <div className="space-y-2">
           <Label htmlFor="location">Location</Label>
           <Input
             id="location"
-            value={profile.location}
-            onChange={(e) =>
-              setProfile({ ...profile, location: e.target.value })
-            }
+            value={formData.location}
+            onChange={handleInputChange}
           />
         </div>
         <div className="space-y-2 md:col-span-2">
@@ -130,8 +155,8 @@ export const ProfileInformation = ({
           <Textarea
             id="bio"
             rows={4}
-            value={profile.bio}
-            onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+            value={formData.bio}
+            onChange={handleInputChange}
           />
         </div>
       </div>
@@ -145,30 +170,24 @@ export const ProfileInformation = ({
             <Label htmlFor="website">Website</Label>
             <Input
               id="website"
-              value={profile.website}
-              onChange={(e) =>
-                setProfile({ ...profile, website: e.target.value })
-              }
+              value={formData.website}
+              onChange={handleInputChange}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="github">GitHub</Label>
             <Input
               id="github"
-              value={profile.github}
-              onChange={(e) =>
-                setProfile({ ...profile, github: e.target.value })
-              }
+              value={formData.github}
+              onChange={handleInputChange}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="twitter">Twitter</Label>
             <Input
               id="twitter"
-              value={profile.twitter}
-              onChange={(e) =>
-                setProfile({ ...profile, twitter: e.target.value })
-              }
+              value={formData.twitter}
+              onChange={handleInputChange}
             />
           </div>
         </div>
