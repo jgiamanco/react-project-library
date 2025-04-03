@@ -6,7 +6,11 @@ import {
   isDbProfile,
 } from "./types";
 
-export let tableChecked = false;
+let tableChecked = false;
+
+export function resetTableCheck() {
+  tableChecked = false;
+}
 
 export async function ensureUsersTable(): Promise<void> {
   if (tableChecked) {

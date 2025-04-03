@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/services/supabase-client";
 import { toast } from "sonner";
-import { tableChecked } from "@/services/user-service";
+import { resetTableCheck } from "@/services/user-service";
 
 export const useLogout = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +22,7 @@ export const useLogout = () => {
       }
 
       // Reset table check flag
-      tableChecked = false;
+      resetTableCheck();
 
       // Clear all auth-related localStorage items
       localStorage.clear();
