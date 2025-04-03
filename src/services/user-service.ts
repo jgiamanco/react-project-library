@@ -198,11 +198,43 @@ export const getUserProfile = async (
 
   try {
     // Use the existing getUser function which already uses the users table
-    return await getUser(email);
+    const userProfile = await getUser(email);
+    if (!userProfile) {
+      console.log("No profile found for email:", email);
+      return null;
+    }
+
+    console.log("Successfully retrieved user profile:", userProfile);
+    return userProfile;
   } catch (error) {
     console.error("Error in getUserProfile:", error);
     throw error;
   }
+};
+
+const convertDbProfileToUserProfile = (data: DbProfile): UserProfile | null => {
+  if (!data) return null;
+
+  const theme = data.theme as "light" | "dark" | "system" | undefined;
+  const validTheme =
+    theme && ["light", "dark", "system"].includes(theme) ? theme : "system";
+
+  return {
+    email: data.email,
+    displayName: data.display_name,
+    photoURL: data.photo_url,
+    bio: data.bio,
+    location: data.location,
+    website: data.website,
+    github: data.github,
+    twitter: data.twitter,
+    role: data.role,
+    theme: validTheme,
+    emailNotifications: data.email_notifications,
+    pushNotifications: data.push_notifications,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
 };
 
 export const updateUserProfile = async (
@@ -228,14 +260,14 @@ export const updateUserProfile = async (
       throw new Error("Profile not found");
     }
 
-    // Merge updates with current profile
-    const updatedProfile = { ...currentProfile, ...profile };
-    console.log("Merged profile for update:", updatedProfile);
+    // Convert the incoming profile to database format
+    const dbProfile = appToDbProfile({ ...currentProfile, ...profile });
+    console.log("Merged profile for update (DB format):", dbProfile);
 
     // Perform the update
     const { data, error } = await supabase
       .from("users")
-      .update(updatedProfile)
+      .update(dbProfile)
       .eq("email", email)
       .select()
       .single();
@@ -257,3 +289,41 @@ export const updateUserProfile = async (
     throw error;
   }
 };
+
+export async function updateRLSPolicies(): Promise<void> {
+  console.log("Updating RLS policies...");
+  try {
+    const { error } = await supabase.rpc("exec_sql", {
+      sql: `
+        DROP POLICY IF EXISTS "Users can view their own profile" ON public.users;
+        DROP POLICY IF EXISTS "Users can update their own profile" ON public.users;
+        DROP POLICY IF EXISTS "Users can insert their own profile" ON public.users;
+
+        CREATE POLICY "Users can view their own profile"
+          ON public.users FOR SELECT
+          USING (auth.uid()::text = email);
+
+        CREATE POLICY "Users can update their own profile"
+          ON public.users FOR UPDATE
+          USING (auth.uid()::text = email);
+
+        CREATE POLICY "Users can insert their own profile"
+          ON public.users FOR INSERT
+          WITH CHECK (auth.uid()::text = email);
+
+        GRANT ALL ON public.users TO authenticated;
+        GRANT ALL ON public.users TO service_role;
+      `,
+    });
+
+    if (error) {
+      console.error("Error updating RLS policies:", error);
+      throw error;
+    }
+
+    console.log("RLS policies updated successfully");
+  } catch (error) {
+    console.error("Error in updateRLSPolicies:", error);
+    throw error;
+  }
+}
