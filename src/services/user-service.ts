@@ -198,43 +198,11 @@ export const getUserProfile = async (
 
   try {
     // Use the existing getUser function which already uses the users table
-    const userProfile = await getUser(email);
-    if (!userProfile) {
-      console.log("No profile found for email:", email);
-      return null;
-    }
-
-    console.log("Successfully retrieved user profile:", userProfile);
-    return userProfile;
+    return await getUser(email);
   } catch (error) {
     console.error("Error in getUserProfile:", error);
     throw error;
   }
-};
-
-const convertDbProfileToUserProfile = (data: DbProfile): UserProfile | null => {
-  if (!data) return null;
-
-  const theme = data.theme as "light" | "dark" | "system" | undefined;
-  const validTheme =
-    theme && ["light", "dark", "system"].includes(theme) ? theme : "system";
-
-  return {
-    email: data.email,
-    displayName: data.display_name,
-    photoURL: data.photo_url,
-    bio: data.bio,
-    location: data.location,
-    website: data.website,
-    github: data.github,
-    twitter: data.twitter,
-    role: data.role,
-    theme: validTheme,
-    emailNotifications: data.email_notifications,
-    pushNotifications: data.push_notifications,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-  };
 };
 
 export const updateUserProfile = async (
@@ -242,93 +210,48 @@ export const updateUserProfile = async (
   profile: Partial<UserProfile>
 ): Promise<UserProfile> => {
   console.log("Starting updateUserProfile for email:", email);
-  console.log("Profile data to update:", profile);
-
-  if (!email) {
-    throw new Error("Email is required for profile update");
-  }
-
   try {
-    // Get the auth user
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-    if (!authUser) {
-      throw new Error("No authenticated user found");
+    // Get current user profile first
+    const { data: currentProfile, error: fetchError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .single();
+
+    if (fetchError) {
+      console.error("Error fetching current profile:", fetchError);
+      throw fetchError;
     }
 
-    // Get current profile from database
-    const currentProfile = await getUser(email);
-
-    // If no current profile exists, create a new one
     if (!currentProfile) {
-      console.log("No existing profile found, creating new profile");
-      const newProfile: UserProfile = {
-        email,
-        displayName: profile.displayName || email.split("@")[0] || "User",
-        photoURL:
-          profile.photoURL ||
-          `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-        location: profile.location || "",
-        bio: profile.bio || "",
-        website: profile.website || "",
-        github: profile.github || "",
-        twitter: profile.twitter || "",
-        role: profile.role || "User",
-        theme: profile.theme || "system",
-        emailNotifications: profile.emailNotifications ?? true,
-        pushNotifications: profile.pushNotifications ?? false,
-      };
-
-      // Convert to DB format
-      const dbProfile = appToDbProfile(newProfile);
-      console.log("Creating new profile:", dbProfile);
-
-      // Insert new profile with auth user reference
-      const { error: insertError } = await supabase.from("users").insert({
-        ...dbProfile,
-        id: authUser.id,
-      });
-
-      if (insertError) {
-        console.error("Error creating new profile:", insertError);
-        throw insertError;
-      }
-
-      console.log("New profile created successfully");
-      return newProfile;
+      console.error("No profile found for email:", email);
+      throw new Error("Profile not found");
     }
 
-    // Merge current profile with updates
-    const updatedProfile: UserProfile = {
-      ...currentProfile,
-      ...profile,
-      email, // Ensure email is preserved
-    };
+    // Merge updates with current profile
+    const updatedProfile = { ...currentProfile, ...profile };
+    console.log("Merged profile for update:", updatedProfile);
 
-    // Convert to DB format
-    const dbProfile = appToDbProfile(updatedProfile);
-    console.log("Converted to DB profile:", dbProfile);
+    // Perform the update
+    const { data, error } = await supabase
+      .from("users")
+      .update(updatedProfile)
+      .eq("email", email)
+      .select()
+      .single();
 
-    // Update the users table with auth user ID
-    console.log("Sending upsert to users table:", dbProfile);
-    const { error: usersError } = await supabase.from("users").upsert(
-      {
-        ...dbProfile,
-        id: authUser.id,
-      },
-      {
-        onConflict: "email",
-      }
-    );
-
-    if (usersError) {
-      console.error("Users table update failed:", usersError);
-      throw usersError;
+    if (error) {
+      console.error("Error updating profile:", error);
+      throw error;
     }
 
-    console.log("Profile updated successfully");
-    return updatedProfile;
+    if (!data) {
+      console.error("No data returned after update");
+      throw new Error("Update failed - no data returned");
+    }
+
+    console.log("Profile updated successfully:", data);
+    return dbToAppProfile(data);
   } catch (error) {
     console.error("Error in updateUserProfile:", error);
     throw error;
