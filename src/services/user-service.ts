@@ -196,24 +196,7 @@ export const updateUserProfile = async (
 ): Promise<UserProfile> => {
   console.log("Starting updateUserProfile for email:", email);
   try {
-    // Get current user profile first
-    const { data: currentProfile, error: fetchError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("email", email)
-      .single();
-
-    if (fetchError) {
-      console.error("Error fetching current profile:", fetchError);
-      throw fetchError;
-    }
-
-    if (!currentProfile) {
-      console.error("No profile found for email:", email);
-      throw new Error("Profile not found");
-    }
-
-    // Get the auth user to ensure we have the correct id
+    // Get the auth user first to ensure we have the correct id
     const {
       data: { user: authUser },
       error: authError,
@@ -228,11 +211,57 @@ export const updateUserProfile = async (
       throw new Error("Not authenticated");
     }
 
+    // Get current user profile
+    const { data: currentProfile, error: fetchError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .single();
+
+    if (fetchError && fetchError.code !== "PGRST116") {
+      console.error("Error fetching current profile:", fetchError);
+      throw fetchError;
+    }
+
+    // If no profile exists, create a new one
+    if (!currentProfile) {
+      console.log("No profile found, creating new profile");
+      const newProfile = {
+        id: authUser.id,
+        email,
+        displayName: profile.displayName || email.split("@")[0],
+        photoURL: profile.photoURL || null,
+        bio: profile.bio || null,
+        location: profile.location || null,
+        website: profile.website || null,
+        github: profile.github || null,
+        twitter: profile.twitter || null,
+        role: "user",
+        theme: "system",
+        emailNotifications: true,
+        pushNotifications: false,
+      };
+
+      const { data, error: insertError } = await supabase
+        .from("users")
+        .insert(newProfile)
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Error creating new profile:", insertError);
+        throw insertError;
+      }
+
+      console.log("New profile created successfully:", data);
+      return dbToAppProfile(data);
+    }
+
     // Convert the incoming profile to database format and include the id
     const dbProfile = appToDbProfile({
       ...currentProfile,
       ...profile,
-      id: authUser.id, // Ensure we have the correct id
+      id: authUser.id,
     });
     console.log("Merged profile for update (DB format):", dbProfile);
 

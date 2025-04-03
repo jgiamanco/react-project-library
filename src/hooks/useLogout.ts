@@ -13,20 +13,20 @@ export const useLogout = () => {
       setIsLoading(true);
       const toastId = toast.loading("Signing out...");
 
-      // First sign out from Supabase
+      // Clear all auth-related localStorage items first
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Reset table check flag
+      resetTableCheck();
+
+      // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
 
       if (error) {
         console.error("Error signing out from Supabase:", error);
         throw error;
       }
-
-      // Reset table check flag
-      resetTableCheck();
-
-      // Clear all auth-related localStorage items
-      localStorage.clear();
-      sessionStorage.clear();
 
       toast.dismiss(toastId);
       toast.success("Signed out", {
