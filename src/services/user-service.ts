@@ -251,8 +251,43 @@ export const updateUserProfile = async (
   try {
     // Get current profile from database
     const currentProfile = await getUser(email);
+
+    // If no current profile exists, create a new one
     if (!currentProfile) {
-      throw new Error("User profile not found");
+      console.log("No existing profile found, creating new profile");
+      const newProfile: UserProfile = {
+        email,
+        displayName: profile.displayName || email.split("@")[0] || "User",
+        photoURL:
+          profile.photoURL ||
+          `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+        location: profile.location || "",
+        bio: profile.bio || "",
+        website: profile.website || "",
+        github: profile.github || "",
+        twitter: profile.twitter || "",
+        role: profile.role || "User",
+        theme: profile.theme || "system",
+        emailNotifications: profile.emailNotifications ?? true,
+        pushNotifications: profile.pushNotifications ?? false,
+      };
+
+      // Convert to DB format
+      const dbProfile = appToDbProfile(newProfile);
+      console.log("Creating new profile:", dbProfile);
+
+      // Insert new profile
+      const { error: insertError } = await supabase
+        .from("users")
+        .insert(dbProfile);
+
+      if (insertError) {
+        console.error("Error creating new profile:", insertError);
+        throw insertError;
+      }
+
+      console.log("New profile created successfully");
+      return newProfile;
     }
 
     // Merge current profile with updates
@@ -266,7 +301,7 @@ export const updateUserProfile = async (
     const dbProfile = appToDbProfile(updatedProfile);
     console.log("Converted to DB profile:", dbProfile);
 
-    // Update only the users table
+    // Update the users table
     console.log("Sending upsert to users table:", dbProfile);
     const { error: usersError } = await supabase
       .from("users")
