@@ -1,8 +1,4 @@
-import {
-  supabase,
-  handleSupabaseError,
-  getSupabaseClient,
-} from "./supabase-client";
+import { supabase, getSupabaseClient } from "./supabase-client";
 import {
   UserProfile,
   DbProfile,
@@ -10,22 +6,6 @@ import {
   dbToAppProfile,
   isDbProfile,
 } from "./types";
-import { PostgrestResponse } from "@supabase/supabase-js";
-
-const withTimeout = <T>(
-  promise: Promise<T>,
-  timeoutMs: number = 5000
-): Promise<T> => {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(
-        () => reject(new Error("Database operation timed out")),
-        timeoutMs
-      )
-    ),
-  ]);
-};
 
 export async function ensureUsersTable(): Promise<void> {
   console.log("Starting ensureUsersTable...");
@@ -42,7 +22,8 @@ export async function ensureUsersTable(): Promise<void> {
         const { error: createError } = await supabase.rpc("exec_sql", {
           sql: `
             CREATE TABLE IF NOT EXISTS public.users (
-              email TEXT PRIMARY KEY,
+              id UUID PRIMARY KEY REFERENCES auth.users(id),
+              email TEXT UNIQUE NOT NULL,
               display_name TEXT NOT NULL,
               photo_url TEXT,
               bio TEXT,
@@ -60,17 +41,23 @@ export async function ensureUsersTable(): Promise<void> {
 
             ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
-            CREATE POLICY "Users can view their own profile"
-              ON public.users FOR SELECT
-              USING (auth.uid()::text = email);
+            CREATE POLICY "Users can view their own profile" ON users
+              FOR SELECT USING (
+                auth.uid() = id OR 
+                auth.jwt() ->> 'email' = email
+              );
 
-            CREATE POLICY "Users can update their own profile"
-              ON public.users FOR UPDATE
-              USING (auth.uid()::text = email);
+            CREATE POLICY "Users can update their own profile" ON users
+              FOR UPDATE USING (
+                auth.uid() = id OR 
+                auth.jwt() ->> 'email' = email
+              );
 
-            CREATE POLICY "Users can insert their own profile"
-              ON public.users FOR INSERT
-              WITH CHECK (auth.uid()::text = email);
+            CREATE POLICY "Users can insert their own profile" ON users
+              FOR INSERT WITH CHECK (
+                auth.uid() = id OR 
+                auth.jwt() ->> 'email' = email
+              );
 
             GRANT ALL ON public.users TO authenticated;
             GRANT ALL ON public.users TO service_role;
@@ -197,44 +184,11 @@ export const getUserProfile = async (
   }
 
   try {
-    // Use the existing getUser function which already uses the users table
-    const userProfile = await getUser(email);
-    if (!userProfile) {
-      console.log("No profile found for email:", email);
-      return null;
-    }
-
-    console.log("Successfully retrieved user profile:", userProfile);
-    return userProfile;
+    return await getUser(email);
   } catch (error) {
     console.error("Error in getUserProfile:", error);
     throw error;
   }
-};
-
-const convertDbProfileToUserProfile = (data: DbProfile): UserProfile | null => {
-  if (!data) return null;
-
-  const theme = data.theme as "light" | "dark" | "system" | undefined;
-  const validTheme =
-    theme && ["light", "dark", "system"].includes(theme) ? theme : "system";
-
-  return {
-    email: data.email,
-    displayName: data.display_name,
-    photoURL: data.photo_url,
-    bio: data.bio,
-    location: data.location,
-    website: data.website,
-    github: data.github,
-    twitter: data.twitter,
-    role: data.role,
-    theme: validTheme,
-    emailNotifications: data.email_notifications,
-    pushNotifications: data.push_notifications,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-  };
 };
 
 export const updateUserProfile = async (
@@ -260,14 +214,34 @@ export const updateUserProfile = async (
       throw new Error("Profile not found");
     }
 
-    // Convert the incoming profile to database format
-    const dbProfile = appToDbProfile({ ...currentProfile, ...profile });
+    // Get the auth user to ensure we have the correct id
+    const {
+      data: { user: authUser },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError) {
+      console.error("Error getting auth user:", authError);
+      throw authError;
+    }
+
+    if (!authUser) {
+      console.error("No authenticated user found");
+      throw new Error("Not authenticated");
+    }
+
+    // Convert the incoming profile to database format and include the id
+    const dbProfile = appToDbProfile({
+      ...currentProfile,
+      ...profile,
+      id: authUser.id, // Ensure we have the correct id
+    });
     console.log("Merged profile for update (DB format):", dbProfile);
 
-    // Perform the update
+    // Perform the update using both id and email for safety
     const { data, error } = await supabase
       .from("users")
       .update(dbProfile)
+      .eq("id", authUser.id)
       .eq("email", email)
       .select()
       .single();
@@ -289,41 +263,3 @@ export const updateUserProfile = async (
     throw error;
   }
 };
-
-export async function updateRLSPolicies(): Promise<void> {
-  console.log("Updating RLS policies...");
-  try {
-    const { error } = await supabase.rpc("exec_sql", {
-      sql: `
-        DROP POLICY IF EXISTS "Users can view their own profile" ON public.users;
-        DROP POLICY IF EXISTS "Users can update their own profile" ON public.users;
-        DROP POLICY IF EXISTS "Users can insert their own profile" ON public.users;
-
-        CREATE POLICY "Users can view their own profile"
-          ON public.users FOR SELECT
-          USING (auth.uid()::text = email);
-
-        CREATE POLICY "Users can update their own profile"
-          ON public.users FOR UPDATE
-          USING (auth.uid()::text = email);
-
-        CREATE POLICY "Users can insert their own profile"
-          ON public.users FOR INSERT
-          WITH CHECK (auth.uid()::text = email);
-
-        GRANT ALL ON public.users TO authenticated;
-        GRANT ALL ON public.users TO service_role;
-      `,
-    });
-
-    if (error) {
-      console.error("Error updating RLS policies:", error);
-      throw error;
-    }
-
-    console.log("RLS policies updated successfully");
-  } catch (error) {
-    console.error("Error in updateRLSPolicies:", error);
-    throw error;
-  }
-}
