@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User } from "@/contexts/auth-types";
-import { ProfileInformation } from "@/components/profile/ProfileInformation";
+import ProfileInformation from "@/components/profile/ProfileInformation";
 import { AccountSettings } from "@/components/profile/AccountSettings";
 import { NotificationSettings } from "@/components/profile/NotificationSettings";
 import { ProfileLoading } from "@/components/profile/ProfileLoading";
