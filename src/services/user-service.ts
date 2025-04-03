@@ -276,10 +276,19 @@ export const updateUserProfile = async (
       const dbProfile = appToDbProfile(newProfile);
       console.log("Creating new profile:", dbProfile);
 
-      // Insert new profile
-      const { error: insertError } = await supabase
-        .from("users")
-        .insert(dbProfile);
+      // Get the auth user ID
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("No authenticated user found");
+      }
+
+      // Insert new profile with auth user reference
+      const { error: insertError } = await supabase.from("users").insert({
+        ...dbProfile,
+        id: user.id,
+      });
 
       if (insertError) {
         console.error("Error creating new profile:", insertError);
