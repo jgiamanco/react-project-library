@@ -328,10 +328,6 @@ export const updateUserProfile = async (
     }
 
     const updatedProfile = dbToAppProfile(data as DbProfile);
-
-    // Update localStorage with consistent key
-    localStorage.setItem("user_profile", JSON.stringify(updatedProfile));
-
     console.log("Profile successfully updated:", updatedProfile);
     return updatedProfile;
   } catch (error) {

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -16,51 +15,57 @@ export const useLogin = () => {
     try {
       setIsLoading(true);
       sonnerToast.dismiss(); // Clear any existing toasts
-      
+
       // Show loading toast
       sonnerToast.loading("Signing in...");
 
       // Step 1: Sign in with Supabase Auth
       console.log("Attempting Supabase auth sign-in...");
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error: authError } = await supabase.auth.signInWithPassword(
+        {
+          email,
+          password,
+        }
+      );
 
-      if (error) {
-        console.error("Auth sign-in error:", error);
+      if (authError) {
+        console.error("Auth error:", authError);
         sonnerToast.dismiss();
         toast({
           variant: "destructive",
           title: "Error",
-          description: error.message || "Failed to sign in",
+          description: authError.message,
         });
-        throw error;
+        return null;
       }
 
-      if (!data?.user) {
-        console.error("No user data returned from auth");
+      if (!data.user) {
+        console.error("No user data returned");
         sonnerToast.dismiss();
         toast({
           variant: "destructive",
           title: "Error",
-          description: "No user data returned",
+          description: "Failed to sign in",
         });
-        throw new Error("No user data returned");
+        return null;
       }
 
-      // Step 2: Get user profile from database
+      // Step 2: Get or create user profile
       console.log("Getting user profile from database...");
-      let userProfile: User | null = await getUser(data.user.email || "");
-      
+      let userProfile = await getUser(data.user.email || "");
+
       // If no profile exists in the database, create one from auth data
       if (!userProfile) {
-        console.log("No profile found in database, creating one from auth data");
+        console.log(
+          "No profile found in database, creating one from auth data"
+        );
         const basicProfile: User = {
           email: data.user.email || "",
-          displayName: data.user.user_metadata?.display_name || email.split("@")[0],
-          photoURL: data.user.user_metadata?.photo_url || 
-                   `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+          displayName:
+            data.user.user_metadata?.display_name || email.split("@")[0],
+          photoURL:
+            data.user.user_metadata?.photo_url ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
           location: data.user.user_metadata?.location || "",
           bio: "",
           website: "",
@@ -71,7 +76,7 @@ export const useLogin = () => {
           emailNotifications: true,
           pushNotifications: false,
         };
-        
+
         // Store in database
         try {
           await storeUser(basicProfile);
@@ -83,28 +88,27 @@ export const useLogin = () => {
         }
       }
 
-      // Step 3: Store in localStorage for immediate access
+      // Step 3: Store only essential auth data in localStorage
       console.log("Storing user data in localStorage...");
-      localStorage.setItem("user", JSON.stringify(userProfile));
-      localStorage.setItem("authenticated", "true");
-      localStorage.setItem("lastLoggedInEmail", data.user.email || "");
+      localStorage.setItem("auth_token", data.session?.access_token || "");
+      localStorage.setItem("user_email", data.user.email || "");
 
       // Step 4: Success - dismiss loading toast
       sonnerToast.dismiss();
       sonnerToast.success("Signed in successfully");
       navigate("/dashboard");
-      
+
       return userProfile;
     } catch (error) {
       console.error("Login error:", error);
       setIsLoading(false);
       sonnerToast.dismiss();
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to sign in",
         variant: "destructive",
+        title: "Error",
+        description: "An unexpected error occurred during sign in",
       });
-      throw error;
+      return null;
     } finally {
       setIsLoading(false);
     }
