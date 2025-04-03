@@ -34,12 +34,14 @@ interface AvatarUploadProps {
   currentAvatar: string;
   onAvatarChange: (avatarUrl: string) => void;
   name: string;
+  isLoading?: boolean;
 }
 
 export function AvatarUpload({
   currentAvatar,
   onAvatarChange,
   name,
+  isLoading = false,
 }: AvatarUploadProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(currentAvatar);
