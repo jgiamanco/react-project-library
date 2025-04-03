@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/services/supabase-client";
 import { UserProfile } from "@/services/types";
-import { getUser } from "@/services/user-service";
+import { getUser, updateUserProfile } from "@/services/user-service";
 import { toast } from "sonner";
 
 export const useAuthInit = () => {
@@ -46,6 +46,7 @@ export const useAuthInit = () => {
         localStorage.setItem("user_email", session.user.email || "");
 
         try {
+          // Get user profile from database
           const userProfile = await getUser(session.user.email || "");
 
           if (userProfile) {
@@ -53,7 +54,7 @@ export const useAuthInit = () => {
             setUser(userProfile);
             setIsAuthenticated(true);
           } else {
-            console.log("No user profile found in database");
+            console.log("No user profile found in database, creating one");
             // Create a basic profile from session data
             const basicProfile: UserProfile = {
               email: session.user.email || "",
@@ -75,8 +76,17 @@ export const useAuthInit = () => {
               pushNotifications: false,
             };
 
-            setUser(basicProfile);
-            setIsAuthenticated(true);
+            // Store the basic profile in the database
+            try {
+              await updateUserProfile(session.user.email || "", basicProfile);
+              setUser(basicProfile);
+              setIsAuthenticated(true);
+            } catch (dbError) {
+              console.error("Error storing basic profile:", dbError);
+              // Still set the basic profile even if database storage fails
+              setUser(basicProfile);
+              setIsAuthenticated(true);
+            }
           }
         } catch (profileError) {
           console.error("Error getting user profile:", profileError);

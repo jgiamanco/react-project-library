@@ -50,55 +50,34 @@ export const useLogin = () => {
         return null;
       }
 
-      // Step 2: Get or create user profile
-      console.log("Getting user profile from database...");
-      let userProfile = await getUser(data.user.email || "");
-
-      // If no profile exists in the database, create one from auth data
-      if (!userProfile) {
-        console.log(
-          "No profile found in database, creating one from auth data"
-        );
-        const basicProfile: User = {
-          email: data.user.email || "",
-          displayName:
-            data.user.user_metadata?.display_name || email.split("@")[0],
-          photoURL:
-            data.user.user_metadata?.photo_url ||
-            `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
-          location: data.user.user_metadata?.location || "",
-          bio: "",
-          website: "",
-          github: "",
-          twitter: "",
-          role: "User",
-          theme: "system",
-          emailNotifications: true,
-          pushNotifications: false,
-        };
-
-        // Store in database
-        try {
-          await storeUser(basicProfile);
-          userProfile = basicProfile;
-        } catch (dbError) {
-          console.error("Error storing user in database:", dbError);
-          // Continue despite database error, using the basic profile
-          userProfile = basicProfile;
-        }
-      }
-
-      // Step 3: Store only essential auth data in localStorage
+      // Step 2: Store only essential auth data in localStorage
       console.log("Storing user data in localStorage...");
       localStorage.setItem("auth_token", data.session?.access_token || "");
       localStorage.setItem("user_email", data.user.email || "");
 
-      // Step 4: Success - dismiss loading toast
+      // Step 3: Success - dismiss loading toast
       sonnerToast.dismiss();
       sonnerToast.success("Signed in successfully");
       navigate("/dashboard");
 
-      return userProfile;
+      // Return the user data from the auth response
+      return {
+        email: data.user.email || "",
+        displayName:
+          data.user.user_metadata?.display_name || email.split("@")[0],
+        photoURL:
+          data.user.user_metadata?.photo_url ||
+          `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+        location: data.user.user_metadata?.location || "",
+        bio: "",
+        website: "",
+        github: "",
+        twitter: "",
+        role: "User",
+        theme: "system",
+        emailNotifications: true,
+        pushNotifications: false,
+      };
     } catch (error) {
       console.error("Login error:", error);
       setIsLoading(false);
