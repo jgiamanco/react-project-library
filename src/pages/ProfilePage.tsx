@@ -114,18 +114,33 @@ const ProfilePage = () => {
   }, [authUser, authLoading, navigate]);
 
   // Handle profile updates
-  const handleProfileUpdate = async (updates: Partial<User>) => {
-    if (!authUser?.email || !profile) return;
+  const handleProfileUpdate = async (updates: Partial<User>): Promise<User> => {
+    if (!authUser?.email || !profile) {
+      throw new Error("No user or profile available");
+    }
 
     setIsUpdating(true);
     try {
-      console.log("Updating profile in database:", updates);
-      const updatedProfile = await updateUserProfile(authUser.email, updates);
-      console.log("Updating profile in auth context");
-      const updatedUser = await updateUser(updates);
-      setProfile(updatedProfile);
-      toast.success("Profile updated successfully");
-      return updatedUser;
+      // Only update the database if there are actual changes
+      const hasChanges = Object.keys(updates).some(
+        (key) => updates[key as keyof User] !== profile[key as keyof User]
+      );
+
+      if (hasChanges) {
+        console.log("Updating profile in database:", updates);
+        const updatedProfile = await updateUserProfile(authUser.email, updates);
+        console.log("Updating profile in auth context");
+        const updatedUser = await updateUser(updates);
+
+        // If updateUser returns void, use the updated profile from the database
+        const finalProfile = updatedUser || updatedProfile;
+        setProfile(finalProfile);
+        toast.success("Profile updated successfully");
+        return finalProfile;
+      } else {
+        console.log("No changes detected, skipping update");
+        return profile;
+      }
     } catch (error) {
       console.error("Error updating profile:", error);
       toast.error("Failed to update profile", {
