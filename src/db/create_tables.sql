@@ -1,34 +1,59 @@
-
 -- Enable UUID extension if not already enabled
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Drop existing tables if they exist
+DROP TABLE IF EXISTS public.users CASCADE;
+
 -- Create users table
 CREATE TABLE IF NOT EXISTS public.users (
-  email VARCHAR PRIMARY KEY,
-  display_name VARCHAR NOT NULL,
-  photo_url VARCHAR,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+  email TEXT PRIMARY KEY,
+  display_name TEXT NOT NULL,
+  photo_url TEXT,
+  bio TEXT,
+  location TEXT,
+  website TEXT,
+  github TEXT,
+  twitter TEXT,
+  role TEXT NOT NULL DEFAULT 'user',
+  theme TEXT NOT NULL DEFAULT 'system',
+  email_notifications BOOLEAN NOT NULL DEFAULT true,
+  push_notifications BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- Create user_profiles table
-CREATE TABLE IF NOT EXISTS public.user_profiles (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  email VARCHAR NOT NULL REFERENCES users(email) ON DELETE CASCADE,
-  display_name VARCHAR NOT NULL,
-  photo_url VARCHAR,
-  bio TEXT,
-  location VARCHAR,
-  website VARCHAR,
-  github VARCHAR,
-  twitter VARCHAR,
-  role VARCHAR,
-  theme VARCHAR CHECK (theme IN ('light', 'dark', 'system')),
-  email_notifications BOOLEAN DEFAULT true,
-  push_notifications BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-);
+-- Enable Row Level Security
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'users' AND policyname = 'Users can view their own profile') THEN
+  DROP POLICY "Users can view their own profile" ON public.users;
+END IF;
+
+IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'users' AND policyname = 'Users can update their own profile') THEN
+  DROP POLICY "Users can update their own profile" ON public.users;
+END IF;
+
+IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'users' AND policyname = 'Users can insert their own profile') THEN
+  DROP POLICY "Users can insert their own profile" ON public.users;
+END IF;
+
+-- Create RLS policies for users table
+CREATE POLICY "Users can view their own profile"
+  ON public.users FOR SELECT
+  USING (auth.uid()::text = email);
+
+CREATE POLICY "Users can update their own profile"
+  ON public.users FOR UPDATE
+  USING (auth.uid()::text = email);
+
+CREATE POLICY "Users can insert their own profile"
+  ON public.users FOR INSERT
+  WITH CHECK (auth.uid()::text = email);
+
+-- Grant permissions
+GRANT ALL ON public.users TO authenticated;
+GRANT ALL ON public.users TO service_role;
 
 -- Create project_sessions table
 CREATE TABLE IF NOT EXISTS public.project_sessions (
@@ -43,89 +68,8 @@ CREATE TABLE IF NOT EXISTS public.project_sessions (
   UNIQUE(user_id, project_id)
 );
 
--- Create todos table
-CREATE TABLE IF NOT EXISTS public.todos (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id VARCHAR NOT NULL REFERENCES users(email),
-  text TEXT NOT NULL,
-  completed BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-);
-
 -- Enable Row Level Security on all tables
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.project_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.todos ENABLE ROW LEVEL SECURITY;
-
--- Create RLS policies for users table
-DO $$
-BEGIN
-  -- Drop policies if they exist to avoid errors when recreating
-  IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'users' AND policyname = 'Users can read own data') THEN
-    DROP POLICY "Users can read own data" ON public.users;
-  END IF;
-  
-  IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'users' AND policyname = 'Users can insert own data') THEN
-    DROP POLICY "Users can insert own data" ON public.users;
-  END IF;
-  
-  IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'users' AND policyname = 'Users can update own data') THEN
-    DROP POLICY "Users can update own data" ON public.users;
-  END IF;
-  
-  -- Create the policies
-  CREATE POLICY "Users can read own data"
-    ON public.users
-    FOR SELECT
-    USING (auth.uid()::text = email);
-
-  CREATE POLICY "Users can insert own data"
-    ON public.users
-    FOR INSERT
-    WITH CHECK (auth.uid()::text = email);
-
-  CREATE POLICY "Users can update own data"
-    ON public.users
-    FOR UPDATE
-    USING (auth.uid()::text = email);
-END
-$$;
-
--- Create RLS policies for user_profiles table
-DO $$
-BEGIN
-  -- Drop policies if they exist
-  IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_profiles' AND policyname = 'Users can view their own profile') THEN
-    DROP POLICY "Users can view their own profile" ON public.user_profiles;
-  END IF;
-  
-  IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_profiles' AND policyname = 'Users can update their own profile') THEN
-    DROP POLICY "Users can update their own profile" ON public.user_profiles;
-  END IF;
-  
-  IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_profiles' AND policyname = 'Users can insert their own profile') THEN
-    DROP POLICY "Users can insert their own profile" ON public.user_profiles;
-  END IF;
-  
-  -- Create the policies
-  CREATE POLICY "Users can view their own profile"
-    ON public.user_profiles
-    FOR SELECT
-    USING (auth.uid()::text = email);
-
-  CREATE POLICY "Users can update their own profile"
-    ON public.user_profiles
-    FOR UPDATE
-    USING (auth.uid()::text = email);
-
-  CREATE POLICY "Users can insert their own profile"
-    ON public.user_profiles
-    FOR INSERT
-    WITH CHECK (auth.uid()::text = email);
-END
-$$;
 
 -- Create RLS policies for project_sessions table
 DO $$
@@ -151,6 +95,19 @@ BEGIN
     USING (auth.uid()::text = user_id);
 END
 $$;
+
+-- Create todos table
+CREATE TABLE IF NOT EXISTS public.todos (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id VARCHAR NOT NULL REFERENCES users(email),
+  text TEXT NOT NULL,
+  completed BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+-- Enable Row Level Security on all tables
+ALTER TABLE public.todos ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for todos table
 DO $$

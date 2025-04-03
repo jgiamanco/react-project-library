@@ -197,32 +197,18 @@ export const getUserProfile = async (
   }
 
   try {
+    // Use the existing getUser function which already uses the users table
     const userProfile = await getUser(email);
-    if (userProfile) {
-      return userProfile;
-    }
-
-    const client = getSupabaseClient(true);
-    try {
-      const { data, error } = await client
-        .from("user_profiles")
-        .select("*")
-        .eq("email", email)
-        .single();
-
-      if (error) {
-        if (error.code === "PGRST116") return null;
-        throw error;
-      }
-
-      return convertDbProfileToUserProfile(data);
-    } catch (tableError) {
-      console.warn("user_profiles table might not exist:", tableError);
+    if (!userProfile) {
+      console.log("No profile found for email:", email);
       return null;
     }
+
+    console.log("Successfully retrieved user profile:", userProfile);
+    return userProfile;
   } catch (error) {
-    console.error("Error getting user profile:", error);
-    return null;
+    console.error("Error in getUserProfile:", error);
+    throw error;
   }
 };
 
@@ -255,83 +241,48 @@ export const updateUserProfile = async (
   email: string,
   profile: Partial<UserProfile>
 ): Promise<UserProfile> => {
+  console.log("Starting updateUserProfile for email:", email);
+  console.log("Profile data to update:", profile);
+
   if (!email) {
-    throw new Error("Email is required for updating user profile");
+    throw new Error("Email is required for profile update");
   }
 
   try {
-    console.log(
-      "updateUserProfile: Starting update for",
-      email,
-      "with data:",
-      profile
-    );
-
-    await ensureUsersTable();
-
+    // Get current profile from database
     const currentProfile = await getUser(email);
     if (!currentProfile) {
-      console.log("No existing profile found, creating new profile");
+      throw new Error("User profile not found");
     }
 
-    const mergedProfile = {
-      ...(currentProfile || {}),
+    // Merge current profile with updates
+    const updatedProfile: UserProfile = {
+      ...currentProfile,
       ...profile,
-      email,
-      displayName: profile.displayName || currentProfile?.displayName || "",
-      role: profile.role || currentProfile?.role || "User",
-      theme: profile.theme || currentProfile?.theme || "system",
-      emailNotifications:
-        profile.emailNotifications ??
-        currentProfile?.emailNotifications ??
-        true,
-      pushNotifications:
-        profile.pushNotifications ?? currentProfile?.pushNotifications ?? false,
-      updatedAt: new Date().toISOString(),
+      email, // Ensure email is preserved
     };
 
-    console.log("Merged profile data:", mergedProfile);
+    // Convert to DB format
+    const dbProfile = appToDbProfile(updatedProfile);
+    console.log("Converted to DB profile:", dbProfile);
 
-    const dbProfile = appToDbProfile(mergedProfile as UserProfile);
-
-    const client = getSupabaseClient(true);
-
-    // Update both tables to ensure consistency
+    // Update only the users table
     console.log("Sending upsert to users table:", dbProfile);
-    const { error: usersError } = await client.from("users").upsert(dbProfile, {
-      onConflict: "email",
-      ignoreDuplicates: false,
-    });
+    const { error: usersError } = await supabase
+      .from("users")
+      .upsert(dbProfile, {
+        onConflict: "email",
+      });
 
     if (usersError) {
       console.error("Users table update failed:", usersError);
       throw usersError;
     }
 
-    console.log("Sending upsert to user_profiles table:", dbProfile);
-    const { data, error: profilesError } = await client
-      .from("user_profiles")
-      .upsert(dbProfile, {
-        onConflict: "email",
-        ignoreDuplicates: false,
-      })
-      .select("*")
-      .single();
-
-    if (profilesError) {
-      console.error("User_profiles table update failed:", profilesError);
-      throw profilesError;
-    }
-
-    if (!data) {
-      throw new Error("No data returned from profile update");
-    }
-
-    const updatedProfile = dbToAppProfile(data as DbProfile);
-    console.log("Profile successfully updated:", updatedProfile);
+    console.log("Profile updated successfully");
     return updatedProfile;
   } catch (error) {
-    console.error("Error updating user profile:", error);
+    console.error("Error in updateUserProfile:", error);
     throw error;
   }
 };

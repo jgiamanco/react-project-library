@@ -1,30 +1,37 @@
--- Create users table if it doesn't exist (this was missing)
-CREATE TABLE IF NOT EXISTS public.users (
-  email VARCHAR PRIMARY KEY,
-  display_name VARCHAR NOT NULL,
-  photo_url VARCHAR,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+  email TEXT PRIMARY KEY,
+  display_name TEXT NOT NULL,
+  photo_url TEXT,
+  bio TEXT,
+  location TEXT,
+  website TEXT,
+  github TEXT,
+  twitter TEXT,
+  role TEXT NOT NULL DEFAULT 'user',
+  theme TEXT NOT NULL DEFAULT 'system',
+  email_notifications BOOLEAN NOT NULL DEFAULT true,
+  push_notifications BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- Enable RLS
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+-- Enable Row Level Security
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for users table
-CREATE POLICY "Users can read own data"
-  ON public.users
-  FOR SELECT
-  USING (auth.uid()::text = email);
+CREATE POLICY "Users can view their own profile" ON users
+  FOR SELECT USING (auth.uid()::text = email);
 
-CREATE POLICY "Users can insert own data"
-  ON public.users
-  FOR INSERT
-  WITH CHECK (auth.uid()::text = email);
+CREATE POLICY "Users can update their own profile" ON users
+  FOR UPDATE USING (auth.uid()::text = email);
 
-CREATE POLICY "Users can update own data"
-  ON public.users
-  FOR UPDATE
-  USING (auth.uid()::text = email);
+CREATE POLICY "Users can insert their own profile" ON users
+  FOR INSERT WITH CHECK (auth.uid()::text = email);
+
+-- Grant permissions
+GRANT ALL ON users TO authenticated;
+GRANT ALL ON users TO service_role;
 
 -- Create user profiles table
 CREATE TABLE IF NOT EXISTS user_profiles (

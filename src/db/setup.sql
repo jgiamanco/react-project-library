@@ -26,6 +26,77 @@ DROP TRIGGER IF EXISTS handle_updated_at ON public.project_sessions;
 -- Drop existing functions if they exist
 DROP FUNCTION IF EXISTS public.handle_updated_at();
 
+-- Drop existing tables and policies
+DROP TABLE IF EXISTS public.users CASCADE;
+
+-- Drop users policies
+DROP POLICY IF EXISTS "Users can read own profile" ON public.users;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.users;
+
+-- Drop triggers
+DROP TRIGGER IF EXISTS handle_updated_at ON public.users;
+
+-- Create or update users table
+CREATE TABLE IF NOT EXISTS public.users (
+  email TEXT PRIMARY KEY,
+  display_name TEXT NOT NULL,
+  photo_url TEXT,
+  bio TEXT,
+  location TEXT,
+  website TEXT,
+  github TEXT,
+  twitter TEXT,
+  role TEXT NOT NULL DEFAULT 'user',
+  theme TEXT NOT NULL DEFAULT 'system',
+  email_notifications BOOLEAN NOT NULL DEFAULT true,
+  push_notifications BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Enable Row Level Security
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+-- Create new policies for users
+CREATE POLICY "Users can view their own profile"
+  ON public.users FOR SELECT
+  USING (auth.uid()::text = email);
+
+CREATE POLICY "Users can insert their own profile"
+  ON public.users FOR INSERT
+  WITH CHECK (auth.uid()::text = email);
+
+CREATE POLICY "Users can update their own profile"
+  ON public.users FOR UPDATE
+  USING (auth.uid()::text = email);
+
+CREATE POLICY "Users can delete their own profile"
+  ON public.users FOR DELETE
+  USING (auth.uid()::text = email);
+
+-- Create updated_at trigger
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = TIMEZONE('utc'::text, NOW());
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER handle_updated_at
+  BEFORE UPDATE ON public.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_updated_at();
+
+-- Create indexes
+DROP INDEX IF EXISTS idx_users_email;
+CREATE INDEX idx_users_email ON public.users(email);
+
+-- Grant permissions
+GRANT ALL ON public.users TO authenticated;
+GRANT ALL ON public.users TO service_role;
+
 -- Create or update user_profiles table
 CREATE TABLE IF NOT EXISTS public.user_profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
