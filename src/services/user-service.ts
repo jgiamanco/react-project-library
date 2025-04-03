@@ -1,7 +1,6 @@
 import { supabase, getSupabaseClient } from "./supabase-client";
 import {
   UserProfile,
-  DbProfile,
   appToDbProfile,
   dbToAppProfile,
   isDbProfile,
@@ -10,7 +9,7 @@ import {
 export async function ensureUsersTable(): Promise<void> {
   console.log("Starting ensureUsersTable...");
   try {
-    const { data: tableCheck, error: checkError } = await supabase
+    const { error: checkError } = await supabase
       .from("users")
       .select("email")
       .limit(1);

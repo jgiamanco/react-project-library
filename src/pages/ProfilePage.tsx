@@ -23,6 +23,7 @@ const ProfilePage = () => {
   const location = useLocation();
   const { user: authUser, updateUser, isLoading: authLoading } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Get the tab from the URL query parameters
   const queryParams = new URLSearchParams(location.search);
@@ -45,14 +46,15 @@ const ProfilePage = () => {
       }
 
       try {
+        setIsLoading(true);
         console.log("Loading profile for user:", authUser.email);
         const dbProfile = await getUserProfile(authUser.email);
 
         if (dbProfile) {
           console.log("Profile loaded from database:", dbProfile);
           setProfile({
-            ...dbProfile, // Spread database values first
-            ...authUser, // Then override with auth context data
+            ...dbProfile,
+            ...authUser,
             displayName: dbProfile.displayName || authUser.displayName,
             photoURL: dbProfile.photoURL || authUser.photoURL || "",
             bio: dbProfile.bio || "Tell us about yourself...",
@@ -67,7 +69,6 @@ const ProfilePage = () => {
           });
         } else {
           console.log("No profile found in database, creating default profile");
-          // Create a complete default profile
           const defaultProfile: User = {
             ...authUser,
             bio: "Tell us about yourself...",
@@ -81,15 +82,11 @@ const ProfilePage = () => {
           };
 
           setProfile(defaultProfile);
-
-          // Create the profile in the database
           await updateUserProfile(authUser.email, defaultProfile);
           console.log("Default profile created in database");
         }
       } catch (error) {
         console.error("Error loading profile:", error);
-
-        // Fall back to complete user object
         if (authUser) {
           console.log("Falling back to user data with defaults");
           setProfile({
@@ -104,11 +101,12 @@ const ProfilePage = () => {
             pushNotifications: authUser.pushNotifications ?? false,
           });
         }
-
         toast.error("Error loading profile data", {
           description:
             "Using local profile data. Changes may not be saved to the server.",
         });
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -121,17 +119,11 @@ const ProfilePage = () => {
 
     setIsUpdating(true);
     try {
-      // First update the database
       console.log("Updating profile in database:", updates);
       const updatedProfile = await updateUserProfile(authUser.email, updates);
-
-      // Then update auth context
       console.log("Updating profile in auth context");
       const updatedUser = await updateUser(updates);
-
-      // Update local state
       setProfile(updatedProfile);
-
       toast.success("Profile updated successfully");
       return updatedUser;
     } catch (error) {
@@ -139,7 +131,7 @@ const ProfilePage = () => {
       toast.error("Failed to update profile", {
         description: "Please try again later.",
       });
-      throw error; // Re-throw to let the ProfileInformation component handle it
+      throw error;
     } finally {
       setIsUpdating(false);
     }
@@ -153,7 +145,7 @@ const ProfilePage = () => {
     });
   };
 
-  if (authLoading || isUpdating || !profile) {
+  if (authLoading || isLoading || !profile) {
     return <ProfileLoading />;
   }
 
@@ -192,6 +184,7 @@ const ProfilePage = () => {
                   profile={profile}
                   setProfile={setProfile}
                   updateUser={handleProfileUpdate}
+                  isUpdating={isUpdating}
                 />
               </CardContent>
             </Card>

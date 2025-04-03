@@ -7,104 +7,77 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { toast as sonnerToast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface ProfileInformationProps {
   profile: User;
-  setProfile: React.Dispatch<React.SetStateAction<User>>;
-  updateUser: (updates: Partial<User>) => Promise<User | void>;
+  setProfile: (profile: User) => void;
+  updateUser: (updates: Partial<User>) => Promise<User>;
+  isUpdating: boolean;
 }
 
-export const ProfileInformation = ({
+const ProfileInformation = ({
   profile,
   setProfile,
   updateUser,
+  isUpdating,
 }: ProfileInformationProps) => {
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    displayName: profile.displayName,
-    bio: profile.bio,
-    location: profile.location,
-    website: profile.website,
-    github: profile.github,
-    twitter: profile.twitter,
+  const [formData, setFormData] = useState<Partial<User>>({
+    displayName: profile.displayName || "",
+    bio: profile.bio || "",
+    location: profile.location || "",
+    website: profile.website || "",
+    github: profile.github || "",
+    twitter: profile.twitter || "",
+    role: profile.role || "Developer",
   });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Update form data when profile changes
   useEffect(() => {
     setFormData({
-      displayName: profile.displayName,
-      bio: profile.bio,
-      location: profile.location,
-      website: profile.website,
-      github: profile.github,
-      twitter: profile.twitter,
+      displayName: profile.displayName || "",
+      bio: profile.bio || "",
+      location: profile.location || "",
+      website: profile.website || "",
+      github: profile.github || "",
+      twitter: profile.twitter || "",
+      role: profile.role || "Developer",
     });
   }, [profile]);
-
-  const handleProfileUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSaving) return; // Prevent multiple submissions
-
-    setIsSaving(true);
-
-    try {
-      console.log("Updating profile with form data:", formData);
-
-      // Create an updates object with the form data
-      const updates: Partial<User> = {
-        ...formData,
-        photoURL: profile.photoURL,
-        role: profile.role,
-        theme: profile.theme,
-        emailNotifications: profile.emailNotifications,
-        pushNotifications: profile.pushNotifications,
-      };
-
-      // Update auth context (which will update database via updateUser function)
-      const updatedUser = await updateUser(updates);
-
-      if (updatedUser) {
-        // Update local state with the returned user data
-        setProfile(updatedUser);
-        sonnerToast.success("Profile updated", {
-          description: "Your profile has been updated successfully.",
-        });
-      }
-    } catch (error) {
-      console.error("Profile update error:", error);
-      sonnerToast.error("Update failed", {
-        description: "Failed to update profile. Please try again.",
-      });
-      // Reset form data to current profile values
-      setFormData({
-        displayName: profile.displayName,
-        bio: profile.bio,
-        location: profile.location,
-        website: profile.website,
-        github: profile.github,
-        twitter: profile.twitter,
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting || isUpdating) return;
+
+    setIsSubmitting(true);
+    try {
+      const updatedUser = await updateUser(formData);
+      setProfile(updatedUser);
+      sonnerToast.success("Profile updated successfully");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      sonnerToast.error("Failed to update profile", {
+        description: "Please try again later.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAvatarChange = async (newAvatarUrl: string) => {
-    if (isLoading) return; // Prevent multiple submissions
+    if (isSubmitting || isUpdating) return; // Prevent multiple submissions
 
     try {
-      setIsLoading(true);
+      setIsSubmitting(true);
 
       // Update local state
       setProfile({
@@ -129,18 +102,18 @@ export const ProfileInformation = ({
         description: "Failed to update profile picture. Please try again.",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleProfileUpdate} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="flex items-center space-x-4">
         <AvatarUpload
           currentAvatar={profile.photoURL || ""}
           onAvatarChange={handleAvatarChange}
           name={profile.displayName}
-          isLoading={isLoading}
+          isLoading={isSubmitting || isUpdating}
         />
         <div>
           <p className="text-sm font-medium">Profile Picture</p>
@@ -150,75 +123,100 @@ export const ProfileInformation = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="displayName">Full Name</Label>
+          <Label htmlFor="displayName">Display Name</Label>
           <Input
             id="displayName"
+            name="displayName"
             value={formData.displayName}
             onChange={handleInputChange}
-            disabled={isSaving}
+            placeholder="Your name"
           />
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="role">Role</Label>
+          <Input
+            id="role"
+            name="role"
+            value={formData.role}
+            onChange={handleInputChange}
+            placeholder="Your role"
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="location">Location</Label>
           <Input
             id="location"
+            name="location"
             value={formData.location}
             onChange={handleInputChange}
-            disabled={isSaving}
+            placeholder="Your location"
           />
         </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="bio">Bio</Label>
-          <Textarea
-            id="bio"
-            rows={4}
-            value={formData.bio}
+
+        <div className="space-y-2">
+          <Label htmlFor="website">Website</Label>
+          <Input
+            id="website"
+            name="website"
+            value={formData.website}
             onChange={handleInputChange}
-            disabled={isSaving}
+            placeholder="Your website"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="github">GitHub</Label>
+          <Input
+            id="github"
+            name="github"
+            value={formData.github}
+            onChange={handleInputChange}
+            placeholder="Your GitHub username"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="twitter">Twitter</Label>
+          <Input
+            id="twitter"
+            name="twitter"
+            value={formData.twitter}
+            onChange={handleInputChange}
+            placeholder="Your Twitter handle"
           />
         </div>
       </div>
 
-      <Separator />
-
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium">Social Links</h3>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="website">Website</Label>
-            <Input
-              id="website"
-              value={formData.website}
-              onChange={handleInputChange}
-              disabled={isSaving}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="github">GitHub</Label>
-            <Input
-              id="github"
-              value={formData.github}
-              onChange={handleInputChange}
-              disabled={isSaving}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="twitter">Twitter</Label>
-            <Input
-              id="twitter"
-              value={formData.twitter}
-              onChange={handleInputChange}
-              disabled={isSaving}
-            />
-          </div>
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="bio">Bio</Label>
+        <Textarea
+          id="bio"
+          name="bio"
+          value={formData.bio}
+          onChange={handleInputChange}
+          placeholder="Tell us about yourself..."
+          rows={4}
+        />
       </div>
 
-      <Button type="submit" disabled={isSaving}>
-        {isSaving ? "Saving..." : "Save Changes"}
-      </Button>
+      <div className="flex justify-end">
+        <Button type="submit" disabled={isSubmitting || isUpdating}>
+          {isSubmitting || isUpdating ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
+        </Button>
+      </div>
     </form>
   );
 };
+
+export default ProfileInformation;
