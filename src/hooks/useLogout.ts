@@ -1,18 +1,16 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/services/supabase-client";
-import { toast as sonnerToast } from "sonner";
+import { toast } from "sonner";
 
 export const useLogout = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const logout = useCallback(async () => {
     try {
       setIsLoading(true);
-      sonnerToast.loading("Signing out...");
+      const toastId = toast.loading("Signing out...");
 
       // First sign out from Supabase
       const { error } = await supabase.auth.signOut();
@@ -31,9 +29,8 @@ export const useLogout = () => {
       // Clear any other app-specific storage
       sessionStorage.clear();
 
-      sonnerToast.dismiss();
-      toast({
-        title: "Signed out",
+      toast.dismiss(toastId);
+      toast.success("Signed out", {
         description: "You have been successfully signed out.",
       });
 
@@ -41,10 +38,7 @@ export const useLogout = () => {
       navigate("/", { replace: true });
     } catch (error) {
       console.error("Logout error:", error);
-      sonnerToast.dismiss();
-      toast({
-        variant: "destructive",
-        title: "Error signing out",
+      toast.error("Error signing out", {
         description: "There was a problem signing you out. Please try again.",
       });
 
@@ -53,7 +47,7 @@ export const useLogout = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [navigate, toast]);
+  }, [navigate]);
 
   return {
     logout,
