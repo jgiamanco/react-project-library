@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/services/supabase-client";
 import { toast } from "sonner";
+import { tableChecked } from "@/services/user-service";
 
 export const useLogout = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,13 +21,11 @@ export const useLogout = () => {
         throw error;
       }
 
-      // Clear all auth-related localStorage items
-      localStorage.removeItem("authenticated");
-      localStorage.removeItem("user");
-      localStorage.removeItem("user_profile");
-      localStorage.removeItem("lastLoggedInEmail");
+      // Reset table check flag
+      tableChecked = false;
 
-      // Clear any other app-specific storage
+      // Clear all auth-related localStorage items
+      localStorage.clear();
       sessionStorage.clear();
 
       toast.dismiss(toastId);

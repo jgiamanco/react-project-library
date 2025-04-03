@@ -6,7 +6,13 @@ import {
   isDbProfile,
 } from "./types";
 
+export let tableChecked = false;
+
 export async function ensureUsersTable(): Promise<void> {
+  if (tableChecked) {
+    return;
+  }
+
   console.log("Starting ensureUsersTable...");
   try {
     const { error: checkError } = await supabase
@@ -77,17 +83,7 @@ export async function ensureUsersTable(): Promise<void> {
       console.log("Users table exists");
     }
 
-    const { data: structureCheck, error: structureError } = await supabase
-      .from("users")
-      .select("*")
-      .limit(1);
-
-    if (structureError) {
-      console.error("Error verifying table structure:", structureError);
-      throw structureError;
-    }
-
-    console.log("Table structure verified successfully");
+    tableChecked = true;
   } catch (error) {
     console.error("Error in ensureUsersTable:", error);
     throw error;
