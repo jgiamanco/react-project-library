@@ -20,14 +20,6 @@ export async function ensureUsersTable(): Promise<void> {
 
   console.log("Starting ensureUsersTable...");
   try {
-    // First check if we can connect to Supabase
-    const { data: health, error: healthError } = await supabase.rpc("health");
-    if (healthError) {
-      console.error("Error connecting to Supabase:", healthError);
-      throw healthError;
-    }
-    console.log("Supabase connection successful");
-
     // Try a simple query to check table access
     const { data, error } = await supabase
       .from("users")
