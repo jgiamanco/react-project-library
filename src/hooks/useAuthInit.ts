@@ -90,10 +90,15 @@ export const useAuthInit = () => {
         }
       } else if (event === "SIGNED_OUT") {
         console.log("Processing SIGNED_OUT event");
-        await authTokenService.clearSession();
-        setUser(null);
-        setIsAuthenticated(false);
-        authInitialized.current = false;
+        setLoading(true);
+        try {
+          await authTokenService.clearSession();
+          setUser(null);
+          setIsAuthenticated(false);
+          authInitialized.current = false;
+        } finally {
+          setLoading(false);
+        }
       }
     });
 
@@ -131,6 +136,8 @@ export const useAuthInit = () => {
     try {
       if (session?.user) {
         console.log("Active session found for user:", session.user.email);
+        // Set authenticated state immediately when we have a session
+        setIsAuthenticated(true);
 
         try {
           // Get user profile from database
@@ -163,7 +170,6 @@ export const useAuthInit = () => {
               pushNotifications: false,
             };
             setUser(basicProfile);
-            setIsAuthenticated(true);
             return;
           }
 
@@ -176,7 +182,6 @@ export const useAuthInit = () => {
           if (userProfile) {
             console.log("User profile found in database:", userProfile.email);
             setUser(userProfile);
-            setIsAuthenticated(true);
           } else {
             console.log("No user profile found in database, creating one");
             // Create a basic profile from session data
@@ -206,12 +211,10 @@ export const useAuthInit = () => {
               await updateUserProfile(session.user.email || "", basicProfile);
               console.log("Basic profile created and stored");
               setUser(basicProfile);
-              setIsAuthenticated(true);
             } catch (dbError) {
               console.error("Error storing basic profile:", dbError);
               // Still set the basic profile even if database storage fails
               setUser(basicProfile);
-              setIsAuthenticated(true);
             }
           }
         } catch (profileError) {
