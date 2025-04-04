@@ -11,25 +11,41 @@ export const useAuthInit = () => {
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
-  const initialCheckDone = useRef(false);
 
   useEffect(() => {
     console.log("useAuthInit: Initializing auth...");
+
+    // Check for existing session first
+    const checkSession = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) {
+          console.log("Found existing session for user:", session.user.email);
+          await updateAuthState(session);
+        } else {
+          console.log("No existing session found");
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Error checking session:", err);
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+
+    // Set up auth state change listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event, session?.user?.email);
-      await updateAuthState(session);
-    });
-
-    // Initial check
-    supabase.auth.getSession().then(({ data: { session } }) => {
       if (mounted.current) {
-        updateAuthState(session);
+        await updateAuthState(session);
       }
     });
 
-    // Cleanup
     return () => {
       mounted.current = false;
       subscription.unsubscribe();
@@ -109,9 +125,8 @@ export const useAuthInit = () => {
       setUser(null);
       setIsAuthenticated(false);
     } finally {
-      if (mounted.current && !initialCheckDone.current) {
+      if (mounted.current) {
         setLoading(false);
-        initialCheckDone.current = true;
       }
     }
   };
