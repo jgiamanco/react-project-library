@@ -33,10 +33,50 @@ export const useAuthInit = () => {
           await updateAuthState(session);
           setLoading(false);
         } else {
-          console.log("No existing session found");
-          setUser(null);
-          setIsAuthenticated(false);
-          setLoading(false);
+          // Check for auth token in localStorage
+          const authToken = localStorage.getItem("auth_token");
+          const userEmail = localStorage.getItem("user_email");
+
+          if (authToken && userEmail) {
+            console.log(
+              "Found auth token in localStorage, attempting to restore session"
+            );
+            setLoading(true);
+            try {
+              // Set the session using the token
+              const {
+                data: { session: restoredSession },
+                error: restoreError,
+              } = await supabase.auth.setSession({
+                access_token: authToken,
+                refresh_token: "",
+              });
+
+              if (restoreError) {
+                console.error("Error restoring session:", restoreError);
+                // Clear invalid tokens
+                localStorage.removeItem("auth_token");
+                localStorage.removeItem("user_email");
+                setUser(null);
+                setIsAuthenticated(false);
+              } else if (restoredSession) {
+                console.log("Successfully restored session from token");
+                await updateAuthState(restoredSession);
+              }
+            } catch (err) {
+              console.error("Error in session restoration:", err);
+              setError(
+                err instanceof Error ? err.message : "An error occurred"
+              );
+            } finally {
+              setLoading(false);
+            }
+          } else {
+            console.log("No existing session or auth token found");
+            setUser(null);
+            setIsAuthenticated(false);
+            setLoading(false);
+          }
         }
       } catch (err) {
         console.error("Error checking session:", err);
