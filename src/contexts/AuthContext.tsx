@@ -67,7 +67,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const logout = useCallback(async () => {
     try {
       await performLogout();
-      localStorage.clear();
       setUser(null);
       setIsAuthenticated(false);
     } catch (error) {
