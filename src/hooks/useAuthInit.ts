@@ -11,7 +11,6 @@ export const useAuthInit = () => {
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
-  const authChecked = useRef(false);
 
   useEffect(() => {
     console.log("useAuthInit: Initializing auth...");
@@ -22,6 +21,10 @@ export const useAuthInit = () => {
         const {
           data: { session },
         } = await supabase.auth.getSession();
+        console.log(
+          "Initial session check result:",
+          session ? "Found session" : "No session"
+        );
 
         if (session) {
           console.log("Found existing session for user:", session.user.email);
@@ -38,8 +41,8 @@ export const useAuthInit = () => {
         setIsAuthenticated(false);
       } finally {
         if (mounted.current) {
+          console.log("Setting loading to false, auth state:", isAuthenticated);
           setLoading(false);
-          authChecked.current = true;
         }
       }
     };
@@ -53,8 +56,12 @@ export const useAuthInit = () => {
       console.log("Auth state changed:", event, session?.user?.email);
       if (mounted.current) {
         if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+          console.log("Processing SIGNED_IN/INITIAL_SESSION event");
+          setLoading(true);
           await updateAuthState(session);
+          setLoading(false);
         } else if (event === "SIGNED_OUT") {
+          console.log("Processing SIGNED_OUT event");
           setUser(null);
           setIsAuthenticated(false);
           localStorage.removeItem("auth_token");
@@ -92,6 +99,10 @@ export const useAuthInit = () => {
         try {
           // Get user profile from database
           const userProfile = await getUser(session.user.email || "");
+          console.log(
+            "User profile fetch result:",
+            userProfile ? "Found profile" : "No profile"
+          );
 
           if (userProfile) {
             console.log("User profile found in database:", userProfile.email);
@@ -123,6 +134,7 @@ export const useAuthInit = () => {
             // Store the basic profile in the database
             try {
               await updateUserProfile(session.user.email || "", basicProfile);
+              console.log("Basic profile created and stored");
               setUser(basicProfile);
               setIsAuthenticated(true);
             } catch (dbError) {
@@ -152,13 +164,20 @@ export const useAuthInit = () => {
       setError(err instanceof Error ? err.message : "An error occurred");
       setUser(null);
       setIsAuthenticated(false);
-    } finally {
-      if (mounted.current && !authChecked.current) {
-        setLoading(false);
-        authChecked.current = true;
-      }
     }
   };
+
+  // Debug logging for state changes
+  useEffect(() => {
+    console.log(
+      "Auth state updated - isAuthenticated:",
+      isAuthenticated,
+      "isLoading:",
+      isLoading,
+      "user:",
+      user?.email
+    );
+  }, [isAuthenticated, isLoading, user]);
 
   return {
     user,
