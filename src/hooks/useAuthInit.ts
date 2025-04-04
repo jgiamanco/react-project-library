@@ -52,13 +52,31 @@ export const useAuthInit = () => {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event, session?.user?.email);
       if (mounted.current) {
-        await updateAuthState(session);
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+          await updateAuthState(session);
+        } else if (event === "SIGNED_OUT") {
+          setUser(null);
+          setIsAuthenticated(false);
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("user_email");
+        }
       }
     });
+
+    // Listen for storage events to sync across tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "auth_token" && e.newValue) {
+        console.log("Auth token changed in another tab, refreshing session");
+        initializeAuth();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
 
     return () => {
       mounted.current = false;
       subscription.unsubscribe();
+      window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
 
