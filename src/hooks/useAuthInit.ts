@@ -16,21 +16,15 @@ export const useAuthInit = () => {
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
-  const authTokenService = AuthTokenService.getInstance();
   const authInitialized = useRef(false);
+  const authTokenService = AuthTokenService.getInstance();
 
   useEffect(() => {
     console.log("useAuthInit: Initializing auth...");
-    let isInitializing = true;
+    const isInitializing = true;
 
     const initializeAuth = async () => {
-      if (authInitialized.current) {
-        console.log("Auth already initialized, skipping...");
-        return;
-      }
-
       try {
-        console.log("Starting initial auth check...");
         // Check for existing session
         const {
           data: { session },
@@ -42,17 +36,36 @@ export const useAuthInit = () => {
 
         if (session) {
           console.log("Found existing session for user:", session.user.email);
+          setLoading(true);
           await updateAuthState(session);
+          setLoading(false);
         } else {
           // Try to restore session from stored token
           const storedSession = await authTokenService.getStoredSession();
           if (storedSession) {
-            console.log("Restored session from stored token");
-            await updateAuthState(storedSession);
+            console.log(
+              "Restored session from stored token for user:",
+              storedSession.user?.email
+            );
+            setLoading(true);
+            try {
+              await updateAuthState(storedSession);
+            } catch (err) {
+              console.error(
+                "Error updating auth state from stored session:",
+                err
+              );
+              setError(
+                err instanceof Error ? err.message : "An error occurred"
+              );
+            } finally {
+              setLoading(false);
+            }
           } else {
             console.log("No existing session or valid stored token found");
             setUser(null);
             setIsAuthenticated(false);
+            setLoading(false);
           }
         }
       } catch (err) {
@@ -60,44 +73,43 @@ export const useAuthInit = () => {
         setError(err instanceof Error ? err.message : "An error occurred");
         setUser(null);
         setIsAuthenticated(false);
+        setLoading(false);
       } finally {
         authInitialized.current = true;
         setLoading(false);
       }
     };
 
-    // Set up auth state change listener first
+    initializeAuth();
+
+    // Set up auth state change listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event, session?.user?.email);
-      if (!mounted.current) return;
-
-      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        console.log("Processing SIGNED_IN/INITIAL_SESSION event");
-        setLoading(true);
-        try {
-          if (session) {
-            await authTokenService.storeSession(session);
+      if (mounted.current) {
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+          console.log("Processing SIGNED_IN/INITIAL_SESSION event");
+          setLoading(true);
+          try {
+            if (session) {
+              await authTokenService.storeSession(session);
+            }
             await updateAuthState(session);
+          } catch (err) {
+            console.error("Error in auth state change handler:", err);
+            setError(err instanceof Error ? err.message : "An error occurred");
+          } finally {
+            setLoading(false);
           }
-        } catch (err) {
-          console.error("Error in auth state change handler:", err);
-          setError(err instanceof Error ? err.message : "An error occurred");
-        } finally {
-          setLoading(false);
+        } else if (event === "SIGNED_OUT") {
+          console.log("Processing SIGNED_OUT event");
+          await authTokenService.clearSession();
+          setUser(null);
+          setIsAuthenticated(false);
         }
-      } else if (event === "SIGNED_OUT") {
-        console.log("Processing SIGNED_OUT event");
-        await authTokenService.clearSession();
-        setUser(null);
-        setIsAuthenticated(false);
-        authInitialized.current = false;
       }
     });
-
-    // Then initialize auth
-    initializeAuth();
 
     // Listen for storage events to sync across tabs
     const handleStorageChange = async (e: StorageEvent) => {
