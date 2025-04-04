@@ -61,7 +61,6 @@ export const useAuthInit = () => {
         setUser(null);
         setIsAuthenticated(false);
       } finally {
-        isInitializing = false;
         authInitialized.current = true;
         setLoading(false);
       }
