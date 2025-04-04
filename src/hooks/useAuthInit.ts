@@ -2,7 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/services/supabase-client";
 import { UserProfile } from "@/services/types";
-import { getUser, updateUserProfile } from "@/services/user-service";
+import {
+  getUser,
+  updateUserProfile,
+  ensureUsersTable,
+} from "@/services/user-service";
+import { AuthTokenService } from "@/services/auth-token-service";
 import { toast } from "sonner";
 
 export const useAuthInit = () => {
@@ -11,6 +16,7 @@ export const useAuthInit = () => {
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
+  const authTokenService = AuthTokenService.getInstance();
 
   useEffect(() => {
     console.log("useAuthInit: Initializing auth...");
@@ -28,51 +34,19 @@ export const useAuthInit = () => {
 
         if (session) {
           console.log("Found existing session for user:", session.user.email);
-          // Set loading true before updating auth state
           setLoading(true);
           await updateAuthState(session);
           setLoading(false);
         } else {
-          // Check for auth token in localStorage
-          const authToken = localStorage.getItem("auth_token");
-          const userEmail = localStorage.getItem("user_email");
-
-          if (authToken && userEmail) {
-            console.log(
-              "Found auth token in localStorage, attempting to restore session"
-            );
+          // Try to restore session from stored token
+          const storedSession = await authTokenService.getStoredSession();
+          if (storedSession) {
+            console.log("Restored session from stored token");
             setLoading(true);
-            try {
-              // Set the session using the token
-              const {
-                data: { session: restoredSession },
-                error: restoreError,
-              } = await supabase.auth.setSession({
-                access_token: authToken,
-                refresh_token: "",
-              });
-
-              if (restoreError) {
-                console.error("Error restoring session:", restoreError);
-                // Clear invalid tokens
-                localStorage.removeItem("auth_token");
-                localStorage.removeItem("user_email");
-                setUser(null);
-                setIsAuthenticated(false);
-              } else if (restoredSession) {
-                console.log("Successfully restored session from token");
-                await updateAuthState(restoredSession);
-              }
-            } catch (err) {
-              console.error("Error in session restoration:", err);
-              setError(
-                err instanceof Error ? err.message : "An error occurred"
-              );
-            } finally {
-              setLoading(false);
-            }
+            await updateAuthState(storedSession);
+            setLoading(false);
           } else {
-            console.log("No existing session or auth token found");
+            console.log("No existing session or valid stored token found");
             setUser(null);
             setIsAuthenticated(false);
             setLoading(false);
@@ -99,6 +73,9 @@ export const useAuthInit = () => {
           console.log("Processing SIGNED_IN/INITIAL_SESSION event");
           setLoading(true);
           try {
+            if (session) {
+              await authTokenService.storeSession(session);
+            }
             await updateAuthState(session);
           } catch (err) {
             console.error("Error in auth state change handler:", err);
@@ -108,10 +85,9 @@ export const useAuthInit = () => {
           }
         } else if (event === "SIGNED_OUT") {
           console.log("Processing SIGNED_OUT event");
+          await authTokenService.clearSession();
           setUser(null);
           setIsAuthenticated(false);
-          localStorage.removeItem("auth_token");
-          localStorage.removeItem("user_email");
         }
       }
     });
@@ -138,16 +114,41 @@ export const useAuthInit = () => {
       if (session?.user) {
         console.log("Active session found for user:", session.user.email);
 
-        // Only store essential auth data in localStorage
-        localStorage.setItem("auth_token", session.access_token);
-        localStorage.setItem("user_email", session.user.email || "");
-
         try {
           // Get user profile from database
           console.log(
             "Attempting to get user profile for:",
             session.user.email
           );
+          const { success: tableCheckSuccess } = await ensureUsersTable();
+
+          if (!tableCheckSuccess) {
+            console.log("Table check failed, creating basic profile");
+            // Create a basic profile from session data
+            const basicProfile: UserProfile = {
+              email: session.user.email || "",
+              displayName:
+                session.user.user_metadata?.display_name ||
+                session.user.email?.split("@")[0] ||
+                "User",
+              photoURL:
+                session.user.user_metadata?.photo_url ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`,
+              location: session.user.user_metadata?.location || "",
+              bio: "",
+              website: "",
+              github: "",
+              twitter: "",
+              role: "User",
+              theme: "system",
+              emailNotifications: true,
+              pushNotifications: false,
+            };
+            setUser(basicProfile);
+            setIsAuthenticated(true);
+            return;
+          }
+
           const userProfile = await getUser(session.user.email || "");
           console.log(
             "User profile fetch result:",
@@ -206,9 +207,6 @@ export const useAuthInit = () => {
         console.log("No active session found");
         setUser(null);
         setIsAuthenticated(false);
-        // Clear only auth-related localStorage items
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("user_email");
       }
     } catch (err) {
       console.error("Error updating auth state:", err);

@@ -13,10 +13,13 @@ export function resetTableCheck() {
   tableChecked = false;
 }
 
-export async function ensureUsersTable(): Promise<void> {
+export async function ensureUsersTable(): Promise<{
+  success: boolean;
+  error?: Error;
+}> {
   if (tableChecked) {
     console.log("Table already checked, skipping...");
-    return;
+    return { success: true };
   }
 
   console.log("Starting ensureUsersTable...");
@@ -41,18 +44,25 @@ export async function ensureUsersTable(): Promise<void> {
       console.error("Error checking users table:", result.error);
       if (result.error.code === "42P01") {
         console.error("Users table does not exist");
-        throw new Error("Users table does not exist");
+        return {
+          success: false,
+          error: new Error("Users table does not exist"),
+        };
       } else if (result.error.code === "42501") {
         console.error("Permission denied accessing users table");
-        throw new Error("Permission denied accessing users table");
+        return {
+          success: false,
+          error: new Error("Permission denied accessing users table"),
+        };
       } else {
         console.error("Unexpected error accessing users table:", result.error);
-        throw result.error;
+        return { success: false, error: result.error };
       }
     }
 
     console.log("Users table exists and is accessible");
     tableChecked = true;
+    return { success: true };
   } catch (error) {
     console.error("Error in ensureUsersTable:", error);
     // Reset tableChecked on error so we can try again
@@ -61,9 +71,12 @@ export async function ensureUsersTable(): Promise<void> {
     if (error instanceof Error && error.message === "Table check timed out") {
       console.log("Table check timed out, assuming table exists");
       tableChecked = true;
-      return;
+      return { success: true };
     }
-    throw error;
+    return {
+      success: false,
+      error: error instanceof Error ? error : new Error("Unknown error"),
+    };
   }
 }
 
