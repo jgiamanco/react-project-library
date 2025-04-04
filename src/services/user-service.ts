@@ -20,21 +20,40 @@ export async function ensureUsersTable(): Promise<void> {
 
   console.log("Starting ensureUsersTable...");
   try {
-    // Just check if the table exists, don't try to create it
-    const { error: checkError } = await supabase
+    // First check if we can connect to Supabase
+    const { data: health, error: healthError } = await supabase.rpc("health");
+    if (healthError) {
+      console.error("Error connecting to Supabase:", healthError);
+      throw healthError;
+    }
+    console.log("Supabase connection successful");
+
+    // Try a simple query to check table access
+    const { data, error } = await supabase
       .from("users")
       .select("email")
       .limit(1);
 
-    if (checkError) {
-      console.error("Error checking users table:", checkError);
-      throw checkError;
+    if (error) {
+      console.error("Error checking users table:", error);
+      if (error.code === "42P01") {
+        console.error("Users table does not exist");
+        throw new Error("Users table does not exist");
+      } else if (error.code === "42501") {
+        console.error("Permission denied accessing users table");
+        throw new Error("Permission denied accessing users table");
+      } else {
+        console.error("Unexpected error accessing users table:", error);
+        throw error;
+      }
     }
 
     console.log("Users table exists and is accessible");
     tableChecked = true;
   } catch (error) {
     console.error("Error in ensureUsersTable:", error);
+    // Reset tableChecked on error so we can try again
+    tableChecked = false;
     throw error;
   }
 }
