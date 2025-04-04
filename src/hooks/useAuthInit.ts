@@ -28,22 +28,22 @@ export const useAuthInit = () => {
 
         if (session) {
           console.log("Found existing session for user:", session.user.email);
+          // Set loading true before updating auth state
+          setLoading(true);
           await updateAuthState(session);
+          setLoading(false);
         } else {
           console.log("No existing session found");
           setUser(null);
           setIsAuthenticated(false);
+          setLoading(false);
         }
       } catch (err) {
         console.error("Error checking session:", err);
         setError(err instanceof Error ? err.message : "An error occurred");
         setUser(null);
         setIsAuthenticated(false);
-      } finally {
-        if (mounted.current) {
-          console.log("Setting loading to false, auth state:", isAuthenticated);
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
@@ -58,8 +58,11 @@ export const useAuthInit = () => {
         if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
           console.log("Processing SIGNED_IN/INITIAL_SESSION event");
           setLoading(true);
-          await updateAuthState(session);
-          setLoading(false);
+          try {
+            await updateAuthState(session);
+          } finally {
+            setLoading(false);
+          }
         } else if (event === "SIGNED_OUT") {
           console.log("Processing SIGNED_OUT event");
           setUser(null);
