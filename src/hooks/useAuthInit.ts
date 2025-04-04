@@ -146,6 +146,7 @@ export const useAuthInit = () => {
             session.user.email
           );
           const { success: tableCheckSuccess } = await ensureUsersTable();
+          console.log("Table check result:", tableCheckSuccess);
 
           if (!tableCheckSuccess) {
             console.log("Table check failed, creating basic profile");
