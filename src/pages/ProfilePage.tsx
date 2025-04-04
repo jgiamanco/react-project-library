@@ -35,6 +35,7 @@ const ProfilePage = () => {
 
   // Load user profile from database
   useEffect(() => {
+    let isMounted = true;
     const loadUserProfile = async () => {
       if (!authUser?.email) {
         if (!authLoading) {
@@ -49,6 +50,8 @@ const ProfilePage = () => {
         setIsLoading(true);
         console.log("Loading profile for user:", authUser.email);
         const dbProfile = await getUserProfile(authUser.email);
+
+        if (!isMounted) return;
 
         if (dbProfile) {
           console.log("Profile loaded from database:", dbProfile);
@@ -81,13 +84,15 @@ const ProfilePage = () => {
             pushNotifications: false,
           };
 
-          setProfile(defaultProfile);
-          await updateUserProfile(authUser.email, defaultProfile);
-          console.log("Default profile created in database");
+          if (isMounted) {
+            setProfile(defaultProfile);
+            await updateUserProfile(authUser.email, defaultProfile);
+            console.log("Default profile created in database");
+          }
         }
       } catch (error) {
         console.error("Error loading profile:", error);
-        if (authUser) {
+        if (isMounted && authUser) {
           console.log("Falling back to user data with defaults");
           setProfile({
             ...authUser,
@@ -106,12 +111,18 @@ const ProfilePage = () => {
             "Using local profile data. Changes may not be saved to the server.",
         });
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadUserProfile();
-  }, [authUser, authLoading, navigate]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authUser?.email, authLoading, navigate]); // Only depend on email and loading state
 
   // Handle profile updates
   const handleProfileUpdate = async (updates: Partial<User>): Promise<User> => {
