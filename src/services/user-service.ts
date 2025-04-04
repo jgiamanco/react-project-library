@@ -5,6 +5,7 @@ import {
   dbToAppProfile,
   isDbProfile,
 } from "./types";
+import { PostgrestError } from "@supabase/supabase-js";
 
 let tableChecked = false;
 
@@ -20,23 +21,33 @@ export async function ensureUsersTable(): Promise<void> {
 
   console.log("Starting ensureUsersTable...");
   try {
-    // Try a simple query to check table access
-    const { data, error } = await supabase
-      .from("users")
-      .select("email")
-      .limit(1);
+    // Add a timeout to prevent hanging
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("Table check timed out"));
+      }, 5000); // 5 second timeout
+    });
 
-    if (error) {
-      console.error("Error checking users table:", error);
-      if (error.code === "42P01") {
+    // Try a simple query to check table access
+    const tableCheckPromise = supabase.from("users").select("email").limit(1);
+
+    // Race between the timeout and the table check
+    const result = (await Promise.race([
+      tableCheckPromise,
+      timeoutPromise,
+    ])) as { data: { email: string }[] | null; error: PostgrestError | null };
+
+    if (result.error) {
+      console.error("Error checking users table:", result.error);
+      if (result.error.code === "42P01") {
         console.error("Users table does not exist");
         throw new Error("Users table does not exist");
-      } else if (error.code === "42501") {
+      } else if (result.error.code === "42501") {
         console.error("Permission denied accessing users table");
         throw new Error("Permission denied accessing users table");
       } else {
-        console.error("Unexpected error accessing users table:", error);
-        throw error;
+        console.error("Unexpected error accessing users table:", result.error);
+        throw result.error;
       }
     }
 
@@ -46,6 +57,12 @@ export async function ensureUsersTable(): Promise<void> {
     console.error("Error in ensureUsersTable:", error);
     // Reset tableChecked on error so we can try again
     tableChecked = false;
+    // If it's a timeout error, we'll assume the table exists to allow the auth flow to continue
+    if (error instanceof Error && error.message === "Table check timed out") {
+      console.log("Table check timed out, assuming table exists");
+      tableChecked = true;
+      return;
+    }
     throw error;
   }
 }
