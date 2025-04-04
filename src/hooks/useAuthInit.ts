@@ -16,12 +16,11 @@ export const useAuthInit = () => {
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
-  const authInitialized = useRef(false);
+  const isInitializing = useRef(true);
   const authTokenService = AuthTokenService.getInstance();
 
   useEffect(() => {
     console.log("useAuthInit: Initializing auth...");
-    const isInitializing = true;
 
     const initializeAuth = async () => {
       try {
@@ -58,6 +57,8 @@ export const useAuthInit = () => {
               setError(
                 err instanceof Error ? err.message : "An error occurred"
               );
+              // Clear invalid stored session
+              await authTokenService.clearSession();
             } finally {
               setLoading(false);
             }
@@ -75,8 +76,7 @@ export const useAuthInit = () => {
         setIsAuthenticated(false);
         setLoading(false);
       } finally {
-        authInitialized.current = true;
-        setLoading(false);
+        isInitializing.current = false;
       }
     };
 
@@ -94,11 +94,15 @@ export const useAuthInit = () => {
           try {
             if (session) {
               await authTokenService.storeSession(session);
+              await updateAuthState(session);
             }
-            await updateAuthState(session);
           } catch (err) {
             console.error("Error in auth state change handler:", err);
             setError(err instanceof Error ? err.message : "An error occurred");
+            // Clear invalid session
+            await authTokenService.clearSession();
+            setUser(null);
+            setIsAuthenticated(false);
           } finally {
             setLoading(false);
           }
@@ -113,7 +117,7 @@ export const useAuthInit = () => {
 
     // Listen for storage events to sync across tabs
     const handleStorageChange = async (e: StorageEvent) => {
-      if (e.key === "auth_token" && e.newValue && !isInitializing) {
+      if (e.key === "auth_token" && e.newValue && !isInitializing.current) {
         console.log("Auth token changed in another tab, refreshing session");
         setLoading(true);
         try {
@@ -123,6 +127,9 @@ export const useAuthInit = () => {
           }
         } catch (err) {
           console.error("Error handling storage change:", err);
+          await authTokenService.clearSession();
+          setUser(null);
+          setIsAuthenticated(false);
         } finally {
           setLoading(false);
         }
