@@ -14,79 +14,24 @@ export function resetTableCheck() {
 
 export async function ensureUsersTable(): Promise<void> {
   if (tableChecked) {
+    console.log("Table already checked, skipping...");
     return;
   }
 
   console.log("Starting ensureUsersTable...");
   try {
+    // Just check if the table exists, don't try to create it
     const { error: checkError } = await supabase
       .from("users")
       .select("email")
       .limit(1);
 
     if (checkError) {
-      console.log("Table check error:", checkError);
-      if (checkError.code === "42P01") {
-        console.log("Users table does not exist, creating...");
-        const { error: createError } = await supabase.rpc("exec_sql", {
-          sql: `
-            CREATE TABLE IF NOT EXISTS public.users (
-              id UUID PRIMARY KEY REFERENCES auth.users(id),
-              email TEXT UNIQUE NOT NULL,
-              display_name TEXT NOT NULL,
-              photo_url TEXT,
-              bio TEXT,
-              location TEXT,
-              website TEXT,
-              github TEXT,
-              twitter TEXT,
-              role TEXT NOT NULL DEFAULT 'user',
-              theme TEXT NOT NULL DEFAULT 'system',
-              email_notifications BOOLEAN NOT NULL DEFAULT true,
-              push_notifications BOOLEAN NOT NULL DEFAULT false,
-              created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-              updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
-            );
-
-            ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-
-            CREATE POLICY "Users can view their own profile" ON users
-              FOR SELECT USING (
-                auth.uid() = id OR 
-                auth.jwt() ->> 'email' = email
-              );
-
-            CREATE POLICY "Users can update their own profile" ON users
-              FOR UPDATE USING (
-                auth.uid() = id OR 
-                auth.jwt() ->> 'email' = email
-              );
-
-            CREATE POLICY "Users can insert their own profile" ON users
-              FOR INSERT WITH CHECK (
-                auth.uid() = id OR 
-                auth.jwt() ->> 'email' = email
-              );
-
-            GRANT ALL ON public.users TO authenticated;
-            GRANT ALL ON public.users TO service_role;
-          `,
-        });
-
-        if (createError) {
-          console.error("Error creating users table:", createError);
-          throw createError;
-        }
-
-        console.log("Users table created successfully");
-      } else {
-        console.error("Unexpected error checking table:", checkError);
-        throw checkError;
-      }
-    } else {
-      console.log("Users table exists");
+      console.error("Error checking users table:", checkError);
+      throw checkError;
     }
 
+    console.log("Users table exists and is accessible");
     tableChecked = true;
   } catch (error) {
     console.error("Error in ensureUsersTable:", error);

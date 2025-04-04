@@ -60,6 +60,9 @@ export const useAuthInit = () => {
           setLoading(true);
           try {
             await updateAuthState(session);
+          } catch (err) {
+            console.error("Error in auth state change handler:", err);
+            setError(err instanceof Error ? err.message : "An error occurred");
           } finally {
             setLoading(false);
           }
@@ -101,6 +104,10 @@ export const useAuthInit = () => {
 
         try {
           // Get user profile from database
+          console.log(
+            "Attempting to get user profile for:",
+            session.user.email
+          );
           const userProfile = await getUser(session.user.email || "");
           console.log(
             "User profile fetch result:",
@@ -136,6 +143,7 @@ export const useAuthInit = () => {
 
             // Store the basic profile in the database
             try {
+              console.log("Attempting to store basic profile");
               await updateUserProfile(session.user.email || "", basicProfile);
               console.log("Basic profile created and stored");
               setUser(basicProfile);
