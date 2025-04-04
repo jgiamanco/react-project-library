@@ -20,6 +20,7 @@ export const useAuthInit = () => {
 
   useEffect(() => {
     console.log("useAuthInit: Initializing auth...");
+    let isInitializing = true;
 
     const initializeAuth = async () => {
       try {
@@ -58,6 +59,8 @@ export const useAuthInit = () => {
         setUser(null);
         setIsAuthenticated(false);
         setLoading(false);
+      } finally {
+        isInitializing = false;
       }
     };
 
@@ -93,10 +96,20 @@ export const useAuthInit = () => {
     });
 
     // Listen for storage events to sync across tabs
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "auth_token" && e.newValue) {
+    const handleStorageChange = async (e: StorageEvent) => {
+      if (e.key === "auth_token" && e.newValue && !isInitializing) {
         console.log("Auth token changed in another tab, refreshing session");
-        initializeAuth();
+        setLoading(true);
+        try {
+          const storedSession = await authTokenService.getStoredSession();
+          if (storedSession) {
+            await updateAuthState(storedSession);
+          }
+        } catch (err) {
+          console.error("Error handling storage change:", err);
+        } finally {
+          setLoading(false);
+        }
       }
     };
 

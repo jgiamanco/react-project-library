@@ -8,6 +8,9 @@ import {
 import { PostgrestError } from "@supabase/supabase-js";
 
 let tableChecked = false;
+let tableCheckInProgress = false;
+let tableCheckPromise: Promise<{ success: boolean; error?: Error }> | null =
+  null;
 
 export function resetTableCheck() {
   tableChecked = false;
@@ -17,67 +20,74 @@ export async function ensureUsersTable(): Promise<{
   success: boolean;
   error?: Error;
 }> {
+  console.log("Starting ensureUsersTable...");
+
+  // If table is already checked, return success
   if (tableChecked) {
     console.log("Table already checked, skipping...");
     return { success: true };
   }
 
-  console.log("Starting ensureUsersTable...");
-  try {
-    // Add a timeout to prevent hanging
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error("Table check timed out"));
-      }, 5000); // 5 second timeout
-    });
-
-    // Try a simple query to check table access
-    const tableCheckPromise = supabase.from("users").select("email").limit(1);
-
-    // Race between the timeout and the table check
-    const result = (await Promise.race([
-      tableCheckPromise,
-      timeoutPromise,
-    ])) as { data: { email: string }[] | null; error: PostgrestError | null };
-
-    if (result.error) {
-      console.error("Error checking users table:", result.error);
-      if (result.error.code === "42P01") {
-        console.error("Users table does not exist");
-        return {
-          success: false,
-          error: new Error("Users table does not exist"),
-        };
-      } else if (result.error.code === "42501") {
-        console.error("Permission denied accessing users table");
-        return {
-          success: false,
-          error: new Error("Permission denied accessing users table"),
-        };
-      } else {
-        console.error("Unexpected error accessing users table:", result.error);
-        return { success: false, error: result.error };
-      }
-    }
-
-    console.log("Users table exists and is accessible");
-    tableChecked = true;
-    return { success: true };
-  } catch (error) {
-    console.error("Error in ensureUsersTable:", error);
-    // Reset tableChecked on error so we can try again
-    tableChecked = false;
-    // If it's a timeout error, we'll assume the table exists to allow the auth flow to continue
-    if (error instanceof Error && error.message === "Table check timed out") {
-      console.log("Table check timed out, assuming table exists");
-      tableChecked = true;
-      return { success: true };
-    }
-    return {
-      success: false,
-      error: error instanceof Error ? error : new Error("Unknown error"),
-    };
+  // If a check is in progress, wait for it to complete
+  if (tableCheckInProgress && tableCheckPromise) {
+    console.log("Table check in progress, waiting for result...");
+    return tableCheckPromise;
   }
+
+  // Set up the check
+  tableCheckInProgress = true;
+  tableCheckPromise = new Promise<{ success: boolean; error?: Error }>(
+    (resolve) => {
+      const timeout = setTimeout(() => {
+        console.log("Table check timed out, assuming table exists");
+        tableChecked = true;
+        tableCheckInProgress = false;
+        tableCheckPromise = null;
+        resolve({ success: true });
+      }, 5000);
+
+      // Check if users table exists
+      supabase
+        .from("users")
+        .select("count")
+        .limit(1)
+        .then(({ error }) => {
+          clearTimeout(timeout);
+          if (error) {
+            console.error("Error in ensureUsersTable:", error);
+            if (error.code === "42P01") {
+              // Table does not exist
+              console.log("Users table does not exist");
+              resolve({ success: false, error });
+            } else if (error.code === "42501") {
+              // Permission denied
+              console.log("Permission denied to users table");
+              resolve({ success: false, error });
+            } else {
+              // Other error, assume table exists
+              console.log("Other error, assuming table exists");
+              tableChecked = true;
+              resolve({ success: true });
+            }
+          } else {
+            console.log("Users table exists");
+            tableChecked = true;
+            resolve({ success: true });
+          }
+          tableCheckInProgress = false;
+          tableCheckPromise = null;
+        })
+        .catch((error) => {
+          clearTimeout(timeout);
+          console.error("Error in ensureUsersTable:", error);
+          tableCheckInProgress = false;
+          tableCheckPromise = null;
+          resolve({ success: false, error });
+        });
+    }
+  );
+
+  return tableCheckPromise;
 }
 
 export async function storeUser(profile: UserProfile): Promise<void> {
