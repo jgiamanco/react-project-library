@@ -40,6 +40,11 @@ export async function createUserProfile(email: string, profile: UserProfile): Pr
       profile = { ...profile, id: email };
     }
     
+    // Ensure displayName is set
+    if (!profile.displayName) {
+      profile = { ...profile, displayName: email.split('@')[0] || 'User' };
+    }
+    
     const dbProfile = appToDbProfile(profile);
     
     const { data, error } = await supabase
@@ -76,6 +81,11 @@ export async function updateExistingProfile(
     // Ensure profile has an ID
     if (!profile.id) {
       profile = { ...profile, id: email };
+    }
+    
+    // Ensure displayName is set
+    if (!profile.displayName) {
+      profile = { ...profile, displayName: email.split('@')[0] || 'User' };
     }
     
     const dbProfile = appToDbProfile(profile);

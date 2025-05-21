@@ -6,7 +6,7 @@ import { UserProfile } from "./types";
 export const getUserProfile = fetchUserProfile;
 
 // Update or create a user profile
-export async function updateUserProfile(email: string, profile: UserProfile): Promise<UserProfile | null> {
+export async function updateUserProfile(email: string, profile: Partial<UserProfile>): Promise<UserProfile | null> {
   console.log("Starting updateUserProfile for email:", email);
   
   try {
@@ -26,11 +26,23 @@ export async function updateUserProfile(email: string, profile: UserProfile): Pr
     } else {
       // Create new profile if not found
       console.log("No profile found, creating new profile");
-      // Ensure profile has an ID
-      if (!profile.id) {
-        profile = { ...profile, id: email };
-      }
-      return await createUserProfile(email, profile);
+      // Create a complete profile with required fields
+      const newProfile: UserProfile = {
+        id: profile.id || email,
+        email: email,
+        displayName: profile.displayName || email.split('@')[0] || 'User',
+        photoURL: profile.photoURL,
+        bio: profile.bio || "Tell us about yourself...",
+        location: profile.location,
+        website: profile.website,
+        github: profile.github,
+        twitter: profile.twitter,
+        role: profile.role || "Developer",
+        theme: profile.theme || "system",
+        emailNotifications: profile.emailNotifications !== undefined ? profile.emailNotifications : true,
+        pushNotifications: profile.pushNotifications !== undefined ? profile.pushNotifications : false
+      };
+      return await createUserProfile(email, newProfile);
     }
   } catch (error) {
     console.error("Error in updateUserProfile:", error);

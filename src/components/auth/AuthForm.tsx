@@ -136,8 +136,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
         setIsSubmitting(true);
 
         try {
-          // Create complete profile object with all fields
-          const userProfile: Partial<User> = {
+          // Create user profile object with required fields
+          const userProfile = {
             displayName: fullName,
             location: location || undefined,
             photoURL: avatarUrl,
@@ -155,7 +155,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
           await signup(email, password, userProfile);
 
-          // Ensure profile is created in database
+          // Now updateUserProfile accepts Partial<UserProfile>
           await updateUserProfile(email, userProfile);
 
           // Set needs verification flag to show the verification screen

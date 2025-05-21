@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-hooks";
@@ -87,13 +86,11 @@ const ProfilePage = () => {
 
           if (isMounted) {
             setProfile(defaultProfile);
-            // Make sure we have the required fields for UserProfile
-            const userProfileData = {
+            // Since updateUserProfile now accepts Partial<UserProfile>, we can just pass the data
+            await updateUserProfile(authUser.email, {
               ...defaultProfile,
               id: authUser.email,
-              email: authUser.email
-            };
-            await updateUserProfile(authUser.email, userProfileData);
+            });
             console.log("Default profile created in database");
           }
         }
@@ -146,13 +143,11 @@ const ProfilePage = () => {
 
       if (hasChanges) {
         console.log("Updating profile in database:", updates);
-        // Ensure we have the required fields for UserProfile
-        const userProfileData = {
+        // Now that updateUserProfile accepts Partial<UserProfile>, we can pass the updates directly
+        const updatedProfile = await updateUserProfile(authUser.email, {
           ...updates,
           id: profile.id || authUser.email,
-          email: authUser.email
-        };
-        const updatedProfile = await updateUserProfile(authUser.email, userProfileData);
+        });
         console.log("Updating profile in auth context");
         const updatedUser = await updateUser(updates);
 
