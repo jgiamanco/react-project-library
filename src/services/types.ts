@@ -1,7 +1,9 @@
+
 import { PostgrestError } from "@supabase/supabase-js";
 
 // Database profile structure - this should match exactly what's in Supabase
 export interface DbUserProfile {
+  id?: string; // Added ID field to match the database schema
   email: string;
   display_name: string;
   photo_url?: string | null;
@@ -20,6 +22,7 @@ export interface DbUserProfile {
 
 // App profile structure - this is what the app uses
 export interface UserProfile {
+  id?: string; // Added ID field
   email: string;
   displayName: string;
   photoURL?: string;
@@ -47,6 +50,7 @@ export function isDbProfile(profile: any): profile is DbUserProfile {
 // Convert app profile to database profile
 export function appToDbProfile(profile: UserProfile): DbUserProfile {
   return {
+    id: profile.id || profile.email, // Use email as ID if no ID is provided
     email: profile.email,
     display_name: profile.displayName || '',
     photo_url: profile.photoURL || null,
@@ -65,6 +69,7 @@ export function appToDbProfile(profile: UserProfile): DbUserProfile {
 // Convert database profile to app profile
 export function dbToAppProfile(profile: DbUserProfile): UserProfile {
   return {
+    id: profile.id,
     email: profile.email,
     displayName: profile.display_name,
     photoURL: profile.photo_url || undefined,

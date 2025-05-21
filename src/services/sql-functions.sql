@@ -1,3 +1,4 @@
+
 -- Function to get all tables in a schema
 CREATE OR REPLACE FUNCTION get_tables(schema_name text)
 RETURNS TABLE (
@@ -120,4 +121,4 @@ USING (
 -- Grant necessary permissions
 GRANT ALL ON public.users TO authenticated;
 GRANT ALL ON public.users TO service_role;
-GRANT SELECT ON public.users TO anon; 
+GRANT SELECT ON public.users TO anon;

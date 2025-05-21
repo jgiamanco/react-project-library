@@ -1,4 +1,3 @@
-
 import { supabase, getSupabaseClient } from "./supabase-client";
 import {
   UserProfile,
@@ -112,6 +111,11 @@ export async function storeUser(profile: UserProfile): Promise<void> {
   console.log("Starting storeUser with profile:", profile);
   try {
     await ensureUsersTable();
+
+    // Ensure profile has an ID (use email if not provided)
+    if (!profile.id) {
+      profile.id = profile.email;
+    }
 
     const dbProfile = appToDbProfile(profile);
     console.log("Converted to DB profile:", dbProfile);
@@ -231,6 +235,7 @@ export const updateUserProfile = async (
       
       // Create a basic profile with required fields
       const newProfile: UserProfile = {
+        id: email, // Use email as ID
         email,
         displayName: profile.displayName || email.split("@")[0],
         photoURL: profile.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
@@ -272,7 +277,8 @@ export const updateUserProfile = async (
     // Merge existing profile with updates
     const updatedProfile: UserProfile = {
       ...dbToAppProfile(currentProfile),
-      ...profile
+      ...profile,
+      id: currentProfile.id || email, // Ensure ID is preserved or defaulted to email
     };
 
     // Convert to database format and update
@@ -304,6 +310,7 @@ export const updateUserProfile = async (
     console.error("Error in updateUserProfile:", error);
     // Create a minimal profile to avoid breaking the auth flow
     const fallbackProfile: UserProfile = {
+      id: email, // Use email as ID
       email,
       displayName: profile.displayName || email.split("@")[0],
       photoURL: profile.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,

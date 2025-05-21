@@ -1,3 +1,4 @@
+
 -- Drop existing tables and functions if they exist
 DROP TABLE IF EXISTS public.user_profiles CASCADE;
 DROP TABLE IF EXISTS public.users CASCADE;
@@ -16,7 +17,8 @@ $$;
 
 -- Create users table
 CREATE TABLE public.users (
-    email VARCHAR PRIMARY KEY,
+    id VARCHAR PRIMARY KEY,
+    email VARCHAR NOT NULL UNIQUE,
     display_name VARCHAR NOT NULL,
     photo_url VARCHAR,
     bio TEXT,
@@ -51,9 +53,10 @@ CREATE POLICY "Users can insert their own data"
     FOR INSERT
     WITH CHECK (auth.jwt()->>'email' = email);
 
--- Create user_profiles table
+-- Create user_profiles table (if still needed)
 CREATE TABLE public.user_profiles (
-    email VARCHAR PRIMARY KEY REFERENCES public.users(email) ON DELETE CASCADE,
+    id VARCHAR PRIMARY KEY,
+    email VARCHAR NOT NULL UNIQUE REFERENCES public.users(email) ON DELETE CASCADE,
     display_name VARCHAR NOT NULL,
     photo_url VARCHAR,
     bio TEXT,
@@ -98,16 +101,18 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Insert into users table
-    INSERT INTO public.users (email, display_name, photo_url)
+    INSERT INTO public.users (id, email, display_name, photo_url)
     VALUES (
+        NEW.email,
         NEW.email,
         COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)),
         NEW.raw_user_meta_data->>'photo_url'
     );
 
     -- Insert into user_profiles table
-    INSERT INTO public.user_profiles (email, display_name, photo_url)
+    INSERT INTO public.user_profiles (id, email, display_name, photo_url)
     VALUES (
+        NEW.email,
         NEW.email,
         COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)),
         NEW.raw_user_meta_data->>'photo_url'
@@ -121,4 +126,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user(); 
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
