@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/services/supabase-client";
 import { UserProfile } from "@/services/types";
-import { updateUserProfile } from "@/services/user-service";
+import { fetchUserProfile, createUserProfile } from "@/services/user-service";
 import { AuthTokenService } from "@/services/auth-token-service";
 import { toast } from "sonner";
 
@@ -14,11 +14,15 @@ export const useAuthInit = () => {
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
   const authTokenService = AuthTokenService.getInstance();
+  const initAttempted = useRef(false);
 
   useEffect(() => {
     console.log("useAuthInit: Initializing auth...");
     
     const initializeAuth = async () => {
+      if (initAttempted.current) return;
+      initAttempted.current = true;
+
       try {
         // Check for existing session
         const { data: { session } } = await supabase.auth.getSession();
@@ -120,13 +124,28 @@ export const useAuthInit = () => {
       const email = session.user.email;
       console.log("Updating auth state for user:", email);
       
+      // Try to fetch user profile first
+      try {
+        const existingProfile = await fetchUserProfile(email);
+        
+        if (existingProfile) {
+          console.log("Found existing profile in database");
+          setUser(existingProfile);
+          setIsAuthenticated(true);
+          return;
+        }
+      } catch (fetchError) {
+        console.log("Could not find existing profile:", fetchError);
+      }
+      
       // Create a minimal profile from session data
       const minimalProfile: UserProfile = {
+        id: email, // Use email as ID to ensure we have a value
         email: email,
         displayName: session.user.user_metadata?.display_name || 
-                   email.split("@")[0],
+                  email.split("@")[0],
         photoURL: session.user.user_metadata?.photo_url || 
-                 `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
         location: session.user.user_metadata?.location || "",
         bio: "",
         website: "",
@@ -139,11 +158,11 @@ export const useAuthInit = () => {
       };
 
       try {
-        // Update the profile in database (create if doesn't exist)
-        const userProfile = await updateUserProfile(email, minimalProfile);
+        // Create the profile in database
+        const userProfile = await createUserProfile(email, minimalProfile);
         
         if (userProfile) {
-          console.log("Using profile from database");
+          console.log("Created and using new profile");
           setUser(userProfile);
         } else {
           console.log("Using minimal profile");
@@ -152,7 +171,7 @@ export const useAuthInit = () => {
         
         setIsAuthenticated(true);
       } catch (profileError) {
-        console.error("Error updating user profile:", profileError);
+        console.error("Error creating user profile:", profileError);
         // Still set user as authenticated with minimal profile
         setUser(minimalProfile);
         setIsAuthenticated(true);

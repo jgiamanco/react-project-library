@@ -6,6 +6,7 @@ import { supabase } from "./supabase-client";
 const TOKEN_KEY = "auth_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
 const EXPIRY_KEY = "token_expiry";
+const AUTH_STATUS_KEY = "authenticated";
 
 export class AuthTokenService {
   private static instance: AuthTokenService;
@@ -21,7 +22,10 @@ export class AuthTokenService {
   }
 
   async storeSession(session: Session): Promise<void> {
-    if (!session?.access_token) return;
+    if (!session?.access_token) {
+      console.log("No valid session to store");
+      return;
+    }
 
     // Store tokens
     localStorage.setItem(TOKEN_KEY, session.access_token);
@@ -35,7 +39,7 @@ export class AuthTokenService {
     this.scheduleTokenRefresh(session);
     
     // Store authentication status
-    localStorage.setItem("authenticated", "true");
+    localStorage.setItem(AUTH_STATUS_KEY, "true");
     
     console.log("Session stored successfully, token refresh scheduled");
   }
@@ -44,9 +48,10 @@ export class AuthTokenService {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(EXPIRY_KEY);
-    localStorage.removeItem("authenticated");
+    localStorage.removeItem(AUTH_STATUS_KEY);
     localStorage.removeItem("user_email");
     localStorage.removeItem("user");
+    localStorage.removeItem("lastLoggedInEmail");
 
     if (this.tokenRefreshTimeout) {
       clearTimeout(this.tokenRefreshTimeout);
@@ -110,12 +115,19 @@ export class AuthTokenService {
         return null;
       }
 
+      // Re-store the session to update expiry
+      await this.storeSession(data.session);
       return data.session;
     } catch (error) {
       console.error("Error setting session:", error);
       await this.clearSession();
       return null;
     }
+  }
+
+  isAuthenticated(): boolean {
+    return localStorage.getItem(AUTH_STATUS_KEY) === "true" && 
+           localStorage.getItem(TOKEN_KEY) !== null;
   }
 
   private scheduleTokenRefresh(session: Session): void {

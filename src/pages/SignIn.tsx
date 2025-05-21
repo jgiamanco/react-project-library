@@ -1,19 +1,35 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import AuthForm from "@/components/auth/AuthForm";
 import { toast } from "sonner";
 import { supabase } from "@/services/supabase-client";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { AuthTokenService } from "@/services/auth-token-service";
 
 const SignIn = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const authTokenService = AuthTokenService.getInstance();
   
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Check for an active session directly with Supabase
+        // Check if there's a valid stored token first
+        if (authTokenService.isAuthenticated()) {
+          console.log("Found authentication token, attempting to restore session...");
+          const session = await authTokenService.getStoredSession();
+          
+          if (session) {
+            console.log("Successfully restored session, redirecting to dashboard");
+            navigate("/dashboard");
+            return;
+          }
+        }
+        
+        // If no valid stored token, check for an active session with Supabase
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -48,12 +64,21 @@ const SignIn = () => {
         description: errorDescription || error
       });
     }
-  }, [navigate]);
+
+    // Check if we have a from location in state
+    const from = location.state?.from || "/dashboard";
+    if (from) {
+      console.log("User will be redirected to:", from);
+    }
+  }, [navigate, location]);
 
   if (isCheckingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-muted-foreground">Checking authentication status...</p>
+        </div>
       </div>
     );
   }

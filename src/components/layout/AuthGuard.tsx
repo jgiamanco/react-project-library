@@ -4,6 +4,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-hooks";
 import { supabase } from "@/services/supabase-client";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { AuthTokenService } from "@/services/auth-token-service";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -18,6 +20,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   const authCheckTimeout = useRef<NodeJS.Timeout>();
   const checksCompleted = useRef(false);
   const isMounted = useRef(true);
+  const authTokenService = AuthTokenService.getInstance();
 
   // Define a single, reusable function for redirecting on auth failure
   const redirectToSignIn = useCallback(
@@ -31,9 +34,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
       }
 
       // Clear local storage to prevent auth loops
-      localStorage.removeItem("authenticated");
-      localStorage.removeItem("user");
-      localStorage.removeItem("lastLoggedInEmail");
+      authTokenService.clearSession();
 
       // Show error message
       toast.error(message);
@@ -126,7 +127,10 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   if (isChecking) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="text-center space-y-4">
+          <LoadingSpinner size="lg" color="primary" />
+          <p className="text-muted-foreground">Verifying authentication...</p>
+        </div>
       </div>
     );
   }
