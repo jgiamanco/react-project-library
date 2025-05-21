@@ -1,3 +1,4 @@
+
 import { supabase, getSupabaseClient } from "./supabase-client";
 import {
   UserProfile,
@@ -208,7 +209,7 @@ export const getUserProfile = async (
 export const updateUserProfile = async (
   email: string,
   profile: Partial<UserProfile>
-): Promise<UserProfile> {
+): Promise<UserProfile> => {
   console.log("Starting updateUserProfile for email:", email);
   try {
     // Get current user profile
@@ -310,4 +311,4 @@ export const updateUserProfile = async (
     };
     return fallbackProfile;
   }
-}
+};
