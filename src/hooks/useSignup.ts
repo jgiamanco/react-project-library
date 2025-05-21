@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase, supabaseAdmin } from "@/services/supabase-client";
 import { UserProfile } from "@/services/types";
 import { toast as sonnerToast } from "sonner";
-import { storeUser } from "@/services/user-service";
+import { updateUserProfile } from "@/services/user-service";
 
 export const useSignUp = () => {
   const [loading, setLoading] = useState(false);
@@ -62,7 +62,9 @@ export const useSignUp = () => {
       // Store user profile in database
       try {
         console.log("Storing user profile in database...");
-        await storeUser({
+        
+        // The updateUserProfile function is more robust than storeUser
+        await updateUserProfile(email, {
           email: email,
           displayName: profile.displayName,
           photoURL: profile.photoURL,
@@ -76,6 +78,7 @@ export const useSignUp = () => {
           emailNotifications: profile.emailNotifications || true,
           pushNotifications: profile.pushNotifications || false,
         });
+        
         console.log("User profile stored successfully");
       } catch (dbError) {
         console.error("Error storing user profile:", dbError);

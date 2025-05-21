@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/services/supabase-client";
 import { UserProfile } from "@/services/types";
-import { getUser, updateUserProfile } from "@/services/user-service";
+import { updateUserProfile } from "@/services/user-service";
 import { AuthTokenService } from "@/services/auth-token-service";
 import { toast } from "sonner";
 
@@ -109,88 +109,53 @@ export const useAuthInit = () => {
   }, []);
 
   const updateAuthState = async (session: Session | null) => {
+    if (!session?.user?.email) {
+      console.log("No valid user in session");
+      setUser(null);
+      setIsAuthenticated(false);
+      return;
+    }
+
     try {
-      if (session?.user) {
-        console.log("Updating auth state for user:", session.user.email);
+      const email = session.user.email;
+      console.log("Updating auth state for user:", email);
+      
+      // Create a minimal profile from session data
+      const minimalProfile: UserProfile = {
+        email: email,
+        displayName: session.user.user_metadata?.display_name || 
+                   email.split("@")[0],
+        photoURL: session.user.user_metadata?.photo_url || 
+                 `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+        location: session.user.user_metadata?.location || "",
+        bio: "",
+        website: "",
+        github: "",
+        twitter: "",
+        role: "User",
+        theme: "system",
+        emailNotifications: true,
+        pushNotifications: false,
+      };
+
+      try {
+        // Update the profile in database (create if doesn't exist)
+        const userProfile = await updateUserProfile(email, minimalProfile);
         
-        if (!session.user.email) {
-          console.error("Session user has no email");
-          setUser(null);
-          setIsAuthenticated(false);
-          return;
-        }
-
-        try {
-          // Get user profile from database
-          console.log("Fetching user profile from database...");
-          const userProfile = await getUser(session.user.email);
-          
-          if (userProfile) {
-            console.log("User profile found in database");
-            setUser(userProfile);
-            setIsAuthenticated(true);
-          } else {
-            console.log("No user profile found in database, creating one");
-            // Create basic profile from session data
-            const basicProfile: UserProfile = {
-              email: session.user.email,
-              displayName: session.user.user_metadata?.display_name || 
-                           session.user.email.split("@")[0] || 
-                           "User",
-              photoURL: session.user.user_metadata?.photo_url || 
-                       `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`,
-              location: session.user.user_metadata?.location || "",
-              bio: "",
-              website: "",
-              github: "",
-              twitter: "",
-              role: "User",
-              theme: "system",
-              emailNotifications: true,
-              pushNotifications: false,
-            };
-
-            try {
-              // Store the profile and use it
-              await updateUserProfile(session.user.email, basicProfile);
-              console.log("Basic profile created and stored");
-              setUser(basicProfile);
-              setIsAuthenticated(true);
-            } catch (storeError) {
-              console.error("Error storing user profile:", storeError);
-              // Still set user as authenticated with basic profile
-              setUser(basicProfile);
-              setIsAuthenticated(true);
-            }
-          }
-        } catch (profileError) {
-          console.error("Error getting user profile:", profileError);
-          // Create a minimal profile from session to avoid login failures
-          const minimalProfile: UserProfile = {
-            email: session.user.email,
-            displayName: session.user.user_metadata?.display_name || 
-                        session.user.email.split("@")[0] || 
-                        "User",
-            photoURL: session.user.user_metadata?.photo_url || 
-                     `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`,
-            location: "",
-            bio: "",
-            website: "",
-            github: "",
-            twitter: "",
-            role: "User",
-            theme: "system",
-            emailNotifications: true,
-            pushNotifications: false,
-          };
+        if (userProfile) {
+          console.log("Using profile from database");
+          setUser(userProfile);
+        } else {
+          console.log("Using minimal profile");
           setUser(minimalProfile);
-          setIsAuthenticated(true);
-          toast.error("Error loading complete profile data");
         }
-      } else {
-        console.log("No active session found");
-        setUser(null);
-        setIsAuthenticated(false);
+        
+        setIsAuthenticated(true);
+      } catch (profileError) {
+        console.error("Error updating user profile:", profileError);
+        // Still set user as authenticated with minimal profile
+        setUser(minimalProfile);
+        setIsAuthenticated(true);
       }
     } catch (err) {
       console.error("Error updating auth state:", err);

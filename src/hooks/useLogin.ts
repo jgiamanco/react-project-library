@@ -5,6 +5,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/services/supabase-client";
 import { toast as sonnerToast } from "sonner";
 import { AuthTokenService } from "@/services/auth-token-service";
+import { updateUserProfile } from "@/services/user-service";
+import { UserProfile } from "@/services/types";
 
 export const useLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -49,6 +51,31 @@ export const useLogin = () => {
       console.log("Storing session data...");
       // Store the session for later use
       await authTokenService.storeSession(data.session);
+
+      // Ensure user profile exists
+      try {
+        const userProfile: UserProfile = {
+          email: data.user.email || "",
+          displayName: data.user.user_metadata?.display_name || email.split("@")[0],
+          photoURL: data.user.user_metadata?.photo_url || 
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+          location: data.user.user_metadata?.location || "",
+          bio: "",
+          website: "",
+          github: "",
+          twitter: "",
+          role: "User",
+          theme: "system",
+          emailNotifications: true,
+          pushNotifications: false,
+        };
+        
+        // Update/create user profile without throwing errors
+        await updateUserProfile(email, userProfile);
+      } catch (profileError) {
+        console.error("Error ensuring user profile:", profileError);
+        // Continue with login anyway
+      }
 
       // Success
       sonnerToast.dismiss();
