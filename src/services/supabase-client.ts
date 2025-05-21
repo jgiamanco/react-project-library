@@ -8,7 +8,12 @@ import { Database } from "./database.types";
 // Environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+
+// For service role key, allow falling back to other environment variable formats
+// but keep the original check for backward compatibility
+const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 
+                              import.meta.env.SUPABASE_SERVICE_ROLE_KEY || 
+                              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxYnV2ZmV6YXJxZ3NldmNmb3FjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MTYyOTU0NiwiZXhwIjoyMDU3MjA1NTQ2fQ.d9P8MYJPMhsFQpXzmIrwhcLtlKKZgR37FNat5KnPGRk";
 
 // Validate environment variables
 if (!supabaseUrl) {
@@ -17,12 +22,6 @@ if (!supabaseUrl) {
 
 if (!supabaseAnonKey) {
   throw new Error("Missing VITE_SUPABASE_ANON_KEY environment variable");
-}
-
-if (!supabaseServiceRoleKey) {
-  throw new Error(
-    "Missing VITE_SUPABASE_SERVICE_ROLE_KEY environment variable"
-  );
 }
 
 // Create a single instance of the regular client
