@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-hooks";
@@ -15,7 +16,7 @@ import ProfileInformation from "@/components/profile/ProfileInformation";
 import { AccountSettings } from "@/components/profile/AccountSettings";
 import { NotificationSettings } from "@/components/profile/NotificationSettings";
 import { ProfileLoading } from "@/components/profile/ProfileLoading";
-import { getUserProfile, updateUserProfile } from "@/services/user-service";
+import { fetchUserProfile, updateUserProfile } from "@/services/user-service";
 import { toast } from "sonner";
 
 const ProfilePage = () => {
@@ -49,7 +50,7 @@ const ProfilePage = () => {
       try {
         setIsLoading(true);
         console.log("Loading profile for user:", authUser.email);
-        const dbProfile = await getUserProfile(authUser.email);
+        const dbProfile = await fetchUserProfile(authUser.email);
 
         if (!isMounted) return;
 
@@ -86,7 +87,13 @@ const ProfilePage = () => {
 
           if (isMounted) {
             setProfile(defaultProfile);
-            await updateUserProfile(authUser.email, defaultProfile);
+            // Make sure we have the required fields for UserProfile
+            const userProfileData = {
+              ...defaultProfile,
+              id: authUser.email,
+              email: authUser.email
+            };
+            await updateUserProfile(authUser.email, userProfileData);
             console.log("Default profile created in database");
           }
         }
@@ -139,7 +146,13 @@ const ProfilePage = () => {
 
       if (hasChanges) {
         console.log("Updating profile in database:", updates);
-        const updatedProfile = await updateUserProfile(authUser.email, updates);
+        // Ensure we have the required fields for UserProfile
+        const userProfileData = {
+          ...updates,
+          id: profile.id || authUser.email,
+          email: authUser.email
+        };
+        const updatedProfile = await updateUserProfile(authUser.email, userProfileData);
         console.log("Updating profile in auth context");
         const updatedUser = await updateUser(updates);
 
