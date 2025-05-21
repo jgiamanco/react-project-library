@@ -1,3 +1,4 @@
+
 import React, { createContext, useCallback, useState, useEffect } from "react";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { useAuthOperations } from "@/hooks/useAuthOperations";
@@ -81,8 +82,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       try {
         // Merge current user data with updates to ensure all required fields
-        const fullUpdates = { ...user, ...updates };
-        await performUpdateUser(fullUpdates);
+        const updatedProfile = { ...user, ...updates };
+        await performUpdateUser(updatedProfile);
         setUser((prev) => (prev ? { ...prev, ...updates } : null));
       } catch (error) {
         console.error("Update user error in context:", error);

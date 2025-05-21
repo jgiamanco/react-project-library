@@ -1,21 +1,10 @@
+
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase-client";
 
-// Encrypt/decrypt functions for token storage
-const encryptToken = (token: string): string => {
-  // In a production environment, use a proper encryption method
-  // This is a simple example - replace with proper encryption
-  return btoa(token);
-};
-
-const decryptToken = (encryptedToken: string): string => {
-  // In a production environment, use proper decryption
-  return atob(encryptedToken);
-};
-
 // Token storage keys
 const TOKEN_KEY = "auth_token";
-const EMAIL_KEY = "user_email";
+const REFRESH_TOKEN_KEY = "refresh_token";
 const EXPIRY_KEY = "token_expiry";
 
 export class AuthTokenService {
@@ -34,63 +23,96 @@ export class AuthTokenService {
   async storeSession(session: Session): Promise<void> {
     if (!session?.access_token) return;
 
-    // Store encrypted token
-    const encryptedToken = encryptToken(session.access_token);
-    localStorage.setItem(TOKEN_KEY, encryptedToken);
-    localStorage.setItem(EMAIL_KEY, session.user.email || "");
-
+    // Store tokens
+    localStorage.setItem(TOKEN_KEY, session.access_token);
+    localStorage.setItem(REFRESH_TOKEN_KEY, session.refresh_token || "");
+    
     // Store token expiry
     const expiry = new Date(session.expires_at! * 1000).toISOString();
     localStorage.setItem(EXPIRY_KEY, expiry);
 
     // Set up token refresh
     this.scheduleTokenRefresh(session);
+    
+    // Store authentication status
+    localStorage.setItem("authenticated", "true");
+    
+    console.log("Session stored successfully, token refresh scheduled");
   }
 
   async clearSession(): Promise<void> {
     localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(EMAIL_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(EXPIRY_KEY);
+    localStorage.removeItem("authenticated");
+    localStorage.removeItem("user_email");
+    localStorage.removeItem("user");
 
     if (this.tokenRefreshTimeout) {
       clearTimeout(this.tokenRefreshTimeout);
       this.tokenRefreshTimeout = null;
     }
+    
+    console.log("Session cleared successfully");
   }
 
   async getStoredSession(): Promise<Session | null> {
-    const encryptedToken = localStorage.getItem(TOKEN_KEY);
-    const email = localStorage.getItem(EMAIL_KEY);
+    const token = localStorage.getItem(TOKEN_KEY);
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
     const expiry = localStorage.getItem(EXPIRY_KEY);
 
-    if (!encryptedToken || !email || !expiry) return null;
-
-    // Check if token is expired
-    const expiryDate = new Date(expiry);
-    if (expiryDate < new Date()) {
-      await this.clearSession();
+    if (!token || !expiry) {
+      console.log("No stored session found");
       return null;
     }
 
+    // Check if token is expired
+    const expiryDate = new Date(expiry);
+    if (expiryDate <= new Date()) {
+      console.log("Stored token is expired, attempting refresh");
+      
+      if (refreshToken) {
+        try {
+          const { data, error } = await supabase.auth.refreshSession({
+            refresh_token: refreshToken,
+          });
+          
+          if (error || !data.session) {
+            console.error("Failed to refresh session:", error);
+            await this.clearSession();
+            return null;
+          }
+          
+          await this.storeSession(data.session);
+          return data.session;
+        } catch (error) {
+          console.error("Error refreshing token:", error);
+          await this.clearSession();
+          return null;
+        }
+      } else {
+        console.log("No refresh token available");
+        await this.clearSession();
+        return null;
+      }
+    }
+
     try {
-      const token = decryptToken(encryptedToken);
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.setSession({
+      // Try to restore the session
+      const { data, error } = await supabase.auth.setSession({
         access_token: token,
-        refresh_token: "",
+        refresh_token: refreshToken || "",
       });
 
-      if (error) {
+      if (error || !data.session) {
         console.error("Error restoring session:", error);
         await this.clearSession();
         return null;
       }
 
-      return session;
+      return data.session;
     } catch (error) {
-      console.error("Error decrypting token:", error);
+      console.error("Error setting session:", error);
       await this.clearSession();
       return null;
     }
@@ -107,21 +129,36 @@ export class AuthTokenService {
     const now = Date.now();
 
     if (refreshTime > now) {
+      const timeUntilRefresh = refreshTime - now;
+      console.log(`Scheduling token refresh in ${Math.round(timeUntilRefresh / 1000)} seconds`);
+      
       this.tokenRefreshTimeout = setTimeout(async () => {
         try {
-          const {
-            data: { session: newSession },
-            error,
-          } = await supabase.auth.refreshSession();
-          if (error) throw error;
-          if (newSession) {
-            await this.storeSession(newSession);
+          console.log("Refreshing auth token...");
+          const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+          
+          if (!refreshToken) {
+            console.error("No refresh token available for refresh");
+            return;
           }
+          
+          const { data, error } = await supabase.auth.refreshSession({
+            refresh_token: refreshToken,
+          });
+          
+          if (error || !data.session) {
+            console.error("Failed to refresh session:", error);
+            return;
+          }
+          
+          await this.storeSession(data.session);
+          console.log("Token refreshed successfully");
         } catch (error) {
           console.error("Error refreshing token:", error);
-          await this.clearSession();
         }
-      }, refreshTime - now);
+      }, timeUntilRefresh);
+    } else {
+      console.log("Token is already expired or close to expiry");
     }
   }
 }

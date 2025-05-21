@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase, supabaseAdmin } from "@/services/supabase-client";
 import { UserProfile } from "@/services/types";
 import { toast as sonnerToast } from "sonner";
+import { storeUser } from "@/services/user-service";
 
 export const useSignUp = () => {
   const [loading, setLoading] = useState(false);
@@ -20,36 +21,8 @@ export const useSignUp = () => {
       setLoading(true);
       sonnerToast.loading("Creating your account...");
 
-      // Check if user already exists
-      const { data: existingUser, error: checkError } = await supabaseAdmin
-        .from("users")
-        .select("email")
-        .eq("email", email)
-        .single();
-
-      if (checkError && checkError.code !== "PGRST116") {
-        // If error is not "not found", then it's a real error
-        console.error("Check user error:", checkError);
-        sonnerToast.dismiss();
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to check if user exists",
-        });
-        return null;
-      }
-
-      if (existingUser) {
-        sonnerToast.dismiss();
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "An account with this email already exists.",
-        });
-        return null;
-      }
-
       // Create the user in Supabase Auth
+      console.log("Creating auth user...");
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -57,6 +30,7 @@ export const useSignUp = () => {
           data: {
             display_name: profile.displayName,
             photo_url: profile.photoURL,
+            location: profile.location || "",
           },
         },
       });
@@ -83,43 +57,38 @@ export const useSignUp = () => {
         return null;
       }
 
-      // Store user profile in database using the admin client to bypass RLS
-      const { error: dbError } = await supabaseAdmin.from("users").upsert({
-        email: authData.user.email,
-        display_name: profile.displayName,
-        photo_url: profile.photoURL,
-        bio: profile.bio || "",
-        location: profile.location || "",
-        website: profile.website || "",
-        github: profile.github || "",
-        twitter: profile.twitter || "",
-        role: profile.role || "User",
-        theme: profile.theme || "system",
-        email_notifications: profile.emailNotifications || true,
-        push_notifications: profile.pushNotifications || false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+      console.log("Auth user created successfully");
 
-      if (dbError) {
-        console.error("Database error:", dbError);
-        sonnerToast.dismiss();
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to create user profile",
+      // Store user profile in database
+      try {
+        console.log("Storing user profile in database...");
+        await storeUser({
+          email: email,
+          displayName: profile.displayName,
+          photoURL: profile.photoURL,
+          bio: profile.bio || "",
+          location: profile.location || "",
+          website: profile.website || "",
+          github: profile.github || "",
+          twitter: profile.twitter || "",
+          role: profile.role || "User",
+          theme: profile.theme || "system",
+          emailNotifications: profile.emailNotifications || true,
+          pushNotifications: profile.pushNotifications || false,
         });
-        return null;
+        console.log("User profile stored successfully");
+      } catch (dbError) {
+        console.error("Error storing user profile:", dbError);
+        // Continue with signup even if profile storage fails temporarily
       }
 
       sonnerToast.dismiss();
       toast({
         title: "Success",
-        description: "Account created successfully!",
+        description: "Account created successfully! Please verify your email.",
       });
 
-      // Don't automatically navigate - let the client handle this
-      // based on email verification needs
+      // Return the user object
       return authData.user;
     } catch (error) {
       console.error("Sign up error:", error);

@@ -3,20 +3,39 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthForm from "@/components/auth/AuthForm";
 import { toast } from "sonner";
+import { supabase } from "@/services/supabase-client";
 
 const SignUp = () => {
   const navigate = useNavigate();
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   
-  // Try using a separate approach to check authentication to avoid circular dependencies
-  const storedAuth = localStorage.getItem("authenticated") === "true";
-  const storedUser = localStorage.getItem("user");
-
   useEffect(() => {
-    // Redirect if we have stored authentication data
-    if (storedAuth && storedUser) {
-      navigate("/dashboard");
-    }
+    const checkAuth = async () => {
+      try {
+        // Check for an active session directly with Supabase
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error checking auth session:", error);
+          setIsCheckingAuth(false);
+          return;
+        }
+        
+        if (data.session) {
+          console.log("User is already authenticated, redirecting...");
+          navigate("/dashboard");
+          return;
+        }
+        
+        setIsCheckingAuth(false);
+      } catch (error) {
+        console.error("Error checking authentication:", error);
+        setIsCheckingAuth(false);
+      }
+    };
+    
+    checkAuth();
     
     // Check URL for error parameters
     const params = new URLSearchParams(window.location.search);
@@ -29,7 +48,15 @@ const SignUp = () => {
         description: errorDescription || error
       });
     }
-  }, [storedAuth, storedUser, navigate]);
+  }, [navigate]);
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12 bg-gray-50">

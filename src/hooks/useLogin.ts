@@ -1,32 +1,28 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { User } from "@/contexts/auth-types";
 import { supabase } from "@/services/supabase-client";
 import { toast as sonnerToast } from "sonner";
-import { storeUser, getUser } from "@/services/user-service";
+import { AuthTokenService } from "@/services/auth-token-service";
 
 export const useLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const authTokenService = AuthTokenService.getInstance();
 
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
       sonnerToast.dismiss(); // Clear any existing toasts
-
-      // Show loading toast
       sonnerToast.loading("Signing in...");
 
-      // Step 1: Sign in with Supabase Auth
       console.log("Attempting Supabase auth sign-in...");
-      const { data, error: authError } = await supabase.auth.signInWithPassword(
-        {
-          email,
-          password,
-        }
-      );
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
       if (authError) {
         console.error("Auth error:", authError);
@@ -39,8 +35,8 @@ export const useLogin = () => {
         return null;
       }
 
-      if (!data.user) {
-        console.error("No user data returned");
+      if (!data.user || !data.session) {
+        console.error("No user or session data returned");
         sonnerToast.dismiss();
         toast({
           variant: "destructive",
@@ -50,23 +46,19 @@ export const useLogin = () => {
         return null;
       }
 
-      // Step 2: Store only essential auth data in localStorage
-      console.log("Storing user data in localStorage...");
-      localStorage.setItem("auth_token", data.session?.access_token || "");
-      localStorage.setItem("user_email", data.user.email || "");
+      console.log("Storing session data...");
+      // Store the session for later use
+      await authTokenService.storeSession(data.session);
 
-      // Step 3: Success - dismiss loading toast
+      // Success
       sonnerToast.dismiss();
       sonnerToast.success("Signed in successfully");
       navigate("/dashboard");
 
-      // Return the user data from the auth response
       return {
         email: data.user.email || "",
-        displayName:
-          data.user.user_metadata?.display_name || email.split("@")[0],
-        photoURL:
-          data.user.user_metadata?.photo_url ||
+        displayName: data.user.user_metadata?.display_name || email.split("@")[0],
+        photoURL: data.user.user_metadata?.photo_url || 
           `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
         location: data.user.user_metadata?.location || "",
         bio: "",
