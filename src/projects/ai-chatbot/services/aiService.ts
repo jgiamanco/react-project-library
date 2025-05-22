@@ -1,30 +1,57 @@
-// This is a mock AI service. In a real application, this would interact with an LLM API.
+import cohere from 'cohere-ai';
+import { Message } from '../types';
 
-interface MockAIResponse {
-  text: string;
-  delay: number; // milliseconds
+// Get API key from environment variables
+const COHERE_API_KEY = import.meta.env.VITE_COHERE_API_KEY;
+
+// Initialize Cohere client
+if (!COHERE_API_KEY) {
+  console.error("COHERE_API_KEY is not set in environment variables.");
+} else {
+  cohere.init(COHERE_API_KEY);
 }
 
-const mockResponses: Record<string, MockAIResponse> = {
-  "hello": { text: "Hello there! How can I help you today?", delay: 800 },
-  "how are you": { text: "I am a language model, I don't have feelings, but I'm ready to assist!", delay: 1000 },
-  "what is react": { text: "React is a JavaScript library for building user interfaces.", delay: 1200 },
-  "tell me a joke": { text: "Why don't scientists trust atoms? Because they make up everything!", delay: 1500 },
+// Function to format messages for the Cohere API
+const formatMessagesForCohere = (messages: Message[]) => {
+  return messages.map(msg => ({
+    role: msg.sender === 'user' ? 'user' : 'chatbot',
+    message: msg.text,
+  }));
 };
 
-export const generateResponse = async (message: string): Promise<string> => {
-  console.log("Mock AI Service: Received message:", message);
-  const lowerCaseMessage = message.toLowerCase().trim();
+export const generateResponse = async (messages: Message[]): Promise<string> => {
+  if (!COHERE_API_KEY) {
+    throw new Error("Cohere API key is not configured.");
+  }
 
-  // Find a matching mock response or provide a default
-  const response = mockResponses[lowerCaseMessage] || {
-    text: `I received your message: "${message}". I'm a simple mock AI for this demo. Try asking "hello" or "what is react".`,
-    delay: 1500,
-  };
+  console.log("Cohere Service: Sending messages to API:", messages);
 
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, response.delay));
+  try {
+    // Get the latest user message
+    const latestUserMessage = messages.findLast(msg => msg.sender === 'user');
+    const history = formatMessagesForCohere(messages.filter(msg => msg.id !== latestUserMessage?.id));
 
-  console.log("Mock AI Service: Sending response:", response.text);
-  return response.text;
+    const response = await cohere.chat({
+      model: 'command-r-plus-08-2024', // Use the specified model
+      message: latestUserMessage?.text || '',
+      chatHistory: history,
+      // You can add other parameters here, like temperature, etc.
+    });
+
+    console.log("Cohere Service: Received response:", response);
+
+    // Extract the text from the response
+    const aiResponseText = response.text;
+
+    if (!aiResponseText) {
+      throw new Error("No text response received from Cohere API.");
+    }
+
+    return aiResponseText;
+
+  } catch (error: any) {
+    console.error("Error calling Cohere API:", error);
+    // Provide a more user-friendly error message
+    throw new Error(`Failed to get response from AI: ${error.message || 'Unknown error'}`);
+  }
 };

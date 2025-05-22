@@ -14,9 +14,11 @@ export const useChat = () => {
   const { isLoading: isAIThinking, error: aiError, getResponse } = useStreamingResponse();
 
   // Update loading state based on AI hook
-  useState(() => {
+  // Use useEffect instead of useState for side effects based on hook state
+  useEffect(() => {
     setChatState(prev => ({ ...prev, isLoading: isAIThinking, error: aiError }));
   }, [isAIThinking, aiError]);
+
 
   const addMessage = useCallback((message: Message) => {
     setChatState(prev => ({
@@ -36,10 +38,18 @@ export const useChat = () => {
     };
 
     // Add user message immediately
-    addMessage(userMessage);
+    // Use functional update to ensure we have the latest state
+    setChatState(prev => ({
+      ...prev,
+      messages: [...prev.messages, userMessage],
+    }));
 
-    // Get AI response
-    const aiResponseText = await getResponse(text);
+    // Get AI response - pass the *updated* messages array
+    // We need to wait for the state update to complete or pass the new message explicitly
+    // A simpler approach is to pass the messages including the new user message
+    const messagesWithNewUserMessage = [...chatState.messages, userMessage];
+
+    const aiResponseText = await getResponse(messagesWithNewUserMessage);
 
     if (aiResponseText) {
       const aiMessage: Message = {
@@ -48,10 +58,13 @@ export const useChat = () => {
         sender: "ai",
         timestamp: Date.now(),
       };
-      // Add AI message
-      addMessage(aiMessage);
+      // Add AI message - use functional update again
+      setChatState(prev => ({
+        ...prev.messages,
+        aiMessage,
+      }));
     }
-  }, [addMessage, getResponse]);
+  }, [addMessage, getResponse, chatState.messages]); // Add chatState.messages to dependencies
 
   return {
     chatState,
