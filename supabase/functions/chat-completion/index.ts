@@ -1,15 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import cohere from 'npm:cohere-ai@7.17.1'; // Use npm specifier for Node.js module
 
-// Initialize Cohere client with API key from environment variables (Supabase Secrets)
+// Get Cohere API key from environment variables (Supabase Secrets)
 const COHERE_API_KEY = Deno.env.get('COHERE_API_KEY');
-
-if (!COHERE_API_KEY) {
-  console.error("COHERE_API_KEY is not set in Supabase Secrets.");
-  // Note: In a real app, you might want to return an error response here
-} else {
-  cohere.init(COHERE_API_KEY);
-}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,6 +14,18 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Ensure API key is set before proceeding with the actual request
+  if (!COHERE_API_KEY) {
+     console.error("COHERE_API_KEY is not set in Supabase Secrets.");
+     return new Response(JSON.stringify({ error: "Cohere API key is not configured on the server." }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Initialize Cohere client *after* the OPTIONS check
+  cohere.init(COHERE_API_KEY);
 
   try {
     const { messages } = await req.json();
@@ -42,13 +47,6 @@ serve(async (req) => {
         role: msg.sender === 'user' ? 'user' : 'chatbot',
         message: msg.text,
       }));
-
-    if (!COHERE_API_KEY) {
-       return new Response(JSON.stringify({ error: "Cohere API key is not configured on the server." }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     const response = await cohere.chat({
       model: 'command-r-plus-08-2024',
