@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -49,10 +48,10 @@ export const useLogin = () => {
 
       // Fetch full profile from database
       const dbProfile = await fetchUserProfile(email);
-      
+
       // Create or merge profile
       let userProfile: UserProfile;
-      
+
       if (dbProfile) {
         // Use the database profile
         userProfile = dbProfile;
@@ -61,8 +60,10 @@ export const useLogin = () => {
         userProfile = {
           id: email,
           email: data.user.email || "",
-          displayName: data.user.user_metadata?.display_name || email.split("@")[0],
-          photoURL: data.user.user_metadata?.photo_url || 
+          displayName:
+            data.user.user_metadata?.display_name || email.split("@")[0],
+          photoURL:
+            data.user.user_metadata?.photo_url ||
             `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
           location: data.user.user_metadata?.location || "",
           bio: "",
@@ -74,7 +75,7 @@ export const useLogin = () => {
           emailNotifications: true,
           pushNotifications: false,
         };
-        
+
         // Ensure profile exists in database
         try {
           await updateUserProfile(email, userProfile);
@@ -83,12 +84,9 @@ export const useLogin = () => {
           // Continue with login anyway
         }
       }
-      
-      // Store profile in local storage without overwriting existing data
-      authTokenService.storeUserProfile(userProfile);
-      
-      // Mark successful login for cross-tab notification
-      authTokenService.markSuccessfulLogin();
+
+      // Store profile in local storage
+      authTokenService.setUserProfile(userProfile);
 
       // Success notification and redirect
       sonnerToast.dismiss();
