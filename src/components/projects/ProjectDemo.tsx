@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
@@ -64,7 +63,8 @@ const ProjectDemo = () => {
       "markdown-editor": projectComponents.markdownEditor,
       "pomodoro-timer": projectComponents.pomodoroTimer,
       "calculator": projectComponents.calculator,
-      "recipe-finder": projectComponents.recipeFinder
+      "recipe-finder": projectComponents.recipeFinder,
+      "ai-chatbot": projectComponents.aiChatbot // Added the AI Chatbot project here
     };
     
     return projectMap[projectId as keyof typeof projectMap] || null;
