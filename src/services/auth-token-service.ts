@@ -1,3 +1,4 @@
+
 import { UserProfile } from "./types";
 import { supabase } from "./supabase-client";
 
@@ -7,6 +8,8 @@ export class AuthTokenService {
   private readonly PROFILE_KEY = "user_profile";
   private readonly SESSION_KEY = "auth_session";
   private authEventListeners: Set<() => void> = new Set();
+  private lastValidationTime = 0;
+  private validationThrottleMs = 5000; // Throttle validation to once every 5 seconds
 
   private constructor() {
     // Listen for auth events from other tabs
@@ -74,6 +77,15 @@ export class AuthTokenService {
   }
 
   public async validateSession(): Promise<boolean> {
+    // Throttle validation to prevent excessive calls
+    const now = Date.now();
+    if (now - this.lastValidationTime < this.validationThrottleMs) {
+      // Return cached result if we've validated recently
+      return !!this.getUserProfile();
+    }
+    
+    this.lastValidationTime = now;
+    
     try {
       const { data } = await supabase.auth.getSession();
       const hasSession = !!data.session;

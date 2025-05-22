@@ -1,3 +1,4 @@
+
 import {
   createClient,
   PostgrestError,
@@ -20,11 +21,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables");
 }
 
-// Create a single instance of the Supabase client
+// Create a single instance of the Supabase client with a consistent storage key
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
-    storageKey: "react-project-library-auth",
+    storageKey: "supabase-auth-token", // Use consistent storage key
     storage: window.localStorage,
     autoRefreshToken: true,
     detectSessionInUrl: true,

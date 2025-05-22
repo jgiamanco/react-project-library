@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState, useEffect } from "react";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { useAuthOperations } from "@/hooks/useAuthOperations";
@@ -5,6 +6,7 @@ import { User } from "./auth-types";
 import { UserProfile } from "@/services/types";
 import { AuthTokenService } from "@/services/auth-token-service";
 import { AuthContext } from "./auth-context";
+import { supabase } from "@/services/supabase-client";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -29,6 +31,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     setLoading(initLoading);
   }, [initLoading]);
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const profile = authTokenService.getUserProfile();
+        if (profile) {
+          // Validate session with the server
+          const hasValidSession = await authTokenService.validateSession();
+          if (hasValidSession) {
+            setUser(profile);
+            setIsAuthenticated(true);
+          } else {
+            // Clear invalid session
+            authTokenService.clearAuthData();
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const profile = authTokenService.getUserProfile();
+        if (profile) {
+          setUser(profile);
+          setIsAuthenticated(true);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [authTokenService]);
 
   // Wrap the auth operations to update our state
   const login = useCallback(
@@ -77,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const currentProfile = authTokenService.getUserProfile() || user;
 
         // Merge current user data with updates to ensure all required fields
-        const updatedProfile = { ...currentProfile, ...updates };
+        const updatedProfile = { ...currentProfile, ...updates } as UserProfile;
 
         // Perform the update operation
         const result = await performUpdateUser(updatedProfile);
