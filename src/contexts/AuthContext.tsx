@@ -94,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const updateUser = useCallback(
     async (updates: Partial<User>) => {
-      if (!user) return;
+      if (!user) return null;
 
       try {
         // Ensure we have all existing profile data before update
