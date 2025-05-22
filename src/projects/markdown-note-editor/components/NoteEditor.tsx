@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { Input } from "@/components/ui/input";
-import { PreBlock } from "../SyntaxHighlighterPlugin";
+// Removed import for PreBlock
 import { Note } from "../types";
 
 interface NoteEditorProps {
@@ -20,7 +20,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   // Memoize the preview to prevent unnecessary re-renders
   const markdownPreview = useMemo(
     () => (
-      <ReactMarkdown components={{ pre: PreBlock }}>
+      <ReactMarkdown> {/* Removed components prop */}
         {currentNote.content}
       </ReactMarkdown>
     ),
@@ -49,9 +49,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         />
       </div>
       <div
-        className={`p-4 rounded border overflow-auto h-[400px] lg:h-[600px] markdown-body ${
+        className={`p-4 rounded border overflow-auto h-[400px] lg:h-[600px] prose dark:prose-invert max-w-none ${ // Added prose and dark:prose-invert classes
           darkMode
-            ? "markdown-dark bg-gray-700 border-gray-600 text-white"
+            ? "bg-gray-700 border-gray-600 text-white"
             : "bg-white border-gray-200 text-gray-900"
         }`}
       >

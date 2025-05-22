@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Code, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { PreBlock } from "@/projects/markdown-note-editor/SyntaxHighlighterPlugin";
+// Removed import for PreBlock
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -148,8 +148,8 @@ const ProjectDetail = () => {
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
           <TabsContent value="readme" className="prose prose-blue max-w-none">
-            <div className="bg-white rounded-xl p-6 border markdown-body">
-              <ReactMarkdown components={{ pre: PreBlock }}>
+            <div className="bg-white rounded-xl p-6 border"> {/* Removed markdown-body class */}
+              <ReactMarkdown> {/* Removed components prop */}
                 {project.readme}
               </ReactMarkdown>
             </div>
