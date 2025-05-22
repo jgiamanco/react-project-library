@@ -23,10 +23,12 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
     let timeoutId: number;
     
     const checkAuth = async () => {
-      // If auth state is already determined, use it
+      console.log("AuthGuard: Checking authentication status");
+      
+      // Check if auth is already determined through context
       if (!isLoading) {
         if (isAuthenticated && user) {
-          console.log("User is authenticated:", user.email);
+          console.log("AuthGuard: User is authenticated via context:", user.email);
           setIsChecking(false);
           return;
         }
@@ -37,20 +39,51 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
           const { data } = await supabase.auth.getSession();
           
           if (data.session) {
-            // We have a valid session, context will update
-            console.log("Valid session found, waiting for auth context to update");
-            // Give the context a brief moment to update
-            setTimeout(() => {
+            console.log("AuthGuard: Valid session found, waiting for auth context to update");
+            
+            // Try to refresh the auth state
+            const { data: userData } = await supabase.auth.getUser();
+            if (userData?.user) {
+              console.log("AuthGuard: Valid user found, refreshing auth context");
+              
+              // Check if we have a stored profile
+              const storedProfile = authTokenService.getUserProfile();
+              if (!storedProfile || storedProfile.email !== userData.user.email) {
+                console.log("AuthGuard: Sending broadcast to update auth state");
+                // This will trigger auth state update across tabs
+                authTokenService.broadcastAuthEvent('login');
+              }
+            }
+            
+            // Give the context a reasonable amount of time to update
+            timeoutId = window.setTimeout(() => {
+              console.log("AuthGuard: Proceeding with valid session");
               setIsChecking(false);
-            }, 500);
+            }, 1000);
             return;
           }
           
           // Check for stored profile as last resort
           const storedProfile = authTokenService.getUserProfile();
           if (storedProfile?.email) {
-            console.log("Found stored profile, but no valid session");
-            // We have profile data but no session - redirect to sign in
+            console.log("AuthGuard: Found stored profile, but no valid session");
+            // Try to verify if the profile is still valid
+            try {
+              // Make one last attempt to refresh the session
+              const { data: refreshData } = await supabase.auth.refreshSession();
+              if (refreshData.session) {
+                console.log("AuthGuard: Session refreshed successfully");
+                // Session refreshed, wait for auth context to update
+                timeoutId = window.setTimeout(() => {
+                  setIsChecking(false);
+                }, 1000);
+                return;
+              }
+            } catch (refreshError) {
+              console.error("AuthGuard: Session refresh failed:", refreshError);
+            }
+            
+            // No valid session, redirect to sign in
             redirectToSignIn();
             return;
           }
@@ -58,29 +91,45 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
           // No valid authentication, redirect to signin
           redirectToSignIn();
         } catch (error) {
-          console.error("Auth check error:", error);
+          console.error("AuthGuard: Auth check error:", error);
           redirectToSignIn();
         }
       } else {
         // Still loading - we'll wait for MAX_CHECK_TIME before taking action
         timeoutId = window.setTimeout(() => {
           if (isChecking) {
-            console.log("Auth check timed out after", MAX_CHECK_TIME, "ms");
-            // Check one last time before redirecting
-            const storedProfile = authTokenService.getUserProfile();
-            if (storedProfile) {
-              console.log("Using stored profile despite timeout");
-              setIsChecking(false);
-            } else {
+            console.log(`AuthGuard: Auth check timed out after ${MAX_CHECK_TIME} ms`);
+            // Check if we have a valid session as a last resort
+            supabase.auth.getSession().then(({ data }) => {
+              if (data.session) {
+                console.log("AuthGuard: Valid session found after timeout");
+                setIsChecking(false);
+              } else {
+                // No valid session after timeout
+                const storedProfile = authTokenService.getUserProfile();
+                if (storedProfile) {
+                  console.log("AuthGuard: Using stored profile despite timeout");
+                  setIsChecking(false);
+                } else {
+                  redirectToSignIn();
+                }
+              }
+            }).catch(error => {
+              console.error("AuthGuard: Final session check failed:", error);
               redirectToSignIn();
-            }
+            });
           }
         }, MAX_CHECK_TIME);
       }
     };
     
     const redirectToSignIn = () => {
+      console.log("AuthGuard: Redirecting to sign in page");
       toast.error("Please sign in to access this page");
+      
+      // Clear any stale auth data to prevent future issues
+      authTokenService.clearAuthData();
+      
       navigate("/signin", {
         replace: true,
         state: { from: location.pathname },
@@ -90,7 +139,9 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
     checkAuth();
     
     return () => {
-      window.clearTimeout(timeoutId);
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
     };
   }, [isAuthenticated, isLoading, navigate, location.pathname, user]);
 
@@ -105,12 +156,26 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
       <div className="text-center space-y-4">
         <LoadingSpinner size="lg" color="primary" />
         <p className="text-muted-foreground">Verifying authentication...</p>
-        <button 
-          onClick={() => navigate('/signin')} 
-          className="text-sm text-primary hover:underline mt-4"
-        >
-          Click here if you're stuck on this screen
-        </button>
+        <div className="flex flex-col space-y-4 mt-8">
+          <button 
+            onClick={() => {
+              authTokenService.broadcastAuthEvent('login');
+              window.location.reload();
+            }} 
+            className="text-sm text-primary hover:underline"
+          >
+            Refresh authentication
+          </button>
+          <button 
+            onClick={() => {
+              authTokenService.clearAuthData();
+              navigate('/signin');
+            }} 
+            className="text-sm text-destructive hover:underline"
+          >
+            Clear auth data & sign in again
+          </button>
+        </div>
       </div>
     </div>
   );

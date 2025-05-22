@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/services/supabase-client";
 import { UserProfile } from "@/services/types";
@@ -12,15 +13,26 @@ export const useAuthInit = () => {
   const mounted = useRef(true);
   const authTokenService = AuthTokenService.getInstance();
   const initAttempted = useRef(false);
+  const authEventUnsubscribe = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     console.log("useAuthInit: Initializing auth...");
+    
+    // Register for auth events from AuthTokenService
+    authEventUnsubscribe.current = authTokenService.addAuthEventListener(() => {
+      console.log("useAuthInit: Auth event received, refreshing state");
+      // Force a re-initialization
+      initAttempted.current = false;
+      initializeAuth();
+    });
     
     const initializeAuth = async () => {
       if (initAttempted.current) return;
       initAttempted.current = true;
       
       try {
+        setLoading(true);
+        
         // Check for an existing session
         const { data: { session } } = await supabase.auth.getSession();
         
@@ -36,30 +48,44 @@ export const useAuthInit = () => {
             
             // Try to validate the session
             try {
-              const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+              // Try to refresh the session
+              const { data: refreshData } = await supabase.auth.refreshSession();
               
-              if (supabaseUser) {
-                // Valid session and stored profile match
-                console.log("Session validated for stored profile");
-                setUser(storedProfile);
-                setIsAuthenticated(true);
+              if (refreshData.session) {
+                // Session refreshed successfully
+                console.log("Session refreshed successfully");
+                await loadUserProfile(storedProfile.email);
               } else {
                 // No valid session but we have a stored profile
-                // This is unusual, but try to continue with the stored profile
                 console.log("No valid session but using stored profile");
                 setUser(storedProfile);
                 setIsAuthenticated(true);
                 
-                // Schedule a check to verify if the profile is still valid
-                setTimeout(() => {
-                  validateStoredProfile(storedProfile);
-                }, 500);
+                // Make one more attempt to reload the profile from DB
+                try {
+                  const dbProfile = await fetchUserProfile(storedProfile.email);
+                  if (dbProfile) {
+                    console.log("Successfully fetched profile from database");
+                    // Merge with stored profile with preference to DB values
+                    const mergedProfile = { ...storedProfile, ...dbProfile };
+                    setUser(mergedProfile);
+                    authTokenService.storeUserProfile(mergedProfile);
+                  }
+                } catch (profileError) {
+                  console.warn("Failed to fetch profile from database:", profileError);
+                  // Continue with stored profile
+                }
               }
             } catch (sessionErr) {
-              console.warn("Session validation error:", sessionErr);
-              // Fall back to stored profile for now
+              console.warn("Session validation/refresh error:", sessionErr);
+              // Continue with stored profile for now
               setUser(storedProfile);
               setIsAuthenticated(true);
+              
+              // Schedule a check to verify if the profile is still valid
+              setTimeout(() => {
+                validateStoredProfile(storedProfile);
+              }, 500);
             }
           } else {
             console.log("No existing session or valid stored profile");
@@ -70,8 +96,17 @@ export const useAuthInit = () => {
       } catch (err) {
         console.error("Error during auth initialization:", err);
         setError(err instanceof Error ? err.message : "An error occurred");
-        setUser(null);
-        setIsAuthenticated(false);
+        
+        // Try to recover using stored profile
+        const storedProfile = authTokenService.getUserProfile();
+        if (storedProfile) {
+          console.log("Using stored profile as fallback after initialization error");
+          setUser(storedProfile);
+          setIsAuthenticated(true);
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       } finally {
         if (mounted.current) {
           setLoading(false);
@@ -201,6 +236,10 @@ export const useAuthInit = () => {
     return () => {
       mounted.current = false;
       subscription?.unsubscribe();
+      if (authEventUnsubscribe.current) {
+        authEventUnsubscribe.current();
+        authEventUnsubscribe.current = null;
+      }
     };
   }, []);
 

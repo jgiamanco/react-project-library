@@ -1,3 +1,4 @@
+
 import React, { createContext, useCallback, useState, useEffect } from "react";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { useAuthOperations } from "@/hooks/useAuthOperations";
@@ -102,14 +103,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         // Merge current user data with updates to ensure all required fields
         const updatedProfile = { ...currentProfile, ...updates };
 
-        // Explicitly handling the return value from performUpdateUser
+        // Perform the update operation
         const result = await performUpdateUser(updatedProfile);
-
-        if (result !== undefined && result !== null) {
+        
+        // Only update state if we got a valid result back
+        if (result) {
           setUser(result);
           return result;
         }
-        return null;
+        
+        // If the update operation didn't return a valid profile, return the local updated profile
+        // This ensures we still return something valid even if the server update failed
+        setUser(updatedProfile);
+        return updatedProfile;
       } catch (error) {
         console.error("Update user error in context:", error);
         throw error;
