@@ -1,15 +1,22 @@
+
 import { Session } from "@supabase/supabase-js";
 import { UserProfile } from "./types";
+import { supabase } from "./supabase-client";
 
 // Simple service for auth token management with cross-tab support
 export class AuthTokenService {
   private static instance: AuthTokenService;
   private readonly PROFILE_KEY = 'user_profile';
   private readonly AUTH_EVENT_KEY = 'auth_event';
+  private readonly SESSION_CHECK_INTERVAL = 60000; // Check session every minute
+  private sessionCheckTimer: number | null = null;
 
   private constructor() {
     // Listen for auth events from other tabs
     window.addEventListener('storage', this.handleStorageEvent.bind(this));
+    
+    // Start periodic session validation
+    this.startSessionValidation();
   }
 
   static getInstance(): AuthTokenService {
@@ -23,11 +30,55 @@ export class AuthTokenService {
     // Handle auth-related events from other tabs
     if (event.key === this.AUTH_EVENT_KEY) {
       console.log('Auth event detected from another tab:', event.newValue);
+      
       // Refresh the page to sync auth state if needed
-      if (event.newValue === 'logout' || event.newValue === 'login') {
-        console.log('Refreshing page to sync auth state');
-        window.location.reload();
+      if (event.newValue === 'logout') {
+        console.log('Logout detected from another tab');
+        // Clear local cache first
+        localStorage.removeItem(this.PROFILE_KEY);
+        // Reload only if we're on a protected page
+        const isProtectedRoute = !['/signin', '/signup', '/', '/privacy', '/terms'].includes(window.location.pathname);
+        if (isProtectedRoute) {
+          window.location.href = '/signin';
+        }
+      } else if (event.newValue === 'login' || event.newValue === 'profile_update') {
+        // For login and profile updates, just refresh the session data
+        this.validateSession();
       }
+    }
+  }
+
+  // Start periodic session validation
+  private startSessionValidation() {
+    if (this.sessionCheckTimer === null) {
+      this.sessionCheckTimer = window.setInterval(() => {
+        this.validateSession();
+      }, this.SESSION_CHECK_INTERVAL);
+    }
+  }
+  
+  // Stop periodic session validation
+  private stopSessionValidation() {
+    if (this.sessionCheckTimer !== null) {
+      window.clearInterval(this.sessionCheckTimer);
+      this.sessionCheckTimer = null;
+    }
+  }
+  
+  // Validate the current session
+  private async validateSession() {
+    try {
+      const { data } = await supabase.auth.getSession();
+      
+      // If no session but we have profile data, we might be out of sync
+      const hasProfile = this.hasUserProfile();
+      
+      if (!data.session && hasProfile) {
+        console.log('Session expired but profile exists, clearing local data');
+        this.clearAuthData();
+      }
+    } catch (error) {
+      console.error('Error validating session:', error);
     }
   }
 
@@ -40,6 +91,11 @@ export class AuthTokenService {
     const mergedProfile = existingProfile 
       ? { ...existingProfile, ...profile } 
       : profile;
+    
+    // Ensure critical fields
+    if (!mergedProfile.id) {
+      mergedProfile.id = mergedProfile.email;
+    }
     
     localStorage.setItem(this.PROFILE_KEY, JSON.stringify(mergedProfile));
     

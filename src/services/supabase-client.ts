@@ -31,6 +31,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storageKey: 'sb-yqbuvfezarqgsevfoqc-auth-token',
+    flowType: 'implicit',
   },
 });
 
@@ -62,4 +63,16 @@ export const getSupabaseClient = (
     return supabaseAdmin;
   }
   return supabase;
+};
+
+// Initialize Supabase session - can be called on app start
+export const initializeSupabase = async (): Promise<boolean> => {
+  try {
+    // Get session to initialize the client and check for existing session
+    const { data } = await supabase.auth.getSession();
+    return !!data.session;
+  } catch (error) {
+    console.error("Error initializing Supabase:", error);
+    return false;
+  }
 };

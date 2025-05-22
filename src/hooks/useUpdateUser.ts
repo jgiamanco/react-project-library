@@ -27,11 +27,19 @@ export const useUpdateUser = () => {
         const storedProfile = authTokenService.getUserProfile();
         
         // Create a merged user object for updates, preserving existing data
+        // 1. Start with stored profile for complete data
+        // 2. Add current user state (which may have newer values)
+        // 3. Apply requested updates
         const updatedUser = { 
-          ...storedProfile,  // Start with stored profile (complete data)
-          ...user,           // Add current user state
-          ...updates         // Apply requested updates
+          ...storedProfile,  // Baseline profile data
+          ...user,           // Current user state
+          ...updates         // New updates (highest priority)
         };
+        
+        // Ensure ID is correctly set
+        if (!updatedUser.id) {
+          updatedUser.id = user.email;
+        }
 
         // Update in database through user service
         const result = await updateUserProfile(user.email, updatedUser);
@@ -52,22 +60,29 @@ export const useUpdateUser = () => {
             console.log("Auth metadata updated successfully");
           } catch (authError) {
             console.warn("Error updating auth metadata:", authError);
+            // Continue despite auth metadata update error
           }
 
-          // Update local storage with merged data for cross-tab consistency
-          authTokenService.storeUserProfile(updatedUser);
+          // Update local storage with complete data
+          authTokenService.storeUserProfile(result);
           
           toast({
             title: "Profile updated",
             description: "Your profile has been successfully updated.",
           });
           
-          return updatedUser;
+          return result;
         } else {
-          sonnerToast.error("Update failed", {
-            description: "Failed to update your profile. Please try again.",
+          // Even if the server update fails, update local storage
+          // This ensures UI consistency even with backend issues
+          authTokenService.storeUserProfile(updatedUser);
+          
+          sonnerToast.error("Server update failed", {
+            description: "Your changes were saved locally but not to the server.",
           });
-          return null;
+          
+          // Return the locally updated user despite server failure
+          return updatedUser;
         }
       } catch (error) {
         console.error("Update user error:", error);

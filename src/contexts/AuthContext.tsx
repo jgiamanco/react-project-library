@@ -93,7 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [performLogout]);
 
   const updateUser = useCallback(
-    async (updates: Partial<User>) => {
+    async (updates: Partial<User>): Promise<User | null> => {
       if (!user) return null;
 
       try {
@@ -103,13 +103,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         // Merge current user data with updates to ensure all required fields
         const updatedProfile = { ...currentProfile, ...updates };
         
+        // performUpdateUser can return null, so handle that case
         const result = await performUpdateUser(updatedProfile);
         
         if (result) {
           setUser(result);
+          return result;
         }
-        
-        return result;
+        return null;
       } catch (error) {
         console.error("Update user error in context:", error);
         throw error;
