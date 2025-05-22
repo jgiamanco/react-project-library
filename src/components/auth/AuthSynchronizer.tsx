@@ -11,16 +11,20 @@ export const AuthSynchronizer = () => {
   useEffect(() => {
     const authTokenService = AuthTokenService.getInstance();
     
-    // Simplified event handlers that just validate session
+    // Create wrapper functions that don't pass arguments to validateSession
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         authTokenService.validateSession();
       }
     };
     
-    // Add event listeners
+    const handleFocus = () => {
+      authTokenService.validateSession();
+    };
+    
+    // Add event listeners with proper wrapper functions
     window.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', authTokenService.validateSession);
+    window.addEventListener('focus', handleFocus);
     
     // Initial session check
     authTokenService.validateSession();
@@ -28,7 +32,7 @@ export const AuthSynchronizer = () => {
     // Cleanup
     return () => {
       window.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', authTokenService.validateSession);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
   
