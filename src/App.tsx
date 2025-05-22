@@ -1,9 +1,7 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Routes, Route } from "react-router-dom";
 import Layout from "./components/layout/Layout";
-import AuthSynchronizer from "./components/auth/AuthSynchronizer";
 import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
@@ -20,7 +18,6 @@ import DatabaseTest from "@/pages/DatabaseTest";
 // Removed duplicate providers that are already in main.tsx
 const App = () => (
   <>
-    <AuthSynchronizer />
     <Toaster />
     <Sonner />
     <Routes>
@@ -52,8 +49,8 @@ const App = () => (
       />
       <Route path="/projects/:id/demo" element={<ProjectDemo />} />
       <Route path="/projects/:id/demo/code" element={<ProjectDemo />} />
-      <Route 
-        path="/profile" 
+      <Route
+        path="/profile"
         element={
           <Layout requireAuth>
             <ProfilePage />
