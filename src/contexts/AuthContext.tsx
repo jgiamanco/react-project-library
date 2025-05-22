@@ -4,6 +4,7 @@ import { useAuthInit } from "@/hooks/useAuthInit";
 import { useAuthOperations } from "@/hooks/useAuthOperations";
 import { AuthContextType, User } from "./auth-types";
 import { UserProfile } from "@/services/types";
+import { AuthTokenService } from "@/services/auth-token-service";
 
 export const AuthContext = createContext<AuthContextType | undefined>(
   undefined
@@ -15,6 +16,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const authTokenService = AuthTokenService.getInstance();
 
   const {
     user: initUser,
@@ -33,8 +35,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Sync with useAuthInit state
   useEffect(() => {
-    setUser(initUser);
-    setIsAuthenticated(initIsAuthenticated);
+    if (initUser) {
+      // Get stored profile to ensure we're not losing local-only changes
+      const storedProfile = authTokenService.getUserProfile();
+      
+      // If we have both, merge them with preference to initUser for server values
+      const mergedProfile = storedProfile 
+        ? { ...storedProfile, ...initUser }
+        : initUser;
+      
+      setUser(mergedProfile);
+      setIsAuthenticated(initIsAuthenticated);
+    } else {
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+    
     setLoading(initLoading);
   }, [initUser, initIsAuthenticated, initLoading]);
 
@@ -81,10 +97,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!user) return;
 
       try {
+        // Ensure we have all existing profile data before update
+        const currentProfile = authTokenService.getUserProfile() || user;
+        
         // Merge current user data with updates to ensure all required fields
-        const updatedProfile = { ...user, ...updates };
-        await performUpdateUser(updatedProfile);
-        setUser((prev) => (prev ? { ...prev, ...updates } : null));
+        const updatedProfile = { ...currentProfile, ...updates };
+        
+        const result = await performUpdateUser(updatedProfile);
+        
+        if (result) {
+          setUser(result);
+        }
+        
+        return result;
       } catch (error) {
         console.error("Update user error in context:", error);
         throw error;

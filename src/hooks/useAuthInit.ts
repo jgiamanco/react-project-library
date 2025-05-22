@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/services/supabase-client";
 import { UserProfile } from "@/services/types";

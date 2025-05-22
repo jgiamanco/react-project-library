@@ -23,8 +23,15 @@ export const useUpdateUser = () => {
         setIsLoading(true);
         console.log("useUpdateUser: Updating user with:", updates);
 
-        // Create a merged user object for updates
-        const updatedUser = { ...user, ...updates };
+        // Get current stored profile to ensure we don't lose data
+        const storedProfile = authTokenService.getUserProfile();
+        
+        // Create a merged user object for updates, preserving existing data
+        const updatedUser = { 
+          ...storedProfile,  // Start with stored profile (complete data)
+          ...user,           // Add current user state
+          ...updates         // Apply requested updates
+        };
 
         // Update in database through user service
         const result = await updateUserProfile(user.email, updatedUser);
@@ -47,7 +54,7 @@ export const useUpdateUser = () => {
             console.warn("Error updating auth metadata:", authError);
           }
 
-          // Update local storage for quick access
+          // Update local storage with merged data for cross-tab consistency
           authTokenService.storeUserProfile(updatedUser);
           
           toast({

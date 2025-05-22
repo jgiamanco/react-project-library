@@ -24,41 +24,27 @@ if (!supabaseAnonKey) {
   throw new Error("Missing VITE_SUPABASE_ANON_KEY environment variable");
 }
 
-// Create a singleton Supabase client
-let supabaseInstance: SupabaseClient<Database> | null = null;
-
-export const supabase = (() => {
-  if (!supabaseInstance) {
-    console.log("Creating new Supabase client instance");
-    supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-      },
-    });
-  }
-  return supabaseInstance;
-})();
+// Create a singleton Supabase client with improved config for better persistence
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: 'sb-yqbuvfezarqgsevfoqc-auth-token',
+  },
+});
 
 // Create a singleton Supabase admin client
-let supabaseAdminInstance: SupabaseClient<Database> | null = null;
-
-export const supabaseAdmin = (() => {
-  if (!supabaseAdminInstance) {
-    supabaseAdminInstance = createClient<Database>(
-      supabaseUrl,
-      supabaseServiceRoleKey,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-      }
-    );
+export const supabaseAdmin = createClient<Database>(
+  supabaseUrl,
+  supabaseServiceRoleKey,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
   }
-  return supabaseAdminInstance;
-})();
+);
 
 // Helper function to handle Supabase errors
 export const handleSupabaseError = (error: PostgrestError) => {
@@ -73,10 +59,7 @@ export const getSupabaseClient = (
   bypassRLS: boolean = false
 ): SupabaseClient<Database> => {
   if (bypassRLS) {
-    if (!supabaseAdminInstance) {
-      throw new Error("Admin client not initialized");
-    }
-    return supabaseAdminInstance;
+    return supabaseAdmin;
   }
   return supabase;
 };

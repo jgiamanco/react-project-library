@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/services/supabase-client";
 import { toast as sonnerToast } from "sonner";
 import { AuthTokenService } from "@/services/auth-token-service";
-import { updateUserProfile } from "@/services/user-service";
+import { fetchUserProfile, updateUserProfile } from "@/services/user-service";
 import { UserProfile } from "@/services/types";
 
 export const useLogin = () => {
@@ -18,9 +18,6 @@ export const useLogin = () => {
     try {
       setIsLoading(true);
       sonnerToast.loading("Signing in...");
-
-      // Clear any existing data to prevent conflicts
-      authTokenService.clearAuthData();
 
       // Sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -50,32 +47,48 @@ export const useLogin = () => {
         return null;
       }
 
-      // Create basic profile if needed
-      const userProfile: UserProfile = {
-        email: data.user.email || "",
-        displayName: data.user.user_metadata?.display_name || email.split("@")[0],
-        photoURL: data.user.user_metadata?.photo_url || 
-          `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
-        location: data.user.user_metadata?.location || "",
-        bio: "",
-        website: "",
-        github: "",
-        twitter: "",
-        role: "User",
-        theme: "system",
-        emailNotifications: true,
-        pushNotifications: false,
-      };
+      // Fetch full profile from database
+      const dbProfile = await fetchUserProfile(email);
       
-      // Ensure profile exists in database
-      try {
-        await updateUserProfile(email, userProfile);
-        // Store profile in local storage
-        authTokenService.storeUserProfile(userProfile);
-      } catch (profileError) {
-        console.error("Error ensuring user profile:", profileError);
-        // Continue with login anyway
+      // Create or merge profile
+      let userProfile: UserProfile;
+      
+      if (dbProfile) {
+        // Use the database profile
+        userProfile = dbProfile;
+      } else {
+        // Create basic profile if needed
+        userProfile = {
+          id: email,
+          email: data.user.email || "",
+          displayName: data.user.user_metadata?.display_name || email.split("@")[0],
+          photoURL: data.user.user_metadata?.photo_url || 
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
+          location: data.user.user_metadata?.location || "",
+          bio: "",
+          website: "",
+          github: "",
+          twitter: "",
+          role: "User",
+          theme: "system",
+          emailNotifications: true,
+          pushNotifications: false,
+        };
+        
+        // Ensure profile exists in database
+        try {
+          await updateUserProfile(email, userProfile);
+        } catch (profileError) {
+          console.error("Error ensuring user profile:", profileError);
+          // Continue with login anyway
+        }
       }
+      
+      // Store profile in local storage without overwriting existing data
+      authTokenService.storeUserProfile(userProfile);
+      
+      // Mark successful login for cross-tab notification
+      authTokenService.markSuccessfulLogin();
 
       // Success notification and redirect
       sonnerToast.dismiss();

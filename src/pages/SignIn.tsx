@@ -97,7 +97,7 @@ const SignIn = () => {
         <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md max-w-md mx-auto">
           <h3 className="font-medium text-amber-800">Having trouble signing in?</h3>
           <p className="text-sm text-amber-700 mt-1 mb-3">
-            If you're experiencing issues signing in, or using multiple tabs, try clearing your authentication data.
+            If you're experiencing issues signing in, try clearing your authentication data. This fixes most issues with multiple tabs or sessions.
           </p>
           <Button 
             variant="outline" 

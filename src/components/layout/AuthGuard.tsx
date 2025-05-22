@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-hooks";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { supabase } from "@/services/supabase-client";
+import { AuthTokenService } from "@/services/auth-token-service";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   const location = useLocation();
   const [isChecking, setIsChecking] = useState(true);
   const { isAuthenticated, isLoading } = useAuth();
+  const authTokenService = AuthTokenService.getInstance();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -25,7 +27,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
           return;
         }
         
-        // Not authenticated through context, try session check
+        // Not authenticated through context, try additional checks
         try {
           // Check for current session in Supabase
           const { data } = await supabase.auth.getSession();
@@ -34,6 +36,17 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
             // We have a valid session, context will update
             console.log("Valid session found, waiting for auth context to update");
             setIsChecking(false);
+            return;
+          }
+          
+          // Check for stored profile as last resort
+          const storedProfile = authTokenService.getUserProfile();
+          if (storedProfile?.email) {
+            console.log("Found stored profile, but no valid session");
+            // We have profile data but no session - try to recover or redirect
+            
+            // For now, redirect to sign in to fix potential auth issues
+            redirectToSignIn();
             return;
           }
           
