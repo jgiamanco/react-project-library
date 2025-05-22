@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react"; // Added useEffect import
 import { Message, ChatState } from "../types";
 import { useStreamingResponse } from "./useStreamingResponse";
 import { v4 as uuidv4 } from "uuid";
@@ -14,8 +14,7 @@ export const useChat = () => {
   const { isLoading: isAIThinking, error: aiError, getResponse } = useStreamingResponse();
 
   // Update loading state based on AI hook
-  // Use useEffect instead of useState for side effects based on hook state
-  useEffect(() => {
+  useEffect(() => { // Corrected from useState to useEffect
     setChatState(prev => ({ ...prev, isLoading: isAIThinking, error: aiError }));
   }, [isAIThinking, aiError]);
 
@@ -37,16 +36,14 @@ export const useChat = () => {
       timestamp: Date.now(),
     };
 
-    // Add user message immediately
-    // Use functional update to ensure we have the latest state
+    // Add user message immediately using functional update
     setChatState(prev => ({
       ...prev,
       messages: [...prev.messages, userMessage],
     }));
 
-    // Get AI response - pass the *updated* messages array
-    // We need to wait for the state update to complete or pass the new message explicitly
-    // A simpler approach is to pass the messages including the new user message
+    // Get AI response - pass the messages including the new user message
+    // Use the state value directly here, as the functional update above might not be processed yet
     const messagesWithNewUserMessage = [...chatState.messages, userMessage];
 
     const aiResponseText = await getResponse(messagesWithNewUserMessage);
@@ -60,11 +57,11 @@ export const useChat = () => {
       };
       // Add AI message - use functional update again
       setChatState(prev => ({
-        ...prev.messages,
-        aiMessage,
+        ...prev, // Spread previous state
+        messages: [...prev.messages, aiMessage], // Add new AI message
       }));
     }
-  }, [addMessage, getResponse, chatState.messages]); // Add chatState.messages to dependencies
+  }, [getResponse, chatState.messages]); // Added chatState.messages to dependencies
 
   return {
     chatState,
