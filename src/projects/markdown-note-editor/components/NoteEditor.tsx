@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { Input } from "@/components/ui/input";
-// Removed import for PreBlock
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"; // Import SyntaxHighlighter
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"; // Import a style
 import { Note } from "../types";
 
 interface NoteEditorProps {
@@ -11,20 +12,41 @@ interface NoteEditorProps {
   updateNoteContent: (content: string) => void;
 }
 
-const NoteEditor: React.FC<NoteEditorProps> = ({
+const NoteEditor: React.FC<NoteEditorProps> = React.memo(({
   currentNote,
   darkMode,
   updateNoteTitle,
   updateNoteContent,
 }) => {
+  // Define custom components for ReactMarkdown, specifically for code blocks
+  const markdownComponents = useMemo(() => ({
+    code({ node, inline, className, children, ...props }: any) {
+      const match = /language-(\w+)/.exec(className || '');
+      return !inline && match ? (
+        <SyntaxHighlighter
+          style={vscDarkPlus}
+          language={match[1]}
+          PreTag="div"
+          {...props}
+        >
+          {String(children).replace(/\n$/, '')}
+        </SyntaxHighlighter>
+      ) : (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    }
+  }), []); // Memoize the components object
+
   // Memoize the preview to prevent unnecessary re-renders
   const markdownPreview = useMemo(
     () => (
-      <ReactMarkdown> {/* Removed components prop */}
+      <ReactMarkdown components={markdownComponents}> {/* Added components prop */}
         {currentNote.content}
       </ReactMarkdown>
     ),
-    [currentNote.content]
+    [currentNote.content, markdownComponents] // Add markdownComponents to dependencies
   );
 
   return (
@@ -49,7 +71,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         />
       </div>
       <div
-        className={`p-4 rounded border overflow-auto h-[400px] lg:h-[600px] prose dark:prose-invert max-w-none ${ // Added prose and dark:prose-invert classes
+        className={`p-4 rounded border overflow-auto h-[400px] lg:h-[600px] prose dark:prose-invert max-w-none ${
           darkMode
             ? "bg-gray-700 border-gray-600 text-white"
             : "bg-white border-gray-200 text-gray-900"
@@ -59,6 +81,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       </div>
     </div>
   );
-};
+});
 
-export default React.memo(NoteEditor);
+NoteEditor.displayName = "NoteEditor";
+
+export default NoteEditor;

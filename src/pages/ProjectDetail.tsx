@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Code, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-// Removed import for PreBlock
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"; // Import SyntaxHighlighter
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"; // Import a style
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -63,6 +64,27 @@ const ProjectDetail = () => {
     intermediate: "bg-amber-100 text-amber-800",
     advanced: "bg-rose-100 text-rose-800",
   }[project.difficulty];
+
+  // Define custom components for ReactMarkdown, specifically for code blocks
+  const markdownComponents = {
+    code({ node, inline, className, children, ...props }: any) {
+      const match = /language-(\w+)/.exec(className || '');
+      return !inline && match ? (
+        <SyntaxHighlighter
+          style={vscDarkPlus}
+          language={match[1]}
+          PreTag="div"
+          {...props}
+        >
+          {String(children).replace(/\n$/, '')}
+        </SyntaxHighlighter>
+      ) : (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    }
+  };
 
   return (
     <div className="pt-24 pb-16 animate-fade-in">
@@ -148,8 +170,8 @@ const ProjectDetail = () => {
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
           <TabsContent value="readme" className="prose prose-blue max-w-none">
-            <div className="bg-white rounded-xl p-6 border"> {/* Removed markdown-body class */}
-              <ReactMarkdown> {/* Removed components prop */}
+            <div className="bg-white rounded-xl p-6 border">
+              <ReactMarkdown components={markdownComponents}> {/* Added components prop */}
                 {project.readme}
               </ReactMarkdown>
             </div>
