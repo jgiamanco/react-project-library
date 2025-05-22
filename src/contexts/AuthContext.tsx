@@ -1,5 +1,10 @@
-
-import React, { createContext, useCallback, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useState,
+  useEffect,
+  useContext,
+} from "react";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { useAuthOperations } from "@/hooks/useAuthOperations";
 import { AuthContextType, User } from "./auth-types";
@@ -10,6 +15,14 @@ export const AuthContext = createContext<AuthContextType | undefined>(
   undefined
 );
 
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -18,12 +31,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   const authTokenService = AuthTokenService.getInstance();
 
-  const {
-    user: initUser,
-    isAuthenticated: initIsAuthenticated,
-    isLoading: initLoading,
-    error: initError,
-  } = useAuthInit();
+  // Initialize auth state
+  const { isLoading: initLoading } = useAuthInit();
 
   const {
     login: performLogin,
@@ -33,26 +42,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     loading: operationsLoading,
   } = useAuthOperations();
 
-  // Sync with useAuthInit state
+  // Update loading state based on initialization
   useEffect(() => {
-    if (initUser) {
-      // Get stored profile to ensure we're not losing local-only changes
-      const storedProfile = authTokenService.getUserProfile();
-
-      // If we have both, merge them with preference to initUser for server values
-      const mergedProfile = storedProfile
-        ? { ...storedProfile, ...initUser }
-        : initUser;
-
-      setUser(mergedProfile);
-      setIsAuthenticated(initIsAuthenticated);
-    } else {
-      setUser(null);
-      setIsAuthenticated(false);
-    }
-
     setLoading(initLoading);
-  }, [initUser, initIsAuthenticated, initLoading]);
+  }, [initLoading]);
 
   // Wrap the auth operations to update our state
   const login = useCallback(
@@ -105,14 +98,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         // Perform the update operation
         const result = await performUpdateUser(updatedProfile);
-        
+
         // Handle the result correctly based on its type
-        if (result !== null && result !== undefined && typeof result === 'object') {
+        if (
+          result !== null &&
+          result !== undefined &&
+          typeof result === "object"
+        ) {
           // Only set user if result is a valid object (not void)
           setUser(result as UserProfile);
           return result as User;
         }
-        
+
         // If the update operation didn't return a valid profile, use the local updated profile
         setUser(updatedProfile);
         return updatedProfile;
@@ -121,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         throw error;
       }
     },
-    [user, performUpdateUser, authTokenService] // Added authTokenService to dependencies
+    [user, performUpdateUser, authTokenService]
   );
 
   const contextValue: AuthContextType = {
@@ -132,6 +129,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     signup,
     logout,
     updateUser,
+    setUser,
+    setUserProfile: (profile: UserProfile | null) => {
+      setUser(profile);
+      if (profile) {
+        authTokenService.setUserProfile(profile);
+      } else {
+        authTokenService.clearAuthData();
+      }
+    },
   };
 
   return (
