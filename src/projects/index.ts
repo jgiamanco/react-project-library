@@ -1,4 +1,3 @@
-
 // Export all project implementations for easy importing
 import type { ComponentType } from "react";
 import TodoApp from "./todo-app";
@@ -7,6 +6,7 @@ import MarkdownEditor from "./markdown-note-editor";
 import PomodoroTimer from "./pomodoro-timer";
 import Calculator from "./calculator";
 import RecipeFinder from "./recipe-finder";
+import AIChatbot from "./ai-chatbot"; // Import the new project
 
 export interface ProjectImplementation {
   app: ComponentType;
@@ -51,6 +51,12 @@ const projects: Record<string, ProjectImplementation> = {
     code: RecipeFinder.code,
     title: RecipeFinder.title,
     description: RecipeFinder.description
+  },
+  aiChatbot: { // Add the new project here
+    app: AIChatbot.app,
+    code: AIChatbot.code,
+    title: AIChatbot.title,
+    description: AIChatbot.description
   }
 };
 
