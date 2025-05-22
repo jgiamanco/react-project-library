@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import AuthForm from "@/components/auth/AuthForm";
 import { toast } from "sonner";
 import { supabase } from "@/services/supabase-client";
@@ -10,25 +10,22 @@ import { Button } from "@/components/ui/button";
 
 const SignIn = () => {
   const [authError, setAuthError] = useState<string | null>(null);
-  const [tokenConflict, setTokenConflict] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const authTokenService = AuthTokenService.getInstance();
   
-  // Handle token conflict recovery
-  const handleClearTokens = async () => {
+  // Handle auth data clearing
+  const handleClearAuthData = () => {
     try {
       toast.loading("Clearing auth data...");
-      await authTokenService.clearAllAuthData();
-      await supabase.auth.signOut();
+      authTokenService.clearAuthData();
+      supabase.auth.signOut();
       toast.dismiss();
       toast.success("Auth data cleared successfully");
-      setTokenConflict(false);
-      // Use window.location.reload() to ensure all React states are reset
+      // Reload the page to reset all React states
       window.location.reload();
     } catch (error) {
-      console.error("Error clearing tokens:", error);
+      console.error("Error clearing auth data:", error);
       toast.error("Failed to clear auth data");
     }
   };
@@ -36,39 +33,13 @@ const SignIn = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // First, try to recover from any session conflicts
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          await authTokenService.clearAllAuthData();
-          setTokenConflict(true);
-          setIsCheckingAuth(false);
-          return;
-        }
-        
         // Check if there's a valid session
+        const { data: sessionData } = await supabase.auth.getSession();
+        
         if (sessionData.session) {
           console.log("Active session found, redirecting to dashboard");
           navigate("/dashboard");
           return;
-        }
-        
-        // Check if there's a stored token
-        const hasStoredToken = authTokenService.isAuthenticated();
-        
-        if (hasStoredToken) {
-          console.log("Found stored token, attempting to restore session");
-          const storedSession = await authTokenService.getStoredSession();
-          
-          if (storedSession) {
-            console.log("Session restored successfully");
-            navigate("/dashboard");
-            return;
-          } 
-          
-          console.log("Invalid stored token detected");
-          setTokenConflict(true);
         }
         
         setIsCheckingAuth(false);
@@ -123,22 +94,19 @@ const SignIn = () => {
           </a>
         </div>
 
-        {tokenConflict && (
-          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md max-w-md mx-auto">
-            <h3 className="font-medium text-amber-800">Authentication Issue Detected</h3>
-            <p className="text-sm text-amber-700 mt-1 mb-3">
-              There appears to be an authentication conflict. This can happen when using multiple tabs or 
-              after an extended period of inactivity. Please clear your authentication data to continue.
-            </p>
-            <Button 
-              variant="outline" 
-              className="w-full bg-amber-100 hover:bg-amber-200 text-amber-900"
-              onClick={handleClearTokens}
-            >
-              Clear Authentication Data
-            </Button>
-          </div>
-        )}
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md max-w-md mx-auto">
+          <h3 className="font-medium text-amber-800">Having trouble signing in?</h3>
+          <p className="text-sm text-amber-700 mt-1 mb-3">
+            If you're experiencing issues signing in, or using multiple tabs, try clearing your authentication data.
+          </p>
+          <Button 
+            variant="outline" 
+            className="w-full bg-amber-100 hover:bg-amber-200 text-amber-900"
+            onClick={handleClearAuthData}
+          >
+            Clear Authentication Data
+          </Button>
+        </div>
 
         {authError && (
           <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm max-w-md mx-auto">

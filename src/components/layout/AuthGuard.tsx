@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-hooks";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { supabase } from "@/services/supabase-client";
-import { AuthTokenService } from "@/services/auth-token-service";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -15,14 +14,13 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isChecking, setIsChecking] = useState(true);
-  const { isAuthenticated, isLoading, user } = useAuth();
-  const authTokenService = AuthTokenService.getInstance();
+  const { isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     const checkAuth = async () => {
       // If auth state is already determined, use it
       if (!isLoading) {
-        if (isAuthenticated && user) {
+        if (isAuthenticated) {
           setIsChecking(false);
           return;
         }
@@ -30,35 +28,17 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
         // Not authenticated through context, try session check
         try {
           // Check for current session in Supabase
-          const { data, error } = await supabase.auth.getSession();
-          
-          if (error) {
-            console.error("Session error:", error);
-            redirectToSignIn();
-            return;
-          }
+          const { data } = await supabase.auth.getSession();
           
           if (data.session) {
-            // We have a valid session, but context doesn't reflect it yet
-            // This can happen during initial load or tab synchronization
+            // We have a valid session, context will update
             console.log("Valid session found, waiting for auth context to update");
-            // The auth context will update from the onAuthStateChange listener
             setIsChecking(false);
             return;
           }
           
-          // Last attempt: try stored tokens
-          const storedSession = await authTokenService.getStoredSession();
-          
-          if (!storedSession) {
-            // No valid authentication, redirect to signin
-            redirectToSignIn();
-            return;
-          }
-          
-          // We have a valid stored session, auth context will update
-          setIsChecking(false);
-          
+          // No valid authentication, redirect to signin
+          redirectToSignIn();
         } catch (error) {
           console.error("Auth check error:", error);
           redirectToSignIn();
@@ -91,7 +71,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
     checkAuth();
     
     return () => clearTimeout(timeout);
-  }, [isAuthenticated, isLoading, navigate, location.pathname, user]);
+  }, [isAuthenticated, isLoading, navigate, location.pathname]);
 
   // If auth is confirmed, render children
   if (!isChecking && isAuthenticated) {

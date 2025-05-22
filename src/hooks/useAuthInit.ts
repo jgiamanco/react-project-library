@@ -18,23 +18,22 @@ export const useAuthInit = () => {
     
     const initializeAuth = async () => {
       try {
-        // First check for an existing session
+        // Check for an existing session
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (session) {
+        if (session?.user?.email) {
           console.log("Found existing session for user:", session.user.email);
-          await authTokenService.storeSession(session);
           await loadUserProfile(session.user.email);
         } else {
-          // Try to restore session from stored token
-          console.log("No active session, checking for stored session...");
-          const storedSession = await authTokenService.getStoredSession();
+          // Try to restore from stored profile
+          const storedProfile = authTokenService.getUserProfile();
           
-          if (storedSession?.user?.email) {
-            console.log("Restored session from stored token");
-            await loadUserProfile(storedSession.user.email);
+          if (storedProfile?.email) {
+            console.log("Found stored profile for:", storedProfile.email);
+            setUser(storedProfile);
+            setIsAuthenticated(true);
           } else {
-            console.log("No existing session or valid stored token");
+            console.log("No existing session or valid stored profile");
             setUser(null);
             setIsAuthenticated(false);
           }
@@ -119,22 +118,15 @@ export const useAuthInit = () => {
       if (mounted.current) {
         if (session && ["SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED"].includes(event)) {
           console.log("Processing", event, "event");
-          const expiresIn = session.expires_at 
-            ? Math.floor(session.expires_at - Date.now() / 1000)
-            : 3600;
-          console.log(`Scheduling token refresh in ${expiresIn} seconds`);
-          
-          await authTokenService.storeSession(session);
-          console.log("Session stored successfully, token refresh scheduled");
-          
           console.log("Updating auth state for user:", session.user?.email);
+          
           if (session.user?.email) {
             await loadUserProfile(session.user.email);
           }
         } 
         else if (event === "SIGNED_OUT" || !session) {
           console.log("User signed out or session expired");
-          await authTokenService.clearAllAuthData();
+          authTokenService.clearAuthData();
           setUser(null);
           setIsAuthenticated(false);
         }

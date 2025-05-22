@@ -15,8 +15,8 @@ export const useLogout = () => {
       setIsLoading(true);
       const toastId = toast.loading("Signing out...");
 
-      // Clear all auth data from storage
-      await authTokenService.clearAllAuthData();
+      // Clear auth data
+      authTokenService.clearAuthData();
 
       // Sign out from Supabase
       await supabase.auth.signOut();
@@ -31,7 +31,7 @@ export const useLogout = () => {
       toast.error("Error signing out");
       
       // Still clear local data even if server logout fails
-      await authTokenService.clearAllAuthData();
+      authTokenService.clearAuthData();
       
       // Still navigate away even if there's an error
       navigate("/", { replace: true });

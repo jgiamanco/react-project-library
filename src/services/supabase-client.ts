@@ -11,7 +11,6 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // For service role key, allow falling back to other environment variable formats
-// but keep the original check for backward compatibility
 const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 
                               import.meta.env.SUPABASE_SERVICE_ROLE_KEY || 
                               "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxYnV2ZmV6YXJxZ3NldmNmb3FjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MTYyOTU0NiwiZXhwIjoyMDU3MjA1NTQ2fQ.d9P8MYJPMhsFQpXzmIrwhcLtlKKZgR37FNat5KnPGRk";
@@ -25,10 +24,7 @@ if (!supabaseAnonKey) {
   throw new Error("Missing VITE_SUPABASE_ANON_KEY environment variable");
 }
 
-// Use a unique storage key to prevent conflicts between tabs
-const STORAGE_KEY = "supabase.auth.token.react-project-library";
-
-// Create a single instance of the regular client
+// Create a singleton Supabase client
 let supabaseInstance: SupabaseClient<Database> | null = null;
 
 export const supabase = (() => {
@@ -39,14 +35,13 @@ export const supabase = (() => {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        storageKey: STORAGE_KEY,
       },
     });
   }
   return supabaseInstance;
 })();
 
-// Create a single instance of the admin client
+// Create a singleton Supabase admin client
 let supabaseAdminInstance: SupabaseClient<Database> | null = null;
 
 export const supabaseAdmin = (() => {
@@ -83,5 +78,5 @@ export const getSupabaseClient = (
     }
     return supabaseAdminInstance;
   }
-  return supabaseInstance;
+  return supabase;
 };

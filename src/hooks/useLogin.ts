@@ -19,8 +19,8 @@ export const useLogin = () => {
       setIsLoading(true);
       sonnerToast.loading("Signing in...");
 
-      // Clean up any existing session data to prevent conflicts
-      await authTokenService.clearAllAuthData();
+      // Clear any existing data to prevent conflicts
+      authTokenService.clearAuthData();
 
       // Sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -50,9 +50,6 @@ export const useLogin = () => {
         return null;
       }
 
-      // Store session for later use
-      await authTokenService.storeSession(data.session);
-
       // Create basic profile if needed
       const userProfile: UserProfile = {
         email: data.user.email || "",
@@ -73,6 +70,8 @@ export const useLogin = () => {
       // Ensure profile exists in database
       try {
         await updateUserProfile(email, userProfile);
+        // Store profile in local storage
+        authTokenService.storeUserProfile(userProfile);
       } catch (profileError) {
         console.error("Error ensuring user profile:", profileError);
         // Continue with login anyway
