@@ -93,7 +93,7 @@ export async function updateExistingProfile(
     
     // Only update fields that are not null or undefined to prevent overwriting existing data
     const filteredDbProfile = Object.fromEntries(
-      Object.entries(dbProfile).filter(([_, value]) => value !== undefined && value !== null)
+      Object.entries(dbProfile).filter(([_, value]) => value !== undefined)
     );
     
     const { data, error } = await supabase

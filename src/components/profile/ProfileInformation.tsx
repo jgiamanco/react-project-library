@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { User } from "@/contexts/auth-types";
 import { Button } from "@/components/ui/button";
@@ -61,8 +62,10 @@ const ProfileInformation = ({
     setIsSubmitting(true);
     try {
       const updatedUser = await updateUser(formData);
-      setProfile(updatedUser);
-      sonnerToast.success("Profile updated successfully");
+      if (updatedUser) {
+        setProfile(updatedUser);
+        sonnerToast.success("Profile updated successfully");
+      }
     } catch (error) {
       console.error("Error updating profile:", error);
       sonnerToast.error("Failed to update profile", {
@@ -79,7 +82,7 @@ const ProfileInformation = ({
     try {
       setIsSubmitting(true);
 
-      // Update local state
+      // Update local state immediately for a responsive UI
       setProfile({
         ...profile,
         photoURL: newAvatarUrl,
