@@ -1,4 +1,3 @@
-
 import {
   createClient,
   PostgrestError,
@@ -11,9 +10,10 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // For service role key, allow falling back to other environment variable formats
-const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 
-                              import.meta.env.SUPABASE_SERVICE_ROLE_KEY || 
-                              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxYnV2ZmV6YXJxZ3NldmNmb3FjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MTYyOTU0NiwiZXhwIjoyMDU3MjA1NTQ2fQ.d9P8MYJPMhsFQpXzmIrwhcLtlKKZgR37FNat5KnPGRk";
+const supabaseServiceRoleKey =
+  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
+  import.meta.env.SUPABASE_SERVICE_ROLE_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxYnV2ZmV6YXJxZ3NldmNmb3FjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MTYyOTU0NiwiZXhwIjoyMDU3MjA1NTQ2fQ.d9P8MYJPMhsFQpXzmIrwhcLtlKKZgR37FNat5KnPGRk";
 
 // Validate environment variables
 if (!supabaseUrl) {
@@ -30,8 +30,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storageKey: 'sb-yqbuvfezarqgsevfoqc-auth-token',
-    flowType: 'implicit',
+    storageKey: "sb-auth-token",
   },
 });
 
