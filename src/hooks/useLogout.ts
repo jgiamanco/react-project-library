@@ -29,6 +29,8 @@ export const useLogout = () => {
     } catch (error) {
       console.error("Logout error:", error);
       toast.error("Error signing out");
+      
+      // Still navigate away even if there's an error
       navigate("/", { replace: true });
     } finally {
       setIsLoading(false);

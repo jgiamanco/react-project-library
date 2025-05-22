@@ -1,11 +1,9 @@
 
 import { useState, useEffect, useRef } from "react";
-import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/services/supabase-client";
 import { UserProfile } from "@/services/types";
 import { fetchUserProfile, createUserProfile } from "@/services/user-service";
 import { AuthTokenService } from "@/services/auth-token-service";
-import { toast } from "sonner";
 
 export const useAuthInit = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -14,32 +12,29 @@ export const useAuthInit = () => {
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
   const authTokenService = AuthTokenService.getInstance();
-  const initAttempted = useRef(false);
 
   useEffect(() => {
     console.log("useAuthInit: Initializing auth...");
     
     const initializeAuth = async () => {
-      if (initAttempted.current) return;
-      initAttempted.current = true;
-
       try {
-        // Check for existing session
+        // First check for an existing session
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
           console.log("Found existing session for user:", session.user.email);
-          await updateAuthState(session);
+          await authTokenService.storeSession(session);
+          await loadUserProfile(session.user.email);
         } else {
           // Try to restore session from stored token
           console.log("No active session, checking for stored session...");
           const storedSession = await authTokenService.getStoredSession();
           
-          if (storedSession) {
-            console.log("Restored session from stored token for user:", storedSession.user?.email);
-            await updateAuthState(storedSession);
+          if (storedSession?.user?.email) {
+            console.log("Restored session from stored token");
+            await loadUserProfile(storedSession.user.email);
           } else {
-            console.log("No existing session or valid stored token found");
+            console.log("No existing session or valid stored token");
             setUser(null);
             setIsAuthenticated(false);
           }
@@ -54,6 +49,59 @@ export const useAuthInit = () => {
       }
     };
 
+    // Load user profile helper function
+    const loadUserProfile = async (email: string) => {
+      try {
+        // Try to fetch user profile
+        const existingProfile = await fetchUserProfile(email);
+        
+        if (existingProfile) {
+          console.log("Found existing profile in database");
+          setUser(existingProfile);
+          setIsAuthenticated(true);
+          
+          // Store in local storage for quick access
+          authTokenService.storeUserProfile(existingProfile);
+          return;
+        }
+        
+        // Create a minimal profile if not found
+        const minimalProfile: UserProfile = {
+          id: email,
+          email: email,
+          displayName: email.split("@")[0],
+          photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+          location: "",
+          bio: "",
+          website: "",
+          github: "",
+          twitter: "",
+          role: "User",
+          theme: "system",
+          emailNotifications: true,
+          pushNotifications: false,
+        };
+
+        // Create the profile in database
+        const userProfile = await createUserProfile(email, minimalProfile);
+        
+        if (userProfile) {
+          console.log("Created new profile");
+          setUser(userProfile);
+          authTokenService.storeUserProfile(userProfile);
+        } else {
+          setUser(minimalProfile);
+        }
+        
+        setIsAuthenticated(true);
+      } catch (err) {
+        console.error("Error loading user profile:", err);
+        setError("Failed to load user profile");
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    };
+
     initializeAuth();
 
     // Set up auth state change listener
@@ -61,22 +109,13 @@ export const useAuthInit = () => {
       console.log("Auth state changed:", event, session?.user?.email);
       
       if (mounted.current) {
-        if (session) {
-          // For sign in and session update events
-          if (["SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED", "INITIAL_SESSION"].includes(event)) {
-            console.log(`Processing ${event} event`);
-            await authTokenService.storeSession(session);
-            await updateAuthState(session);
-          } 
-          // For sign out event
-          else if (event === "SIGNED_OUT") {
-            console.log("Processing SIGNED_OUT event");
-            await authTokenService.clearSession();
-            setUser(null);
-            setIsAuthenticated(false);
+        if (session && ["SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED"].includes(event)) {
+          await authTokenService.storeSession(session);
+          if (session.user?.email) {
+            await loadUserProfile(session.user.email);
           }
-        } else if (event === "SIGNED_OUT") {
-          console.log("Processing SIGNED_OUT event (no session)");
+        } 
+        else if (event === "SIGNED_OUT" || !session) {
           await authTokenService.clearSession();
           setUser(null);
           setIsAuthenticated(false);
@@ -84,105 +123,11 @@ export const useAuthInit = () => {
       }
     });
 
-    // Listen for storage events to sync across tabs
-    const handleStorageChange = async (e: StorageEvent) => {
-      if (e.key === "auth_token") {
-        console.log("Auth token changed in another tab, refreshing session");
-        const storedSession = await authTokenService.getStoredSession();
-        if (storedSession) {
-          await updateAuthState(storedSession);
-        } else {
-          setUser(null);
-          setIsAuthenticated(false);
-        }
-      } else if (e.key === "authenticated" && e.newValue === null) {
-        // Handle logout in another tab
-        console.log("User logged out in another tab");
-        setUser(null);
-        setIsAuthenticated(false);
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-
     return () => {
       mounted.current = false;
       subscription?.unsubscribe();
-      window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
-
-  const updateAuthState = async (session: Session | null) => {
-    if (!session?.user?.email) {
-      console.log("No valid user in session");
-      setUser(null);
-      setIsAuthenticated(false);
-      return;
-    }
-
-    try {
-      const email = session.user.email;
-      console.log("Updating auth state for user:", email);
-      
-      // Try to fetch user profile first
-      try {
-        const existingProfile = await fetchUserProfile(email);
-        
-        if (existingProfile) {
-          console.log("Found existing profile in database");
-          setUser(existingProfile);
-          setIsAuthenticated(true);
-          return;
-        }
-      } catch (fetchError) {
-        console.log("Could not find existing profile:", fetchError);
-      }
-      
-      // Create a minimal profile from session data
-      const minimalProfile: UserProfile = {
-        id: email, // Use email as ID to ensure we have a value
-        email: email,
-        displayName: session.user.user_metadata?.display_name || 
-                  email.split("@")[0],
-        photoURL: session.user.user_metadata?.photo_url || 
-                `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-        location: session.user.user_metadata?.location || "",
-        bio: "",
-        website: "",
-        github: "",
-        twitter: "",
-        role: "User",
-        theme: "system",
-        emailNotifications: true,
-        pushNotifications: false,
-      };
-
-      try {
-        // Create the profile in database
-        const userProfile = await createUserProfile(email, minimalProfile);
-        
-        if (userProfile) {
-          console.log("Created and using new profile");
-          setUser(userProfile);
-        } else {
-          console.log("Using minimal profile");
-          setUser(minimalProfile);
-        }
-        
-        setIsAuthenticated(true);
-      } catch (profileError) {
-        console.error("Error creating user profile:", profileError);
-        // Still set user as authenticated with minimal profile
-        setUser(minimalProfile);
-        setIsAuthenticated(true);
-      }
-    } catch (err) {
-      console.error("Error updating auth state:", err);
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setUser(null);
-      setIsAuthenticated(false);
-    }
-  };
 
   return {
     user,

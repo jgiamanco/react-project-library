@@ -1,4 +1,3 @@
-
 import { supabase, handleSupabaseError } from "./supabase-client";
 import { DbUserProfile, UserProfile, appToDbProfile, dbToAppProfile } from "./types";
 
@@ -91,14 +90,10 @@ export async function updateExistingProfile(
     
     const dbProfile = appToDbProfile(profile);
     
-    // Only update fields that are not null or undefined to prevent overwriting existing data
-    const filteredDbProfile = Object.fromEntries(
-      Object.entries(dbProfile).filter(([_, value]) => value !== undefined)
-    );
-    
+    // Keep all non-null values in the update
     const { data, error } = await supabase
       .from("users")
-      .update(filteredDbProfile)
+      .update(dbProfile)
       .eq("email", email)
       .select("*")
       .maybeSingle();

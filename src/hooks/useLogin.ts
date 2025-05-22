@@ -17,22 +17,21 @@ export const useLogin = () => {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      sonnerToast.dismiss(); // Clear any existing toasts
       sonnerToast.loading("Signing in...");
 
-      console.log("Attempting Supabase auth sign-in...");
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (authError) {
-        console.error("Auth error:", authError);
+      if (error) {
+        console.error("Auth error:", error);
         sonnerToast.dismiss();
         toast({
           variant: "destructive",
           title: "Error",
-          description: authError.message,
+          description: error.message,
         });
         return null;
       }
@@ -48,41 +47,11 @@ export const useLogin = () => {
         return null;
       }
 
-      console.log("Storing session data...");
-      // Store the session for later use
+      // Store session for later use
       await authTokenService.storeSession(data.session);
 
-      // Ensure user profile exists
-      try {
-        const userProfile: UserProfile = {
-          email: data.user.email || "",
-          displayName: data.user.user_metadata?.display_name || email.split("@")[0],
-          photoURL: data.user.user_metadata?.photo_url || 
-            `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`,
-          location: data.user.user_metadata?.location || "",
-          bio: "",
-          website: "",
-          github: "",
-          twitter: "",
-          role: "User",
-          theme: "system",
-          emailNotifications: true,
-          pushNotifications: false,
-        };
-        
-        // Update/create user profile without throwing errors
-        await updateUserProfile(email, userProfile);
-      } catch (profileError) {
-        console.error("Error ensuring user profile:", profileError);
-        // Continue with login anyway
-      }
-
-      // Success
-      sonnerToast.dismiss();
-      sonnerToast.success("Signed in successfully");
-      navigate("/dashboard");
-
-      return {
+      // Create basic profile if needed
+      const userProfile: UserProfile = {
         email: data.user.email || "",
         displayName: data.user.user_metadata?.display_name || email.split("@")[0],
         photoURL: data.user.user_metadata?.photo_url || 
@@ -97,9 +66,23 @@ export const useLogin = () => {
         emailNotifications: true,
         pushNotifications: false,
       };
+      
+      // Ensure profile exists in database
+      try {
+        await updateUserProfile(email, userProfile);
+      } catch (profileError) {
+        console.error("Error ensuring user profile:", profileError);
+        // Continue with login anyway
+      }
+
+      // Success notification and redirect
+      sonnerToast.dismiss();
+      sonnerToast.success("Signed in successfully");
+      navigate("/dashboard");
+
+      return userProfile;
     } catch (error) {
       console.error("Login error:", error);
-      setIsLoading(false);
       sonnerToast.dismiss();
       toast({
         variant: "destructive",

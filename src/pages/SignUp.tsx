@@ -34,34 +34,25 @@ const SignUp = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Check if there's a valid stored token first
+        // Check if there's a valid session
+        const { data } = await supabase.auth.getSession();
+        
+        if (data.session) {
+          navigate("/dashboard");
+          return;
+        }
+        
+        // Check if there's a stored token that might be causing conflicts
         if (authTokenService.isAuthenticated()) {
-          console.log("Found authentication token, attempting to restore session...");
-          const session = await authTokenService.getStoredSession();
+          const storedSession = await authTokenService.getStoredSession();
           
-          if (session) {
-            console.log("Successfully restored session, redirecting to dashboard");
+          if (storedSession) {
             navigate("/dashboard");
             return;
           } else {
-            console.log("Token exists but session restore failed, possible token conflict");
+            // Token exists but is invalid - likely a conflict
             setTokenConflict(true);
           }
-        }
-        
-        // Check for an active session directly with Supabase
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Error checking auth session:", error);
-          setIsCheckingAuth(false);
-          return;
-        }
-        
-        if (data.session) {
-          console.log("User is already authenticated, redirecting...");
-          navigate("/dashboard");
-          return;
         }
         
         setIsCheckingAuth(false);
@@ -121,7 +112,7 @@ const SignUp = () => {
             <h3 className="font-medium text-amber-800">Authentication Issue Detected</h3>
             <p className="text-sm text-amber-700 mt-1 mb-3">
               There appears to be a token conflict that's preventing you from signing up. 
-              This can happen if you have an existing session that wasn't properly closed.
+              Please clear your authentication data to continue.
             </p>
             <Button 
               variant="outline" 

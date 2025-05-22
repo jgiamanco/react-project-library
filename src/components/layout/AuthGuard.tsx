@@ -1,10 +1,10 @@
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-hooks";
-import { supabase } from "@/services/supabase-client";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { supabase } from "@/services/supabase-client";
 import { AuthTokenService } from "@/services/auth-token-service";
 
 interface AuthGuardProps {
@@ -16,115 +16,77 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   const location = useLocation();
   const [isChecking, setIsChecking] = useState(true);
   const { isAuthenticated, isLoading, user } = useAuth();
-  const redirectTimeout = useRef<NodeJS.Timeout>();
-  const authCheckTimeout = useRef<NodeJS.Timeout>();
-  const checksCompleted = useRef(false);
-  const isMounted = useRef(true);
   const authTokenService = AuthTokenService.getInstance();
 
-  // Define a single, reusable function for redirecting on auth failure
-  const redirectToSignIn = useCallback(
-    (message: string) => {
-      // Clear any existing timeouts
-      if (redirectTimeout.current) {
-        clearTimeout(redirectTimeout.current);
+  useEffect(() => {
+    const checkAuth = async () => {
+      // If auth state is already determined, use it
+      if (!isLoading) {
+        if (isAuthenticated && user) {
+          setIsChecking(false);
+          return;
+        }
+        
+        // Not authenticated through context, try session check
+        try {
+          const { data } = await supabase.auth.getSession();
+          
+          if (data.session) {
+            setIsChecking(false);
+            return;
+          }
+          
+          // Last attempt: try stored tokens
+          const storedSession = await authTokenService.getStoredSession();
+          
+          if (!storedSession) {
+            // No valid authentication, redirect to signin
+            toast.error("Please sign in to access this page");
+            navigate("/signin", {
+              replace: true,
+              state: { from: location.pathname },
+            });
+          }
+          
+        } catch (error) {
+          console.error("Auth check error:", error);
+          toast.error("Authentication error");
+          navigate("/signin", { 
+            replace: true,
+            state: { from: location.pathname },
+          });
+        }
+        
+        setIsChecking(false);
       }
-      if (authCheckTimeout.current) {
-        clearTimeout(authCheckTimeout.current);
-      }
-
-      // Clear local storage to prevent auth loops
-      authTokenService.clearSession();
-
-      // Show error message
-      toast.error(message);
-
-      // Use a timeout to ensure state updates are processed
-      redirectTimeout.current = setTimeout(() => {
-        if (isMounted.current) {
+    };
+    
+    // Set a timeout to prevent infinite checking
+    const timeout = setTimeout(() => {
+      if (isChecking) {
+        setIsChecking(false);
+        if (!isAuthenticated) {
+          toast.error("Authentication check timed out");
           navigate("/signin", {
             replace: true,
             state: { from: location.pathname },
           });
-          setIsChecking(false);
         }
-      }, 100);
-    },
-    [navigate, location.pathname]
-  );
-
-  useEffect(() => {
-    isMounted.current = true;
-
-    const checkAuth = async () => {
-      // If we already verified authentication and user is authenticated, no need to check again
-      if (checksCompleted.current && isAuthenticated && user) {
-        setIsChecking(false);
-        return;
       }
-
-      try {
-        // Wait for auth state to be determined
-        if (isLoading) {
-          return;
-        }
-
-        // Get the current session from Supabase
-        const { data, error } = await supabase.auth.getSession();
-
-        if (error) {
-          throw error;
-        }
-
-        // If no session and we're not in loading state, redirect
-        if (!data.session && !isAuthenticated) {
-          redirectToSignIn("Please sign in to access this page");
-          return;
-        }
-
-        // Auth check passed
-        checksCompleted.current = true;
-        if (isMounted.current) {
-          setIsChecking(false);
-        }
-      } catch (error) {
-        console.error("Auth check error:", error);
-        redirectToSignIn("Authentication error occurred");
-      }
-    };
-
-    // Run the auth check
+    }, 3000);
+    
     checkAuth();
+    
+    return () => clearTimeout(timeout);
+  }, [isAuthenticated, isLoading, navigate, location.pathname, user]);
 
-    // Set a timeout to prevent infinite auth checks
-    authCheckTimeout.current = setTimeout(() => {
-      if (isChecking && isMounted.current) {
-        setIsChecking(false);
-        if (!isAuthenticated) {
-          redirectToSignIn("Authentication check timed out");
-        }
-      }
-    }, 5000); // Timeout to 5 seconds
-
-    // Clean up
-    return () => {
-      isMounted.current = false;
-      if (redirectTimeout.current) {
-        clearTimeout(redirectTimeout.current);
-      }
-      if (authCheckTimeout.current) {
-        clearTimeout(authCheckTimeout.current);
-      }
-    };
-  }, [isAuthenticated, isLoading, redirectToSignIn, user, isChecking]);
-
-  // If auth state is determined and user is authenticated, render children
+  // If auth is confirmed, render children
   if (!isChecking && isAuthenticated) {
     return <>{children}</>;
   }
 
   // Show loading state while checking
-  if (isChecking) {
+  if (isChecking || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
