@@ -1,4 +1,3 @@
-
 import React, { createContext, useCallback, useState, useEffect } from "react";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { useAuthOperations } from "@/hooks/useAuthOperations";
@@ -38,19 +37,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (initUser) {
       // Get stored profile to ensure we're not losing local-only changes
       const storedProfile = authTokenService.getUserProfile();
-      
+
       // If we have both, merge them with preference to initUser for server values
-      const mergedProfile = storedProfile 
+      const mergedProfile = storedProfile
         ? { ...storedProfile, ...initUser }
         : initUser;
-      
+
       setUser(mergedProfile);
       setIsAuthenticated(initIsAuthenticated);
     } else {
       setUser(null);
       setIsAuthenticated(false);
     }
-    
+
     setLoading(initLoading);
   }, [initUser, initIsAuthenticated, initLoading]);
 
@@ -99,13 +98,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         // Ensure we have all existing profile data before update
         const currentProfile = authTokenService.getUserProfile() || user;
-        
+
         // Merge current user data with updates to ensure all required fields
         const updatedProfile = { ...currentProfile, ...updates };
-        
+
         // Explicitly handling the return value from performUpdateUser
         const result = await performUpdateUser(updatedProfile);
-        
+
         if (result !== undefined && result !== null) {
           setUser(result);
           return result;
@@ -121,7 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const contextValue: AuthContextType = {
     user,
-    isAuthenticated,
+    isAuthenticated: !!user,
     isLoading: loading || operationsLoading,
     login,
     signup,
