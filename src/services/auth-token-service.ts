@@ -113,6 +113,19 @@ export class AuthTokenService {
     try {
       console.log('Validating session' + (forceRefresh ? ' (forced)' : ''));
       
+      // Reduce frequency of validation attempts to prevent loops
+      const lastCheck = Number(localStorage.getItem('last_session_check') || '0');
+      const now = Date.now();
+      const tooSoon = (now - lastCheck) < 2000; // 2 seconds minimum between checks
+      
+      if (tooSoon && !forceRefresh) {
+        console.log('Skipping session validation (too soon)');
+        return true; // Assume valid to reduce unnecessary checks
+      }
+      
+      // Store last check timestamp
+      localStorage.setItem('last_session_check', now.toString());
+      
       // Get current session
       const { data } = forceRefresh 
         ? await supabase.auth.refreshSession()
