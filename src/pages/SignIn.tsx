@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthForm from "@/components/auth/AuthForm";
@@ -13,7 +12,7 @@ const SignIn = () => {
   const navigate = useNavigate();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const authTokenService = AuthTokenService.getInstance();
-  
+
   // Handle auth data clearing
   const handleClearAuthData = () => {
     try {
@@ -35,31 +34,31 @@ const SignIn = () => {
       try {
         // Check if there's a valid session
         const { data: sessionData } = await supabase.auth.getSession();
-        
+
         if (sessionData.session) {
           console.log("Active session found, redirecting to dashboard");
           navigate("/dashboard");
           return;
         }
-        
+
         setIsCheckingAuth(false);
       } catch (error) {
         console.error("Error checking authentication:", error);
         setIsCheckingAuth(false);
       }
     };
-    
+
     checkAuth();
-    
+
     // Check URL for error parameters
     const params = new URLSearchParams(window.location.search);
     const error = params.get("error");
     const errorDescription = params.get("error_description");
-    
+
     if (error) {
       setAuthError(errorDescription || error);
       toast.error("Authentication Error", {
-        description: errorDescription || error
+        description: errorDescription || error,
       });
     }
   }, [navigate]);
@@ -69,7 +68,9 @@ const SignIn = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <LoadingSpinner size="lg" />
-          <p className="mt-4 text-muted-foreground">Checking authentication status...</p>
+          <p className="mt-4 text-muted-foreground">
+            Checking authentication status...
+          </p>
         </div>
       </div>
     );
@@ -95,12 +96,16 @@ const SignIn = () => {
         </div>
 
         <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md max-w-md mx-auto">
-          <h3 className="font-medium text-amber-800">Having trouble signing in?</h3>
+          <h3 className="font-medium text-amber-800">
+            Having trouble signing in?
+          </h3>
           <p className="text-sm text-amber-700 mt-1 mb-3">
-            If you're experiencing issues signing in, try clearing your authentication data. This fixes most issues with multiple tabs or sessions.
+            If you're experiencing issues signing in, try clearing your
+            authentication data. This fixes most issues with multiple tabs or
+            sessions.
           </p>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full bg-amber-100 hover:bg-amber-200 text-amber-900"
             onClick={handleClearAuthData}
           >

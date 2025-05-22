@@ -8,12 +8,16 @@ export const useAuthInit = () => {
   const authTokenService = AuthTokenService.getInstance();
 
   useEffect(() => {
+    let mounted = true;
+
     const initializeAuth = async () => {
       try {
         // Get the current session
         const {
           data: { session },
         } = await supabase.auth.getSession();
+
+        if (!mounted) return;
 
         if (session) {
           // Get user profile from token service
@@ -26,6 +30,8 @@ export const useAuthInit = () => {
               .select("*")
               .eq("id", session.user.id)
               .single();
+
+            if (!mounted) return;
 
             if (error) {
               console.error("Error fetching user profile:", error);
@@ -41,7 +47,9 @@ export const useAuthInit = () => {
       } catch (error) {
         console.error("Error initializing auth:", error);
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -51,6 +59,8 @@ export const useAuthInit = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
       if (event === "SIGNED_IN" && session) {
         // Get user profile from database
         const { data: userData, error } = await supabase
@@ -58,6 +68,8 @@ export const useAuthInit = () => {
           .select("*")
           .eq("id", session.user.id)
           .single();
+
+        if (!mounted) return;
 
         if (error) {
           console.error("Error fetching user profile:", error);
@@ -75,6 +87,7 @@ export const useAuthInit = () => {
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [authTokenService]);

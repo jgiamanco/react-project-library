@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { FavoriteLocation, WeatherData } from "../types";
 import { WeatherFavorites } from "@/services/types";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth-hooks";
 import { supabase } from "@/services/supabase-client";
 
 export const useFavorites = () => {

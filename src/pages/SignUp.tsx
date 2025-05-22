@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthForm from "@/components/auth/AuthForm";
@@ -7,13 +6,14 @@ import { supabase } from "@/services/supabase-client";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { AuthTokenService } from "@/services/auth-token-service";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth-hooks";
 
 const SignUp = () => {
   const navigate = useNavigate();
   const [authError, setAuthError] = useState<string | null>(null);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const { isAuthenticated, isLoading } = useAuth();
   const authTokenService = AuthTokenService.getInstance();
-  
+
   // Handle auth data clearing
   const handleClearAuthData = () => {
     try {
@@ -29,47 +29,35 @@ const SignUp = () => {
       toast.error("Failed to clear auth data");
     }
   };
-  
+
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // Check if there's a valid session
-        const { data: sessionData } = await supabase.auth.getSession();
-        
-        if (sessionData.session) {
-          console.log("Active session found, redirecting to dashboard");
-          navigate("/dashboard");
-          return;
-        }
-        
-        setIsCheckingAuth(false);
-      } catch (error) {
-        console.error("Error checking authentication:", error);
-        setIsCheckingAuth(false);
-      }
-    };
-    
-    checkAuth();
-    
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
     // Check URL for error parameters
     const params = new URLSearchParams(window.location.search);
     const error = params.get("error");
     const errorDescription = params.get("error_description");
-    
+
     if (error) {
       setAuthError(errorDescription || error);
       toast.error("Authentication Error", {
-        description: errorDescription || error
+        description: errorDescription || error,
       });
     }
-  }, [navigate]);
+  }, []);
 
-  if (isCheckingAuth) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <LoadingSpinner size="lg" />
-          <p className="mt-4 text-muted-foreground">Checking authentication status...</p>
+          <p className="mt-4 text-muted-foreground">
+            Checking authentication status...
+          </p>
         </div>
       </div>
     );
@@ -95,12 +83,15 @@ const SignUp = () => {
         </div>
 
         <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md max-w-md mx-auto">
-          <h3 className="font-medium text-amber-800">Having trouble signing up?</h3>
+          <h3 className="font-medium text-amber-800">
+            Having trouble signing up?
+          </h3>
           <p className="text-sm text-amber-700 mt-1 mb-3">
-            If you're experiencing issues signing up, or using multiple tabs, try clearing your authentication data.
+            If you're experiencing issues signing up, or using multiple tabs,
+            try clearing your authentication data.
           </p>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full bg-amber-100 hover:bg-amber-200 text-amber-900"
             onClick={handleClearAuthData}
           >

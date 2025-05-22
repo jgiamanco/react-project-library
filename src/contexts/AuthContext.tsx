@@ -1,26 +1,10 @@
-import React, {
-  createContext,
-  useCallback,
-  useState,
-  useEffect,
-  useContext,
-} from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { useAuthOperations } from "@/hooks/useAuthOperations";
-import { AuthContextType, User } from "./auth-types";
+import { User } from "./auth-types";
 import { UserProfile } from "@/services/types";
 import { AuthTokenService } from "@/services/auth-token-service";
-
-// Create the context with a default value
-export const AuthContext = createContext<AuthContextType | null>(null);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
+import { AuthContext } from "./auth-context";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -120,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     [user, performUpdateUser, authTokenService]
   );
 
-  const contextValue: AuthContextType = {
+  const contextValue = {
     user,
     isAuthenticated: !!user,
     isLoading: loading || operationsLoading,

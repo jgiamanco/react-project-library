@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Note, Folder } from "../types";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth-hooks";
 import { supabase } from "@/services/supabase-client";
 import { toast } from "sonner";
 
