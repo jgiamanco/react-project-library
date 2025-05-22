@@ -6,12 +6,30 @@ import { toast } from "sonner";
 import { supabase } from "@/services/supabase-client";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { AuthTokenService } from "@/services/auth-token-service";
+import { Button } from "@/components/ui/button";
 
 const SignUp = () => {
   const navigate = useNavigate();
   const [authError, setAuthError] = useState<string | null>(null);
+  const [tokenConflict, setTokenConflict] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const authTokenService = AuthTokenService.getInstance();
+  
+  // Handle token conflict recovery
+  const handleClearTokens = async () => {
+    try {
+      toast.loading("Clearing auth data...");
+      await authTokenService.clearAllAuthData();
+      await supabase.auth.signOut();
+      toast.dismiss();
+      toast.success("Auth data cleared successfully");
+      setTokenConflict(false);
+      window.location.reload();
+    } catch (error) {
+      console.error("Error clearing tokens:", error);
+      toast.error("Failed to clear auth data");
+    }
+  };
   
   useEffect(() => {
     const checkAuth = async () => {
@@ -25,6 +43,9 @@ const SignUp = () => {
             console.log("Successfully restored session, redirecting to dashboard");
             navigate("/dashboard");
             return;
+          } else {
+            console.log("Token exists but session restore failed, possible token conflict");
+            setTokenConflict(true);
           }
         }
         
@@ -94,6 +115,23 @@ const SignUp = () => {
             <span>React Project Library</span>
           </a>
         </div>
+
+        {tokenConflict && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md max-w-md mx-auto">
+            <h3 className="font-medium text-amber-800">Authentication Issue Detected</h3>
+            <p className="text-sm text-amber-700 mt-1 mb-3">
+              There appears to be a token conflict that's preventing you from signing up. 
+              This can happen if you have an existing session that wasn't properly closed.
+            </p>
+            <Button 
+              variant="outline" 
+              className="w-full bg-amber-100 hover:bg-amber-200 text-amber-900"
+              onClick={handleClearTokens}
+            >
+              Clear Authentication Data
+            </Button>
+          </div>
+        )}
 
         {authError && (
           <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm">

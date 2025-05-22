@@ -49,9 +49,12 @@ export class AuthTokenService {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(EXPIRY_KEY);
     localStorage.removeItem(AUTH_STATUS_KEY);
-    localStorage.removeItem("user_email");
-    localStorage.removeItem("user");
-    localStorage.removeItem("lastLoggedInEmail");
+    
+    // Don't clear these automatically to prevent potential data loss on accidental logout
+    // Only clear them when explicitly requested to logout
+    // localStorage.removeItem("user_email");
+    // localStorage.removeItem("user");
+    // localStorage.removeItem("lastLoggedInEmail");
 
     if (this.tokenRefreshTimeout) {
       clearTimeout(this.tokenRefreshTimeout);
@@ -59,6 +62,16 @@ export class AuthTokenService {
     }
     
     console.log("Session cleared successfully");
+  }
+
+  // Method to completely clear all authentication data
+  async clearAllAuthData(): Promise<void> {
+    await this.clearSession();
+    localStorage.removeItem("user_email");
+    localStorage.removeItem("user");
+    localStorage.removeItem("user_profile");
+    localStorage.removeItem("lastLoggedInEmail");
+    console.log("All auth data cleared");
   }
 
   async getStoredSession(): Promise<Session | null> {

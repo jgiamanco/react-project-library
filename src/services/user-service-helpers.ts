@@ -91,9 +91,14 @@ export async function updateExistingProfile(
     
     const dbProfile = appToDbProfile(profile);
     
+    // Only update fields that are not null or undefined to prevent overwriting existing data
+    const filteredDbProfile = Object.fromEntries(
+      Object.entries(dbProfile).filter(([_, value]) => value !== undefined && value !== null)
+    );
+    
     const { data, error } = await supabase
       .from("users")
-      .update(dbProfile)
+      .update(filteredDbProfile)
       .eq("email", email)
       .select("*")
       .maybeSingle();
