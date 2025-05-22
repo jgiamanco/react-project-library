@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
@@ -30,26 +31,25 @@ export const LoadingSpinner = ({
   if (!show) return null;
 
   const sizeClasses = {
-    sm: 'h-4 w-4 border-2',
-    md: 'h-8 w-8 border-3',
-    lg: 'h-12 w-12 border-4'
+    sm: 'h-4 w-4',
+    md: 'h-8 w-8',
+    lg: 'h-12 w-12'
   };
   
   const colorClasses = {
-    primary: 'border-primary border-t-transparent',
-    white: 'border-white border-t-transparent',
-    gray: 'border-gray-300 border-t-transparent'
+    primary: 'text-primary',
+    white: 'text-white',
+    gray: 'text-gray-300'
   };
 
   return (
-    <div 
+    <Loader2
       className={cn(
-        "animate-spin rounded-full", 
+        "animate-spin", 
         sizeClasses[size], 
         colorClasses[color],
         className
       )}
-      role="status"
       aria-label="Loading"
     />
   );

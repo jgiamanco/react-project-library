@@ -103,10 +103,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         // Merge current user data with updates to ensure all required fields
         const updatedProfile = { ...currentProfile, ...updates };
         
-        // performUpdateUser can return null, so handle that case
+        // Explicitly handling the return value from performUpdateUser
         const result = await performUpdateUser(updatedProfile);
         
-        if (result) {
+        if (result !== undefined && result !== null) {
           setUser(result);
           return result;
         }

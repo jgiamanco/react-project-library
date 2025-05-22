@@ -6,13 +6,14 @@ import { ArrowLeft } from "lucide-react";
 import { projects } from "@/data/projects";
 import { trackRenderTime } from "@/utils/performance-monitoring";
 import projectComponents from "@/projects";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 // Create a loading component for projects
 const ProjectLoading = () => (
   <div className="flex items-center justify-center min-h-[calc(100vh-100px)] pt-20">
     <div className="flex flex-col items-center">
-      <div className="w-12 h-12 border-4 border-gray-200 border-t-primary rounded-full animate-spin mb-4"></div>
-      <p className="text-muted-foreground">Loading project...</p>
+      <LoadingSpinner size="lg" color="primary" />
+      <p className="text-muted-foreground mt-4">Loading project...</p>
     </div>
   </div>
 );
