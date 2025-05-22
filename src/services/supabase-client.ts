@@ -21,16 +21,27 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables");
 }
 
-// Create a single instance of the Supabase client with a consistent storage key
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    storageKey: "supabase-auth-token", // Use consistent storage key
-    storage: window.localStorage,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
+// Create supabase client singleton (with persistent storage)
+let supabaseInstance: SupabaseClient<Database> | null = null;
+
+// Export singleton getter function to prevent duplicate instances
+export const getSupabase = (): SupabaseClient<Database> => {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        storageKey: "supabase-auth-token",
+        storage: window.localStorage,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    });
+  }
+  return supabaseInstance;
+};
+
+// Export the singleton instance directly
+export const supabase = getSupabase();
 
 // Create a singleton Supabase admin client
 export const supabaseAdmin = createClient<Database>(

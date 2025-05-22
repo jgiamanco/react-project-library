@@ -1,6 +1,5 @@
 
-import React, { useCallback, useState, useEffect } from "react";
-import { useAuthInit } from "@/hooks/useAuthInit";
+import React, { useCallback, useState, useEffect, useMemo } from "react";
 import { useAuthOperations } from "@/hooks/useAuthOperations";
 import { User } from "./auth-types";
 import { UserProfile } from "@/services/types";
@@ -16,9 +15,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   const authTokenService = AuthTokenService.getInstance();
 
-  // Initialize auth state
-  const { isLoading: initLoading } = useAuthInit();
-
+  // Get auth operations
   const {
     login: performLogin,
     signUp: performSignup,
@@ -27,42 +24,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     loading: operationsLoading,
   } = useAuthOperations();
 
-  // Update loading state based on initialization
+  // Initialize auth and check for existing sessions
   useEffect(() => {
-    setLoading(initLoading);
-  }, [initLoading]);
-
-  // Check for existing session on mount
-  useEffect(() => {
-    const checkSession = async () => {
+    let mounted = true;
+    
+    const initializeAuth = async () => {
       try {
+        // Check if we have an existing profile
         const profile = authTokenService.getUserProfile();
+        
         if (profile) {
-          // Validate session with the server
-          const hasValidSession = await authTokenService.validateSession();
-          if (hasValidSession) {
-            setUser(profile);
-            setIsAuthenticated(true);
+          // Validate the session with Supabase
+          const { data } = await supabase.auth.getSession();
+          
+          if (data.session) {
+            // Valid session, set authenticated state
+            if (mounted) {
+              setUser(profile);
+              setIsAuthenticated(true);
+            }
           } else {
-            // Clear invalid session
+            // No valid session, clear local data
             authTokenService.clearAuthData();
-            setUser(null);
-            setIsAuthenticated(false);
+            if (mounted) {
+              setUser(null);
+              setIsAuthenticated(false);
+            }
           }
         }
       } catch (error) {
-        console.error("Session check error:", error);
+        console.error("Auth initialization error:", error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    checkSession();
+    initializeAuth();
 
-    // Set up auth state change listener
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      
+      console.log("Auth state changed:", event);
+      
       if (event === 'SIGNED_IN' && session) {
         const profile = authTokenService.getUserProfile();
+        
         if (profile) {
           setUser(profile);
           setIsAuthenticated(true);
@@ -70,42 +79,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAuthenticated(false);
+        authTokenService.clearAuthData();
       }
     });
-
+    
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, [authTokenService]);
+  }, []);
 
-  // Wrap the auth operations to update our state
-  const login = useCallback(
-    async (email: string, password: string) => {
-      try {
-        await performLogin(email, password);
-        console.log("Login completed successfully");
-      } catch (error) {
-        console.error("Login error in context:", error);
-        throw error;
+  // Wrap auth operations to update our state consistently
+  const login = useCallback(async (email: string, password: string) => {
+    setLoading(true);
+    try {
+      const result = await performLogin(email, password);
+      if (result) {
+        setUser(result);
+        setIsAuthenticated(true);
       }
-    },
-    [performLogin]
-  );
+      return result;
+    } catch (error) {
+      console.error("Login error in context:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [performLogin]);
 
-  const signup = useCallback(
-    async (email: string, password: string, profile: Partial<User>) => {
-      try {
-        await performSignup(email, password, profile as UserProfile);
-        console.log("Signup completed successfully");
-      } catch (error) {
-        console.error("Signup error in context:", error);
-        throw error;
-      }
-    },
-    [performSignup]
-  );
+  const signup = useCallback(async (
+    email: string, 
+    password: string, 
+    profile: Partial<User>
+  ) => {
+    setLoading(true);
+    try {
+      await performSignup(email, password, profile as UserProfile);
+    } catch (error) {
+      console.error("Signup error in context:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [performSignup]);
 
   const logout = useCallback(async () => {
+    setLoading(true);
     try {
       await performLogout();
       setUser(null);
@@ -113,65 +132,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error) {
       console.error("Logout error in context:", error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   }, [performLogout]);
 
-  const updateUser = useCallback(
-    async (updates: Partial<User>): Promise<User | null> => {
-      if (!user) return null;
+  const updateUser = useCallback(async (
+    updates: Partial<User>
+  ): Promise<User | null> => {
+    if (!user) return null;
 
-      try {
-        // Ensure we have all existing profile data before update
-        const currentProfile = authTokenService.getUserProfile() || user;
-
-        // Merge current user data with updates to ensure all required fields
-        const updatedProfile = { ...currentProfile, ...updates } as UserProfile;
-
-        // Perform the update operation
-        const result = await performUpdateUser(updatedProfile);
-
-        // Handle the result correctly based on its type
-        if (
-          result !== null &&
-          result !== undefined &&
-          typeof result === "object"
-        ) {
-          // Only set user if result is a valid object (not void)
-          setUser(result as UserProfile);
-          return result as User;
-        }
-
-        // If the update operation didn't return a valid profile, use the local updated profile
-        setUser(updatedProfile);
-        return updatedProfile;
-      } catch (error) {
-        console.error("Update user error in context:", error);
-        throw error;
+    try {
+      // Get current profile data
+      const currentProfile = authTokenService.getUserProfile() || user;
+      
+      // Create updated profile
+      const updatedProfile = { ...currentProfile, ...updates } as UserProfile;
+      
+      // Perform the update
+      const result = await performUpdateUser(updatedProfile);
+      
+      // Handle the result
+      if (result !== null && typeof result === "object") {
+        // TypeScript narrowing to ensure result is an object
+        setUser(result as UserProfile);
+        return result as User;
       }
-    },
-    [user, performUpdateUser, authTokenService]
-  );
+      
+      // Use the locally updated profile if the remote update didn't return a value
+      setUser(updatedProfile);
+      return updatedProfile as User;
+    } catch (error) {
+      console.error("Update user error in context:", error);
+      throw error;
+    }
+  }, [user, performUpdateUser, authTokenService]);
 
-  const contextValue = {
+  const setUserProfile = useCallback((profile: UserProfile | null) => {
+    setUser(profile);
+    if (profile) {
+      setIsAuthenticated(true);
+      authTokenService.setUserProfile(profile);
+    } else {
+      setIsAuthenticated(false);
+      authTokenService.clearAuthData();
+    }
+  }, [authTokenService]);
+
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
     user,
-    isAuthenticated: !!user,
+    isAuthenticated,
     isLoading: loading || operationsLoading,
     login,
     signup,
     logout,
     updateUser,
     setUser,
-    setUserProfile: (profile: UserProfile | null) => {
-      setUser(profile);
-      if (profile) {
-        authTokenService.setUserProfile(profile);
-      } else {
-        authTokenService.clearAuthData();
-      }
-    },
-  };
+    setUserProfile,
+  }), [
+    user, 
+    isAuthenticated, 
+    loading, 
+    operationsLoading,
+    login, 
+    signup, 
+    logout, 
+    updateUser, 
+    setUserProfile
+  ]);
 
   return (
-    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
   );
 };

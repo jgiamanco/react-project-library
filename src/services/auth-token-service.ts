@@ -10,6 +10,7 @@ export class AuthTokenService {
   private authEventListeners: Set<() => void> = new Set();
   private lastValidationTime = 0;
   private validationThrottleMs = 5000; // Throttle validation to once every 5 seconds
+  private validationPromise: Promise<boolean> | null = null;
 
   private constructor() {
     // Listen for auth events from other tabs
@@ -65,8 +66,13 @@ export class AuthTokenService {
   }
 
   public getUserProfile(): UserProfile | null {
-    const profile = localStorage.getItem(this.PROFILE_KEY);
-    return profile ? JSON.parse(profile) : null;
+    try {
+      const profile = localStorage.getItem(this.PROFILE_KEY);
+      return profile ? JSON.parse(profile) : null;
+    } catch (e) {
+      console.error("Error parsing user profile:", e);
+      return null;
+    }
   }
 
   public clearAuthData() {
@@ -84,20 +90,28 @@ export class AuthTokenService {
       return !!this.getUserProfile();
     }
     
+    // Use a promise to deduplicate concurrent calls
+    if (this.validationPromise) {
+      return this.validationPromise;
+    }
+    
     this.lastValidationTime = now;
     
+    try {
+      this.validationPromise = this.performValidation();
+      const result = await this.validationPromise;
+      return result;
+    } finally {
+      this.validationPromise = null;
+    }
+  }
+  
+  private async performValidation(): Promise<boolean> {
     try {
       const { data } = await supabase.auth.getSession();
       const hasSession = !!data.session;
 
-      if (hasSession) {
-        // If we have a session but no profile, try to load it
-        const profile = this.getUserProfile();
-        if (!profile && data.session?.user?.email) {
-          // Trigger a profile load
-          this.broadcastAuthEvent("profile_load");
-        }
-      } else {
+      if (!hasSession) {
         // Clear auth data if no session
         this.clearAuthData();
       }

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -17,6 +18,9 @@ export const useLogin = () => {
     try {
       setIsLoading(true);
       sonnerToast.loading("Signing in...");
+
+      // Clear any existing auth data first to avoid conflicts
+      authTokenService.clearAuthData();
 
       // Sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -46,6 +50,8 @@ export const useLogin = () => {
         return null;
       }
 
+      console.log("Successfully signed in with email:", email);
+
       // Fetch full profile from database
       const dbProfile = await fetchUserProfile(email);
 
@@ -55,6 +61,7 @@ export const useLogin = () => {
       if (dbProfile) {
         // Use the database profile
         userProfile = dbProfile;
+        console.log("Retrieved user profile from database");
       } else {
         // Create basic profile if needed
         userProfile = {
@@ -78,6 +85,7 @@ export const useLogin = () => {
 
         // Ensure profile exists in database
         try {
+          console.log("Creating new user profile in database");
           await updateUserProfile(email, userProfile);
         } catch (profileError) {
           console.error("Error ensuring user profile:", profileError);

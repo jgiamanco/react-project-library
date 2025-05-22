@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthForm from "@/components/auth/AuthForm";
@@ -6,19 +7,21 @@ import { supabase } from "@/services/supabase-client";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { AuthTokenService } from "@/services/auth-token-service";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth-hooks";
 
 const SignIn = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const authTokenService = AuthTokenService.getInstance();
+  const { isAuthenticated } = useAuth();
 
   // Handle auth data clearing
   const handleClearAuthData = () => {
     try {
       toast.loading("Clearing auth data...");
       authTokenService.clearAuthData();
-      supabase.auth.signOut();
+      supabase.auth.signOut().catch(console.error);
       toast.dismiss();
       toast.success("Auth data cleared successfully");
       // Reload the page to reset all React states
@@ -30,25 +33,30 @@ const SignIn = () => {
   };
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // Check if there's a valid session
-        const { data: sessionData } = await supabase.auth.getSession();
+    // Redirect if already authenticated
+    if (isAuthenticated) {
+      navigate("/dashboard");
+      return;
+    }
 
-        if (sessionData.session) {
+    // Check if there's a valid session
+    const checkSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        
+        if (data.session) {
           console.log("Active session found, redirecting to dashboard");
           navigate("/dashboard");
           return;
         }
-
-        setIsCheckingAuth(false);
       } catch (error) {
-        console.error("Error checking authentication:", error);
+        console.error("Error checking session:", error);
+      } finally {
         setIsCheckingAuth(false);
       }
     };
 
-    checkAuth();
+    checkSession();
 
     // Check URL for error parameters
     const params = new URLSearchParams(window.location.search);
@@ -61,7 +69,7 @@ const SignIn = () => {
         description: errorDescription || error,
       });
     }
-  }, [navigate]);
+  }, [navigate, isAuthenticated]);
 
   if (isCheckingAuth) {
     return (
