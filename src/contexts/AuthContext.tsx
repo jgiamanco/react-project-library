@@ -106,14 +106,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         // Perform the update operation
         const result = await performUpdateUser(updatedProfile);
         
-        // Only update state if we got a valid result back
-        if (result) {
+        // Fix: Check if result exists instead of checking truthiness
+        if (result !== null && result !== undefined) {
           setUser(result);
           return result;
         }
         
         // If the update operation didn't return a valid profile, return the local updated profile
-        // This ensures we still return something valid even if the server update failed
         setUser(updatedProfile);
         return updatedProfile;
       } catch (error) {

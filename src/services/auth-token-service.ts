@@ -1,9 +1,7 @@
-
-import { Session } from "@supabase/supabase-js";
 import { UserProfile } from "./types";
 import { supabase } from "./supabase-client";
 
-// Enhanced service for auth token management with improved cross-tab support
+// Simplified service for auth token management
 export class AuthTokenService {
   private static instance: AuthTokenService;
   private readonly PROFILE_KEY = 'user_profile';
