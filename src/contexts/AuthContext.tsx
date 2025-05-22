@@ -11,13 +11,12 @@ import { AuthContextType, User } from "./auth-types";
 import { UserProfile } from "@/services/types";
 import { AuthTokenService } from "@/services/auth-token-service";
 
-export const AuthContext = createContext<AuthContextType | undefined>(
-  undefined
-);
+// Create the context with a default value
+export const AuthContext = createContext<AuthContextType | null>(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;

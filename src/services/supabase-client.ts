@@ -16,21 +16,18 @@ const supabaseServiceRoleKey =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxYnV2ZmV6YXJxZ3NldmNmb3FjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MTYyOTU0NiwiZXhwIjoyMDU3MjA1NTQ2fQ.d9P8MYJPMhsFQpXzmIrwhcLtlKKZgR37FNat5KnPGRk";
 
 // Validate environment variables
-if (!supabaseUrl) {
-  throw new Error("Missing VITE_SUPABASE_URL environment variable");
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error("Missing Supabase environment variables");
 }
 
-if (!supabaseAnonKey) {
-  throw new Error("Missing VITE_SUPABASE_ANON_KEY environment variable");
-}
-
-// Create a singleton Supabase client with improved config for better persistence
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+// Create a single instance of the Supabase client
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
+    storageKey: "react-project-library-auth",
+    storage: window.localStorage,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storageKey: "sb-auth-token",
   },
 });
 
