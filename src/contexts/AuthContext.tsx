@@ -106,13 +106,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         // Perform the update operation
         const result = await performUpdateUser(updatedProfile);
         
-        // Fix: Check if result exists instead of checking truthiness
-        if (result !== null && result !== undefined) {
-          setUser(result);
-          return result;
+        // Handle the result correctly based on its type
+        if (result !== null && result !== undefined && typeof result === 'object') {
+          // Only set user if result is a valid object (not void)
+          setUser(result as UserProfile);
+          return result as User;
         }
         
-        // If the update operation didn't return a valid profile, return the local updated profile
+        // If the update operation didn't return a valid profile, use the local updated profile
         setUser(updatedProfile);
         return updatedProfile;
       } catch (error) {
@@ -120,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         throw error;
       }
     },
-    [user, performUpdateUser]
+    [user, performUpdateUser, authTokenService] // Added authTokenService to dependencies
   );
 
   const contextValue: AuthContextType = {
