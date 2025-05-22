@@ -1,7 +1,6 @@
-
 import { useCallback, memo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/auth-hooks";
+import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +15,7 @@ import {
 const UserMenu = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  
+
   // Memoize the logout handler to prevent unnecessary re-renders
   const handleLogout = useCallback(async () => {
     await logout();
@@ -26,9 +25,12 @@ const UserMenu = () => {
   const userInitial = user?.displayName?.[0]?.toUpperCase() || "U";
 
   // Handle navigation with React Router instead of direct window.location changes
-  const handleNavigate = useCallback((path: string) => {
-    navigate(path);
-  }, [navigate]);
+  const handleNavigate = useCallback(
+    (path: string) => {
+      navigate(path);
+    },
+    [navigate]
+  );
 
   return (
     <DropdownMenu>
@@ -58,7 +60,9 @@ const UserMenu = () => {
         <DropdownMenuItem onClick={() => handleNavigate("/profile")}>
           Profile
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleNavigate("/profile?tab=account")}>
+        <DropdownMenuItem
+          onClick={() => handleNavigate("/profile?tab=account")}
+        >
           Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
