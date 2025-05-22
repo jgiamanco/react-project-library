@@ -45,13 +45,21 @@ export const useAuthInit = () => {
         setUser(null);
         setIsAuthenticated(false);
       } finally {
-        setLoading(false);
+        if (mounted.current) {
+          setLoading(false);
+        }
       }
     };
 
     // Load user profile helper function
     const loadUserProfile = async (email: string) => {
+      if (!email) {
+        console.log("No email provided for loading user profile");
+        return;
+      }
+      
       try {
+        console.log("Loading profile for user:", email);
         // Try to fetch user profile
         const existingProfile = await fetchUserProfile(email);
         
@@ -110,13 +118,23 @@ export const useAuthInit = () => {
       
       if (mounted.current) {
         if (session && ["SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED"].includes(event)) {
+          console.log("Processing", event, "event");
+          const expiresIn = session.expires_at 
+            ? Math.floor(session.expires_at - Date.now() / 1000)
+            : 3600;
+          console.log(`Scheduling token refresh in ${expiresIn} seconds`);
+          
           await authTokenService.storeSession(session);
+          console.log("Session stored successfully, token refresh scheduled");
+          
+          console.log("Updating auth state for user:", session.user?.email);
           if (session.user?.email) {
             await loadUserProfile(session.user.email);
           }
         } 
         else if (event === "SIGNED_OUT" || !session) {
-          await authTokenService.clearSession();
+          console.log("User signed out or session expired");
+          await authTokenService.clearAllAuthData();
           setUser(null);
           setIsAuthenticated(false);
         }

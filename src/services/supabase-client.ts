@@ -1,3 +1,4 @@
+
 import {
   createClient,
   PostgrestError,
@@ -24,17 +25,21 @@ if (!supabaseAnonKey) {
   throw new Error("Missing VITE_SUPABASE_ANON_KEY environment variable");
 }
 
+// Use a unique storage key to prevent conflicts between tabs
+const STORAGE_KEY = "supabase.auth.token.react-project-library";
+
 // Create a single instance of the regular client
 let supabaseInstance: SupabaseClient<Database> | null = null;
 
 export const supabase = (() => {
   if (!supabaseInstance) {
+    console.log("Creating new Supabase client instance");
     supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        storageKey: "supabase.auth.token",
+        storageKey: STORAGE_KEY,
       },
     });
   }

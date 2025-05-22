@@ -19,6 +19,9 @@ export const useLogin = () => {
       setIsLoading(true);
       sonnerToast.loading("Signing in...");
 
+      // Clean up any existing session data to prevent conflicts
+      await authTokenService.clearAllAuthData();
+
       // Sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,

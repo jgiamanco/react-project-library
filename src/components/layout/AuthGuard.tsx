@@ -29,9 +29,20 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
         
         // Not authenticated through context, try session check
         try {
-          const { data } = await supabase.auth.getSession();
+          // Check for current session in Supabase
+          const { data, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error("Session error:", error);
+            redirectToSignIn();
+            return;
+          }
           
           if (data.session) {
+            // We have a valid session, but context doesn't reflect it yet
+            // This can happen during initial load or tab synchronization
+            console.log("Valid session found, waiting for auth context to update");
+            // The auth context will update from the onAuthStateChange listener
             setIsChecking(false);
             return;
           }
@@ -41,24 +52,26 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
           
           if (!storedSession) {
             // No valid authentication, redirect to signin
-            toast.error("Please sign in to access this page");
-            navigate("/signin", {
-              replace: true,
-              state: { from: location.pathname },
-            });
+            redirectToSignIn();
+            return;
           }
+          
+          // We have a valid stored session, auth context will update
+          setIsChecking(false);
           
         } catch (error) {
           console.error("Auth check error:", error);
-          toast.error("Authentication error");
-          navigate("/signin", { 
-            replace: true,
-            state: { from: location.pathname },
-          });
+          redirectToSignIn();
         }
-        
-        setIsChecking(false);
       }
+    };
+    
+    const redirectToSignIn = () => {
+      toast.error("Please sign in to access this page");
+      navigate("/signin", {
+        replace: true,
+        state: { from: location.pathname },
+      });
     };
     
     // Set a timeout to prevent infinite checking

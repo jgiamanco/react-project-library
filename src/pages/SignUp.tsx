@@ -24,6 +24,7 @@ const SignUp = () => {
       toast.dismiss();
       toast.success("Auth data cleared successfully");
       setTokenConflict(false);
+      // Use window.location.reload() to ensure all React states are reset
       window.location.reload();
     } catch (error) {
       console.error("Error clearing tokens:", error);
@@ -34,25 +35,39 @@ const SignUp = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Check if there's a valid session
-        const { data } = await supabase.auth.getSession();
+        // First, try to recover from any session conflicts
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
-        if (data.session) {
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          await authTokenService.clearAllAuthData();
+          setTokenConflict(true);
+          setIsCheckingAuth(false);
+          return;
+        }
+        
+        // Check if there's a valid session
+        if (sessionData.session) {
+          console.log("Active session found, redirecting to dashboard");
           navigate("/dashboard");
           return;
         }
         
-        // Check if there's a stored token that might be causing conflicts
-        if (authTokenService.isAuthenticated()) {
+        // Check if there's a stored token
+        const hasStoredToken = authTokenService.isAuthenticated();
+        
+        if (hasStoredToken) {
+          console.log("Found stored token, attempting to restore session");
           const storedSession = await authTokenService.getStoredSession();
           
           if (storedSession) {
+            console.log("Session restored successfully");
             navigate("/dashboard");
             return;
-          } else {
-            // Token exists but is invalid - likely a conflict
-            setTokenConflict(true);
-          }
+          } 
+          
+          console.log("Invalid stored token detected");
+          setTokenConflict(true);
         }
         
         setIsCheckingAuth(false);
@@ -111,8 +126,8 @@ const SignUp = () => {
           <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md max-w-md mx-auto">
             <h3 className="font-medium text-amber-800">Authentication Issue Detected</h3>
             <p className="text-sm text-amber-700 mt-1 mb-3">
-              There appears to be a token conflict that's preventing you from signing up. 
-              Please clear your authentication data to continue.
+              There appears to be an authentication conflict. This can happen when using multiple tabs or 
+              after an extended period of inactivity. Please clear your authentication data to continue.
             </p>
             <Button 
               variant="outline" 
@@ -125,7 +140,7 @@ const SignUp = () => {
         )}
 
         {authError && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
+          <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm max-w-md mx-auto">
             {authError}
           </div>
         )}

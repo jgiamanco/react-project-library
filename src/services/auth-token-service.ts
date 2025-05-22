@@ -5,20 +5,34 @@ import { supabase } from "./supabase-client";
 // Simplified token storage with clear naming
 const AUTH_TOKEN_KEY = "auth_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
-const AUTH_STATUS_KEY = "authenticated";
 const SESSION_EXPIRY_KEY = "session_expiry";
 const USER_PROFILE_KEY = "user_profile";
 
 export class AuthTokenService {
   private static instance: AuthTokenService;
 
-  private constructor() {}
+  private constructor() {
+    // Add storage event listener to handle changes from other tabs
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', this.handleStorageChange.bind(this));
+    }
+  }
 
   static getInstance(): AuthTokenService {
     if (!AuthTokenService.instance) {
       AuthTokenService.instance = new AuthTokenService();
     }
     return AuthTokenService.instance;
+  }
+
+  // Handle storage events from other tabs
+  private handleStorageChange(event: StorageEvent): void {
+    // If auth token was changed in another tab
+    if (event.key === AUTH_TOKEN_KEY && event.newValue === null) {
+      console.log("Auth token cleared in another tab, syncing...");
+      // Notify Supabase client about the signout
+      supabase.auth.signOut().catch(console.error);
+    }
   }
 
   // Store the session in localStorage with simpler approach
@@ -31,13 +45,18 @@ export class AuthTokenService {
     // Store essential session data
     localStorage.setItem(AUTH_TOKEN_KEY, session.access_token);
     localStorage.setItem(REFRESH_TOKEN_KEY, session.refresh_token || "");
-    localStorage.setItem(AUTH_STATUS_KEY, "true");
     
     // Store expiry as ISO string for easier parsing
     const expiry = new Date(session.expires_at! * 1000).toISOString();
     localStorage.setItem(SESSION_EXPIRY_KEY, expiry);
     
     console.log("Session stored successfully");
+
+    // Update Supabase client with the session
+    await supabase.auth.setSession({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token || "",
+    }).catch(console.error);
   }
 
   // Clear only auth-related data
@@ -45,7 +64,6 @@ export class AuthTokenService {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(SESSION_EXPIRY_KEY);
-    localStorage.removeItem(AUTH_STATUS_KEY);
     console.log("Session cleared successfully");
   }
 
@@ -54,6 +72,9 @@ export class AuthTokenService {
     await this.clearSession();
     localStorage.removeItem(USER_PROFILE_KEY);
     console.log("All auth data cleared");
+    
+    // Sign out from Supabase
+    await supabase.auth.signOut().catch(console.error);
   }
 
   // Check if session needs refresh and refresh if needed
@@ -94,7 +115,7 @@ export class AuthTokenService {
       }
     }
 
-    // Token is still valid, try to set it in Supabase client
+    // Token is still valid, set it in Supabase client
     try {
       const { data, error } = await supabase.auth.setSession({
         access_token: token,
@@ -129,6 +150,7 @@ export class AuthTokenService {
 
   // Store user profile data separately
   storeUserProfile(profile: any): void {
+    if (!profile) return;
     localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
   }
 

@@ -30,6 +30,9 @@ export const useLogout = () => {
       console.error("Logout error:", error);
       toast.error("Error signing out");
       
+      // Still clear local data even if server logout fails
+      await authTokenService.clearAllAuthData();
+      
       // Still navigate away even if there's an error
       navigate("/", { replace: true });
     } finally {
