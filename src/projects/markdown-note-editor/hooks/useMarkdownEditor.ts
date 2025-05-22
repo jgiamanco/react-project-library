@@ -1,9 +1,8 @@
-
-import { useState, useEffect } from 'react';
-import { Note, Folder } from '../types';
-import { useAuth } from '@/contexts/auth-hooks';
-import { supabase } from '@/services/supabase-client';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { Note, Folder } from "../types";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/services/supabase-client";
+import { toast } from "sonner";
 
 export const useMarkdownEditor = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -22,14 +21,14 @@ export const useMarkdownEditor = () => {
           // Attempt to load from Supabase
           try {
             const { data, error } = await supabase
-              .from('project_sessions')
-              .select('settings')
-              .eq('user_id', user.email)
-              .eq('project_id', 'markdown-editor')
+              .from("project_sessions")
+              .select("settings")
+              .eq("user_id", user.email)
+              .eq("project_id", "markdown-editor")
               .single();
 
             if (error) {
-              console.warn('Could not load notes from Supabase:', error);
+              console.warn("Could not load notes from Supabase:", error);
               loadFromLocalStorage();
             } else if (data?.settings) {
               if (data.settings.notes) setNotes(data.settings.notes);
@@ -38,7 +37,7 @@ export const useMarkdownEditor = () => {
               loadFromLocalStorage();
             }
           } catch (error) {
-            console.error('Error loading notes and folders:', error);
+            console.error("Error loading notes and folders:", error);
             loadFromLocalStorage();
           }
         } else {
@@ -46,7 +45,7 @@ export const useMarkdownEditor = () => {
           loadFromLocalStorage();
         }
       } catch (error) {
-        console.error('Unexpected error loading data:', error);
+        console.error("Unexpected error loading data:", error);
         loadFromLocalStorage();
       }
     };
@@ -70,30 +69,31 @@ export const useMarkdownEditor = () => {
     const saveData = async () => {
       // Always save to localStorage as fallback
       localStorage.setItem("markdown_notes", JSON.stringify(notes));
-      
+
       // If logged in, try to save to Supabase
       if (user && notes.length > 0) {
         try {
-          const { error } = await supabase
-            .from('project_sessions')
-            .upsert({
+          const { error } = await supabase.from("project_sessions").upsert(
+            {
               user_id: user.email,
-              project_id: 'markdown-editor',
+              project_id: "markdown-editor",
               last_accessed: new Date().toISOString(),
-              settings: { 
+              settings: {
                 notes: notes,
-                folders: folders
+                folders: folders,
               },
-            }, {
-              onConflict: 'user_id,project_id'
-            });
+            },
+            {
+              onConflict: "user_id,project_id",
+            }
+          );
 
           if (error) {
-            console.warn('Could not save notes to Supabase:', error);
+            console.warn("Could not save notes to Supabase:", error);
             // Silent failure - data is already in localStorage
           }
         } catch (error) {
-          console.error('Error saving notes:', error);
+          console.error("Error saving notes:", error);
         }
       }
     };
