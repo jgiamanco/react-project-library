@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import cohere from 'npm:cohere-ai@7.17.1'; // Use npm specifier for Node.js module
+import { CohereClient } from 'npm:cohere-ai@7.17.1'; // Import CohereClient class
 
 // Get Cohere API key from environment variables (Supabase Secrets)
 const COHERE_API_KEY = Deno.env.get('COHERE_API_KEY');
@@ -24,8 +24,10 @@ serve(async (req) => {
     });
   }
 
-  // Initialize Cohere client *after* the OPTIONS check
-  cohere.init(COHERE_API_KEY);
+  // Instantiate CohereClient with the API key
+  const cohere = new CohereClient({
+    token: COHERE_API_KEY, // Use 'token' for initialization
+  });
 
   try {
     const { messages } = await req.json();
@@ -48,7 +50,7 @@ serve(async (req) => {
         message: msg.text,
       }));
 
-    const response = await cohere.chat({
+    const response = await cohere.chat({ // Use the instance method
       model: 'command-r-plus-08-2024',
       message: latestUserMessage?.text || '',
       chatHistory: chatHistory,
