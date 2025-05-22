@@ -1,56 +1,34 @@
-import cohere from 'cohere-ai';
+import { supabase } from "@/services/supabase-client"; // Import Supabase client
 import { Message } from '../types';
 
-// Get API key from environment variables
-const COHERE_API_KEY = import.meta.env.VITE_COHERE_API_KEY;
-
-// Initialize Cohere client
-if (!COHERE_API_KEY) {
-  console.error("COHERE_API_KEY is not set in environment variables.");
-} else {
-  cohere.init(COHERE_API_KEY);
-}
-
-// Function to format messages for the Cohere API
-const formatMessagesForCohere = (messages: Message[]) => {
-  return messages.map(msg => ({
-    role: msg.sender === 'user' ? 'user' : 'chatbot',
-    message: msg.text,
-  }));
-};
+// Remove direct cohere import and init call
 
 export const generateResponse = async (messages: Message[]): Promise<string> => {
-  if (!COHERE_API_KEY) {
-    throw new Error("Cohere API key is not configured.");
-  }
-
-  console.log("Cohere Service: Sending messages to API:", messages);
+  console.log("Client AI Service: Invoking Edge Function with messages:", messages);
 
   try {
-    // Get the latest user message
-    const latestUserMessage = messages.findLast(msg => msg.sender === 'user');
-    const history = formatMessagesForCohere(messages.filter(msg => msg.id !== latestUserMessage?.id));
-
-    const response = await cohere.chat({
-      model: 'command-r-plus-08-2024', // Use the specified model
-      message: latestUserMessage?.text || '',
-      chatHistory: history,
-      // You can add other parameters here, like temperature, etc.
+    // Invoke the Edge Function
+    const { data, error } = await supabase.functions.invoke('chat-completion', {
+      body: { messages: messages }, // Pass the messages array in the body
     });
 
-    console.log("Cohere Service: Received response:", response);
-
-    // Extract the text from the response
-    const aiResponseText = response.text;
-
-    if (!aiResponseText) {
-      throw new Error("No text response received from Cohere API.");
+    if (error) {
+      console.error("Error invoking Edge Function:", error);
+      throw new Error(`Edge Function error: ${error.message}`);
     }
 
+    // Assuming the Edge Function returns { response: string }
+    const aiResponseText = data?.response;
+
+    if (!aiResponseText) {
+      throw new Error("No response text received from Edge Function.");
+    }
+
+    console.log("Client AI Service: Received response from Edge Function:", aiResponseText);
     return aiResponseText;
 
   } catch (error: any) {
-    console.error("Error calling Cohere API:", error);
+    console.error("Error in client AI Service:", error);
     // Provide a more user-friendly error message
     throw new Error(`Failed to get response from AI: ${error.message || 'Unknown error'}`);
   }
