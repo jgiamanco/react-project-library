@@ -1,3 +1,4 @@
+
 import { PostgrestError } from "@supabase/supabase-js";
 
 // Database profile structure - this should match exactly what's in Supabase
@@ -65,18 +66,19 @@ export function appToDbProfile(profile: UserProfile): DbUserProfile {
   };
 }
 
-// Convert database profile to app profile
+// Convert database profile to app profile - This function has the issue
 export function dbToAppProfile(profile: DbUserProfile): UserProfile {
   return {
     id: profile.id || profile.email,
     email: profile.email,
     displayName: profile.display_name,
-    photoURL: profile.photo_url || undefined,
-    bio: profile.bio || undefined,
-    location: profile.location || undefined,
-    website: profile.website || undefined,
-    github: profile.github || undefined,
-    twitter: profile.twitter || undefined,
+    // Fix: Properly handle null values to preserve them in the app model
+    photoURL: profile.photo_url !== null ? profile.photo_url : undefined,
+    bio: profile.bio !== null ? profile.bio : undefined,
+    location: profile.location !== null ? profile.location : undefined,
+    website: profile.website !== null ? profile.website : undefined,
+    github: profile.github !== null ? profile.github : undefined,
+    twitter: profile.twitter !== null ? profile.twitter : undefined,
     role: profile.role || 'User',
     theme: profile.theme || 'system',
     emailNotifications: profile.email_notifications !== undefined ? profile.email_notifications : true,

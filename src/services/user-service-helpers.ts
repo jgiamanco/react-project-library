@@ -23,6 +23,7 @@ export async function fetchUserProfile(email: string): Promise<UserProfile | nul
     }
     
     console.log("Profile found:", data);
+    // Convert the database profile to app profile format
     return dbToAppProfile(data as DbUserProfile);
   } catch (error) {
     console.error("Error fetching user profile:", error);

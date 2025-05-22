@@ -55,20 +55,22 @@ const ProfilePage = () => {
 
         if (dbProfile) {
           console.log("Profile loaded from database:", dbProfile);
+          // Fix: Ensure we preserve all profile data and don't overwrite with undefined values
           setProfile({
-            ...dbProfile,
             ...authUser,
+            ...dbProfile,
+            // Only use authUser values as fallback when dbProfile values are explicitly undefined
             displayName: dbProfile.displayName || authUser.displayName,
             photoURL: dbProfile.photoURL || authUser.photoURL || "",
-            bio: dbProfile.bio || "Tell us about yourself...",
-            location: dbProfile.location || authUser.location || "",
-            website: dbProfile.website || "",
-            github: dbProfile.github || "",
-            twitter: dbProfile.twitter || "",
-            role: dbProfile.role || "Developer",
-            theme: dbProfile.theme || "system",
-            emailNotifications: dbProfile.emailNotifications ?? true,
-            pushNotifications: dbProfile.pushNotifications ?? false,
+            bio: dbProfile.bio !== undefined ? dbProfile.bio : authUser.bio || "Tell us about yourself...",
+            location: dbProfile.location !== undefined ? dbProfile.location : authUser.location || "",
+            website: dbProfile.website !== undefined ? dbProfile.website : authUser.website || "",
+            github: dbProfile.github !== undefined ? dbProfile.github : authUser.github || "",
+            twitter: dbProfile.twitter !== undefined ? dbProfile.twitter : authUser.twitter || "",
+            role: dbProfile.role || authUser.role || "Developer",
+            theme: dbProfile.theme || authUser.theme || "system",
+            emailNotifications: dbProfile.emailNotifications ?? authUser.emailNotifications ?? true,
+            pushNotifications: dbProfile.pushNotifications ?? authUser.pushNotifications ?? false,
           });
         } else {
           console.log("No profile found in database, creating default profile");
