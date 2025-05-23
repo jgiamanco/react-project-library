@@ -65,6 +65,8 @@ const ProjectDemo = () => {
       "calculator": projectComponents.calculator,
       "recipe-finder": projectComponents.recipeFinder,
       "ai-chatbot": projectComponents.aiChatbot,
+      "ai-image-generator": projectComponents.aiImageGenerator,      // Added new project
+      "ai-content-summarizer": projectComponents.aiContentSummarizer, // Added new project
       // Removed "ecommerce-product" and "job-tracker" as they are not fully functional
     };
     

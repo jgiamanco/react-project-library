@@ -8,6 +8,8 @@ import RecipeFinder from "./recipe-finder";
 import AIChatbot from "./ai-chatbot";
 import EcommerceProductPage from "./ecommerce-product";
 import JobTracker from "./job-tracker";
+import AIImageGenerator from "./ai-image-generator";
+import AIContentSummarizer from "./ai-content-summarizer";
 
 export interface ProjectImplementation {
   app: ComponentType;
@@ -70,6 +72,18 @@ const projects: Record<string, ProjectImplementation> = {
     code: JobTracker.code,
     title: JobTracker.title,
     description: JobTracker.description,
+  },
+  aiImageGenerator: {
+    app: AIImageGenerator.app,
+    code: AIImageGenerator.code,
+    title: AIImageGenerator.title,
+    description: AIImageGenerator.description,
+  },
+  aiContentSummarizer: {
+    app: AIContentSummarizer.app,
+    code: AIContentSummarizer.code,
+    title: AIContentSummarizer.title,
+    description: AIContentSummarizer.description,
   },
 };
 
