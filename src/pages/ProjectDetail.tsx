@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Code, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"; // Import SyntaxHighlighter
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"; // Import a style
+// Removed direct SyntaxHighlighter imports
+import MarkdownCodeBlock from "@/components/MarkdownCodeBlock"; // Import the new component
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -65,25 +65,9 @@ const ProjectDetail = () => {
     advanced: "bg-rose-100 text-rose-800",
   }[project.difficulty];
 
-  // Define custom components for ReactMarkdown, specifically for code blocks
+  // Define custom components for ReactMarkdown, using the new MarkdownCodeBlock
   const markdownComponents = {
-    code({ node, inline, className, children, ...props }: any) {
-      const match = /language-(\w+)/.exec(className || '');
-      return !inline && match ? (
-        <SyntaxHighlighter
-          style={vscDarkPlus}
-          language={match[1]}
-          PreTag="div"
-          {...props}
-        >
-          {String(children).replace(/\n$/, '')}
-        </SyntaxHighlighter>
-      ) : (
-        <code className={className} {...props}>
-          {children}
-        </code>
-      );
-    }
+    code: MarkdownCodeBlock, // Use the dedicated component for code blocks
   };
 
   return (
@@ -171,7 +155,7 @@ const ProjectDetail = () => {
           </TabsList>
           <TabsContent value="readme" className="prose prose-blue max-w-none">
             <div className="bg-white rounded-xl p-6 border">
-              <ReactMarkdown components={markdownComponents}> {/* Added components prop */}
+              <ReactMarkdown components={markdownComponents}>
                 {project.readme}
               </ReactMarkdown>
             </div>

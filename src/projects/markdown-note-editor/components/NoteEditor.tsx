@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { Input } from "@/components/ui/input";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"; // Import SyntaxHighlighter
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"; // Import a style
+// Removed direct SyntaxHighlighter imports
+import MarkdownCodeBlock from "@/components/MarkdownCodeBlock"; // Import the new component
 import { Note } from "../types";
 
 interface NoteEditorProps {
@@ -18,31 +18,15 @@ const NoteEditor: React.FC<NoteEditorProps> = React.memo(({
   updateNoteTitle,
   updateNoteContent,
 }) => {
-  // Define custom components for ReactMarkdown, specifically for code blocks
+  // Define custom components for ReactMarkdown, using the new MarkdownCodeBlock
   const markdownComponents = useMemo(() => ({
-    code({ node, inline, className, children, ...props }: any) {
-      const match = /language-(\w+)/.exec(className || '');
-      return !inline && match ? (
-        <SyntaxHighlighter
-          style={vscDarkPlus}
-          language={match[1]}
-          PreTag="div"
-          {...props}
-        >
-          {String(children).replace(/\n$/, '')}
-        </SyntaxHighlighter>
-      ) : (
-        <code className={className} {...props}>
-          {children}
-        </code>
-      );
-    }
+    code: MarkdownCodeBlock, // Use the dedicated component for code blocks
   }), []); // Memoize the components object
 
   // Memoize the preview to prevent unnecessary re-renders
   const markdownPreview = useMemo(
     () => (
-      <ReactMarkdown components={markdownComponents}> {/* Added components prop */}
+      <ReactMarkdown components={markdownComponents}>
         {currentNote.content}
       </ReactMarkdown>
     ),
