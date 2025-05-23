@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { User } from "@/contexts/auth-types";
 import { Button } from "@/components/ui/button";
@@ -208,10 +209,7 @@ const ProfileInformation = ({
         <Button type="submit" disabled={isSubmitting || isUpdating}>
           {isSubmitting || isUpdating ? (
             <>
-              {/* Apply animate-spin to a span around the icon */}
-              <span className="animate-spin mr-2">
-                <Loader2 className="h-4 w-4" />
-              </span>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Saving...
             </>
           ) : (

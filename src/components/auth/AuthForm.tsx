@@ -10,7 +10,6 @@ import {
   ArrowRight,
   ChevronRight,
   ChevronLeft,
-  Loader2, // Import Loader2 icon
 } from "lucide-react";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/services/supabase-client";
@@ -447,10 +446,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
           >
             {buttonLoading ? (
               <div className="flex items-center justify-center">
-                {/* Apply animate-spin to a span around the icon */}
-                <span className="animate-spin mr-2">
-                  <Loader2 className="h-5 w-5" />
-                </span>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                 {mode === "signin" ? "Signing in..." : "Creating account..."}
               </div>
             ) : (
