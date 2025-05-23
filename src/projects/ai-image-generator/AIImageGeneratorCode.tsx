@@ -15,19 +15,32 @@ const IMAGE_SIZES = [
   { label: "4:3 (640x480)", value: "640x480" },
 ];
 
-// Placeholder function to simulate Google Gemini text-to-image API call
-async function generateImageFromGoogleGemini(positivePrompt: string, negativePrompt: string, size: string): Promise<string> {
-  // TODO: Replace this with actual Google Gemini API integration
-  // Use positivePrompt, negativePrompt, and size to request image generation
-  // Return the URL of the generated image
+// Call the Supabase Edge Function to generate image via Google Gemini
+async function generateImageFromGoogleGemini(
+  positivePrompt: string,
+  negativePrompt: string,
+  size: string
+): Promise<string> {
+  try {
+    const response = await fetch("/supabase/functions/v1/gemini-image-generation", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ positivePrompt, negativePrompt, size }),
+    });
 
-  console.log("Simulating Google Gemini API call with:", { positivePrompt, negativePrompt, size });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to generate image");
+    }
 
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 2500));
-
-  // Return a placeholder image URL with prompt text encoded for demo
-  return \`https://via.placeholder.com/\${size}?text=\${encodeURIComponent(positivePrompt)}\`;
+    const data = await response.json();
+    return data.imageUrl;
+  } catch (error) {
+    console.error("Error calling Gemini image generation edge function:", error);
+    throw error;
+  }
 }
 
 const AIImageGenerator: React.FC = () => {
@@ -36,16 +49,18 @@ const AIImageGenerator: React.FC = () => {
   const [imageSize, setImageSize] = useState(IMAGE_SIZES[0].value);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     if (!positivePrompt.trim()) return;
     setIsGenerating(true);
+    setError(null);
+    setImageUrl(null);
     try {
       const url = await generateImageFromGoogleGemini(positivePrompt, negativePrompt, imageSize);
       setImageUrl(url);
-    } catch (error) {
-      console.error("Error generating image:", error);
-      setImageUrl(null);
+    } catch (err) {
+      setError(err.message || "Failed to generate image");
     } finally {
       setIsGenerating(false);
     }
@@ -115,6 +130,9 @@ const AIImageGenerator: React.FC = () => {
             >
               {isGenerating ? "Generating..." : "Generate Image"}
             </Button>
+            {error && (
+              <div className="mt-2 text-red-600 font-medium">{error}</div>
+            )}
           </div>
           <div className="mt-6 flex justify-center">
             {imageUrl ? (
