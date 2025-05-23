@@ -1,4 +1,3 @@
-// Export all project implementations for easy importing
 import type { ComponentType } from "react";
 import TodoApp from "./todo-app";
 import WeatherDashboard from "./weather-dashboard";
@@ -6,7 +5,9 @@ import MarkdownEditor from "./markdown-note-editor";
 import PomodoroTimer from "./pomodoro-timer";
 import Calculator from "./calculator";
 import RecipeFinder from "./recipe-finder";
-import AIChatbot from "./ai-chatbot"; // Import the new project
+import AIChatbot from "./ai-chatbot";
+import EcommerceProductPage from "./ecommerce-product";
+import JobTracker from "./job-tracker";
 
 export interface ProjectImplementation {
   app: ComponentType;
@@ -20,44 +21,56 @@ const projects: Record<string, ProjectImplementation> = {
     app: TodoApp.app,
     code: TodoApp.code,
     title: TodoApp.title,
-    description: TodoApp.description
+    description: TodoApp.description,
   },
   weatherDashboard: {
     app: WeatherDashboard.app,
     code: WeatherDashboard.code,
     title: WeatherDashboard.title,
-    description: WeatherDashboard.description
+    description: WeatherDashboard.description,
   },
   markdownEditor: {
     app: MarkdownEditor.app,
     code: MarkdownEditor.code,
     title: MarkdownEditor.title,
-    description: MarkdownEditor.description
+    description: MarkdownEditor.description,
   },
   pomodoroTimer: {
     app: PomodoroTimer.app,
     code: PomodoroTimer.code,
     title: PomodoroTimer.title,
-    description: PomodoroTimer.description
+    description: PomodoroTimer.description,
   },
   calculator: {
     app: Calculator.app,
     code: Calculator.code,
     title: Calculator.title,
-    description: Calculator.description
+    description: Calculator.description,
   },
   recipeFinder: {
     app: RecipeFinder.app,
     code: RecipeFinder.code,
     title: RecipeFinder.title,
-    description: RecipeFinder.description
+    description: RecipeFinder.description,
   },
-  aiChatbot: { // Add the new project here
+  aiChatbot: {
     app: AIChatbot.app,
     code: AIChatbot.code,
     title: AIChatbot.title,
-    description: AIChatbot.description
-  }
+    description: AIChatbot.description,
+  },
+  ecommerceProductPage: {
+    app: EcommerceProductPage.app,
+    code: EcommerceProductPage.code,
+    title: EcommerceProductPage.title,
+    description: EcommerceProductPage.description,
+  },
+  jobTracker: {
+    app: JobTracker.app,
+    code: JobTracker.code,
+    title: JobTracker.title,
+    description: JobTracker.description,
+  },
 };
 
 export default projects;

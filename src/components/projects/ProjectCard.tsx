@@ -24,7 +24,9 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
       "pomodoro-timer",
       "calculator",
       "recipe-finder",
-      "ai-chatbot" // Add the new project ID here
+      "ai-chatbot",
+      "ecommerce-product", // Added new project ID
+      "job-tracker",       // Added new project ID
     ];
     return implementedProjects.includes(project.id);
   };

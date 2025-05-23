@@ -64,7 +64,9 @@ const ProjectDemo = () => {
       "pomodoro-timer": projectComponents.pomodoroTimer,
       "calculator": projectComponents.calculator,
       "recipe-finder": projectComponents.recipeFinder,
-      "ai-chatbot": projectComponents.aiChatbot // Added the AI Chatbot project here
+      "ai-chatbot": projectComponents.aiChatbot,
+      "ecommerce-product": projectComponents.ecommerceProductPage, // Added new project
+      "job-tracker": projectComponents.jobTracker,               // Added new project
     };
     
     return projectMap[projectId as keyof typeof projectMap] || null;
