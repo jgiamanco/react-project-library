@@ -6,22 +6,38 @@ const AIContentSummarizerCode = () => {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/services/supabase-client";
 
 const AIContentSummarizer: React.FC = () => {
   const [inputText, setInputText] = useState("");
   const [summary, setSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSummarize = () => {
+  const handleSummarize = async () => {
     if (!inputText.trim()) return;
     setIsSummarizing(true);
-    // Placeholder: simulate summarization delay
-    setTimeout(() => {
-      // Simple mock summary: first 100 chars + "..."
-      const mockSummary = inputText.length > 100 ? inputText.slice(0, 100) + "..." : inputText;
-      setSummary(mockSummary);
+    setError(null);
+    setSummary(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("summarize-content", {
+        body: { text: inputText },
+      });
+
+      if (error) {
+        console.error("Error from summarization edge function:", error);
+        setError(error.message || "Failed to generate summary");
+      } else if (data?.summary) {
+        setSummary(data.summary);
+      } else {
+        setError("No summary returned from server");
+      }
+    } catch (err: any) {
+      console.error("Error calling summarization edge function:", err);
+      setError(err.message || "Failed to generate summary");
+    } finally {
       setIsSummarizing(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -46,6 +62,11 @@ const AIContentSummarizer: React.FC = () => {
               {isSummarizing ? "Summarizing..." : "Summarize"}
             </Button>
           </div>
+          {error && (
+            <div className="mt-6 p-4 bg-red-100 text-red-700 rounded-md text-sm">
+              {error}
+            </div>
+          )}
           {summary && (
             <div className="mt-6 p-4 bg-gray-100 rounded-md text-gray-900 whitespace-pre-wrap">
               {summary}
