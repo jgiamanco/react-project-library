@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Project } from "@/types/Project";
@@ -20,11 +19,12 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
   const hasImplementation = () => {
     const implementedProjects = [
       "todo-app",
-      "weather-dashboard", 
+      "weather-dashboard",
       "markdown-editor",
       "pomodoro-timer",
       "calculator",
-      "recipe-finder"
+      "recipe-finder",
+      "ai-chatbot" // Add the new project ID here
     ];
     return implementedProjects.includes(project.id);
   };

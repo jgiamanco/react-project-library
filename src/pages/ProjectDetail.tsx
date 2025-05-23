@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Code, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { PreBlock } from "@/projects/markdown-note-editor/SyntaxHighlighterPlugin";
+import MarkdownCodeBlock from "@/components/MarkdownCodeBlock";
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -63,6 +63,11 @@ const ProjectDetail = () => {
     intermediate: "bg-amber-100 text-amber-800",
     advanced: "bg-rose-100 text-rose-800",
   }[project.difficulty];
+
+  // Define custom components for ReactMarkdown, using the new MarkdownCodeBlock
+  const markdownComponents = {
+    code: MarkdownCodeBlock, // Use the dedicated component for code blocks
+  };
 
   return (
     <div className="pt-24 pb-16 animate-fade-in">
@@ -147,9 +152,9 @@ const ProjectDetail = () => {
             <TabsTrigger value="readme">README</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
-          <TabsContent value="readme" className="prose prose-blue max-w-none">
-            <div className="bg-white rounded-xl p-6 border markdown-body">
-              <ReactMarkdown components={{ pre: PreBlock }}>
+          <TabsContent value="readme"> {/* Removed prose classes from here */}
+            <div className="bg-white rounded-xl p-6 border prose prose-blue max-w-none"> {/* Added prose classes here */}
+              <ReactMarkdown components={markdownComponents}>
                 {project.readme}
               </ReactMarkdown>
             </div>

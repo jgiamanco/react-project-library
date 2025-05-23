@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { Input } from "@/components/ui/input";
-import { PreBlock } from "../SyntaxHighlighterPlugin";
+// Removed direct SyntaxHighlighter imports
+import MarkdownCodeBlock from "@/components/MarkdownCodeBlock"; // Import the new component
 import { Note } from "../types";
 
 interface NoteEditorProps {
@@ -11,20 +12,25 @@ interface NoteEditorProps {
   updateNoteContent: (content: string) => void;
 }
 
-const NoteEditor: React.FC<NoteEditorProps> = ({
+const NoteEditor: React.FC<NoteEditorProps> = React.memo(({
   currentNote,
   darkMode,
   updateNoteTitle,
   updateNoteContent,
 }) => {
+  // Define custom components for ReactMarkdown, using the new MarkdownCodeBlock
+  const markdownComponents = useMemo(() => ({
+    code: MarkdownCodeBlock, // Use the dedicated component for code blocks
+  }), []); // Memoize the components object
+
   // Memoize the preview to prevent unnecessary re-renders
   const markdownPreview = useMemo(
     () => (
-      <ReactMarkdown components={{ pre: PreBlock }}>
+      <ReactMarkdown components={markdownComponents}>
         {currentNote.content}
       </ReactMarkdown>
     ),
-    [currentNote.content]
+    [currentNote.content, markdownComponents] // Add markdownComponents to dependencies
   );
 
   return (
@@ -49,9 +55,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         />
       </div>
       <div
-        className={`p-4 rounded border overflow-auto h-[400px] lg:h-[600px] markdown-body ${
+        className={`p-4 rounded border overflow-auto h-[400px] lg:h-[600px] prose dark:prose-invert max-w-none ${
           darkMode
-            ? "markdown-dark bg-gray-700 border-gray-600 text-white"
+            ? "bg-gray-700 border-gray-600 text-white"
             : "bg-white border-gray-200 text-gray-900"
         }`}
       >
@@ -59,6 +65,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       </div>
     </div>
   );
-};
+});
 
-export default React.memo(NoteEditor);
+NoteEditor.displayName = "NoteEditor";
+
+export default NoteEditor;
