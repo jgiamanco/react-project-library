@@ -144,8 +144,7 @@
   }
 }
 
-/* Custom overrides for markdown headings within .prose */
-/* This helps ensure correct font-size and font-weight if they are being inherited incorrectly */
+/* Custom overrides for markdown headings and lists within .prose */
 @layer components {
   .prose h1 {
     font-size: 2.25em; /* text-4xl */
@@ -170,5 +169,22 @@
   .prose h6 {
     font-size: 1em; /* text-base */
     font-weight: 600; /* font-semibold */
+  }
+
+  /* Override list reset within prose */
+  .prose ul {
+    list-style: disc; /* Use disc for unordered lists */
+    margin-left: 1.5em; /* Add left margin for indentation */
+    padding-left: 0; /* Ensure no extra padding */
+  }
+
+  .prose ol {
+    list-style: decimal; /* Use decimal for ordered lists */
+    margin-left: 1.5em; /* Add left margin for indentation */
+    padding-left: 0; /* Ensure no extra padding */
+  }
+
+  .prose li {
+    margin-bottom: 0.5em; /* Add some space between list items */
   }
 }
