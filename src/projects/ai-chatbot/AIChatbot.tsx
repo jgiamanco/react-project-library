@@ -1,5 +1,11 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import ChatInterface from "./components/ChatInterface";
 import { useChat } from "./hooks/useChat";
 
@@ -11,7 +17,7 @@ const AIChatbot: React.FC = () => {
       <Card className="w-full max-w-2xl mx-auto shadow-lg border-foreground/10">
         <CardHeader className="pb-3">
           <CardTitle className="text-xl">AI Chatbot</CardTitle>
-          <CardDescription>Chat with a mock AI assistant</CardDescription>
+          <CardDescription>Chat with an AI assistant</CardDescription>
         </CardHeader>
         <CardContent>
           <ChatInterface
