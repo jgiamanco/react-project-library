@@ -5,7 +5,7 @@ const AIImageGeneratorCode = () => {
     "AIImageGenerator.tsx": `import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { ImageIcon } from "lucide-react";
 
@@ -66,24 +66,26 @@ const AIImageGenerator: React.FC = () => {
               <label htmlFor="positive-prompt" className="block font-medium mb-1">
                 Positive Prompt
               </label>
-              <Input
+              <Textarea
                 id="positive-prompt"
                 placeholder="Describe what you want to see..."
                 value={positivePrompt}
                 onChange={(e) => setPositivePrompt(e.target.value)}
                 disabled={isGenerating}
+                rows={4}
               />
             </div>
             <div>
               <label htmlFor="negative-prompt" className="block font-medium mb-1">
                 Negative Prompt (optional)
               </label>
-              <Input
+              <Textarea
                 id="negative-prompt"
                 placeholder="Describe what to avoid..."
                 value={negativePrompt}
                 onChange={(e) => setNegativePrompt(e.target.value)}
                 disabled={isGenerating}
+                rows={4}
               />
             </div>
             <div>
