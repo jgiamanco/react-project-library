@@ -65,8 +65,7 @@ const ProjectDemo = () => {
       "calculator": projectComponents.calculator,
       "recipe-finder": projectComponents.recipeFinder,
       "ai-chatbot": projectComponents.aiChatbot,
-      "ecommerce-product": projectComponents.ecommerceProductPage, // Added new project
-      "job-tracker": projectComponents.jobTracker,               // Added new project
+      // Removed "ecommerce-product" and "job-tracker" as they are not fully functional
     };
     
     return projectMap[projectId as keyof typeof projectMap] || null;
