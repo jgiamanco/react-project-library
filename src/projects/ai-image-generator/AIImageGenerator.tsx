@@ -11,6 +11,8 @@ const IMAGE_SIZES = [
   { label: "4:3 (640x480)", value: "640x480" },
 ];
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
 // Call the Supabase Edge Function to generate image via Google Gemini
 async function generateImageFromGoogleGemini(
   positivePrompt: string,
@@ -18,7 +20,7 @@ async function generateImageFromGoogleGemini(
   size: string
 ): Promise<string> {
   try {
-    const response = await fetch("/supabase/functions/v1/gemini-image-generation", {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/gemini-image-generation`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
