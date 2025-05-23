@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Code, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-// Removed direct SyntaxHighlighter imports
-import MarkdownCodeBlock from "@/components/MarkdownCodeBlock"; // Import the new component
+import MarkdownCodeBlock from "@/components/MarkdownCodeBlock";
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -153,8 +152,8 @@ const ProjectDetail = () => {
             <TabsTrigger value="readme">README</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
-          <TabsContent value="readme" className="prose prose-blue max-w-none">
-            <div className="bg-white rounded-xl p-6 border">
+          <TabsContent value="readme"> {/* Removed prose classes from here */}
+            <div className="bg-white rounded-xl p-6 border prose prose-blue max-w-none"> {/* Added prose classes here */}
               <ReactMarkdown components={markdownComponents}>
                 {project.readme}
               </ReactMarkdown>
