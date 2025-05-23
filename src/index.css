@@ -1,12 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
-@tailwind components;
 @tailwind utilities;
 
-@layer components {
-  /* Make all Loader2 icons spin globally */
-  svg[data-icon="loader2"] {
-    @apply animate-spin;
+/* Raw CSS to spin Loader2 icon without affecting other styles */
+svg[data-icon="loader2"] {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
