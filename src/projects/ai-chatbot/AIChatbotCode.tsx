@@ -52,8 +52,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
     <div className="flex flex-col h-full">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">AI Chat</h3>
-        {/* Model selector can be added here if needed */}
-        {/* <ModelSelector selectedModel={selectedModel} onModelChange={setSelectedModel} /> */}
       </div>
       <MessageList messages={messages} isLoading={isLoading} />
       <InputForm onSendMessage={onSendMessage} isLoading={isLoading} />
@@ -62,52 +60,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
 };
 
 export default ChatInterface;`,
-    "components/MessageItem.tsx": `import React from "react";
-import { Message } from "../types";
-import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
-interface MessageItemProps {
-  message: Message;
-}
-
-const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
-  const isUser = message.sender === "user";
-
-  return (
-    <div
-      className={cn(
-        "flex items-start gap-3",
-        isUser ? "justify-end" : "justify-start"
-      )}
-    >
-      {!isUser && (
-        <Avatar className="h-8 w-8">
-          <AvatarImage src="/placeholder-avatar.png" alt="AI Avatar" />
-          <AvatarFallback>AI</AvatarFallback>
-        </Avatar>
-      )}
-      <div
-        className={cn(
-          "rounded-lg p-3 text-sm max-w-[75%]",
-          isUser
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted text-muted-foreground"
-        )}
-      >
-        {message.text}
-      </div>
-      {isUser && (
-        <Avatar className="h-8 w-8">
-          <AvatarImage src="/placeholder-avatar.png" alt="User Avatar" />
-          <AvatarFallback>U</AvatarFallback>
-        </Avatar>
-      )}
-    </div>
-  );
-};
-
-export default MessageItem;`,
     "components/InputForm.tsx": `import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -189,106 +141,128 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
 };
 
 export default MessageList;`,
-    "components/ModelSelector.tsx": `import React from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+    "components/MessageItem.tsx": `import React from "react";
+import { Message } from "../types";
+import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-interface ModelSelectorProps {
-  selectedModel: string;
-  onModelChange: (model: string) => void;
+interface MessageItemProps {
+  message: Message;
 }
 
-const ModelSelector: React.FC<ModelSelectorProps> = ({ selectedModel, onModelChange }) => {
-  const availableModels = ["Mock AI"];
+const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
+  const isUser = message.sender === "user";
 
   return (
-    <div className="flex items-center gap-2">
-      <Label htmlFor="model-select" className="text-sm text-muted-foreground">Model:</Label>
-      <Select value={selectedModel} onValueChange={onModelChange}>
-        <SelectTrigger id="model-select" className="w-[180px] h-8">
-          <SelectValue placeholder="Select a model" />
-        </SelectTrigger>
-        <SelectContent>
-          {availableModels.map(model => (
-            <SelectItem key={model} value={model}>{model}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div
+      className={cn(
+        "flex items-start gap-3",
+        isUser ? "justify-end" : "justify-start"
+      )}
+    >
+      {!isUser && (
+        <Avatar className="h-8 w-8">
+          <AvatarImage src="/placeholder-avatar.png" alt="AI Avatar" />
+          <AvatarFallback>AI</AvatarFallback>
+        </Avatar>
+      )}
+      <div
+        className={cn(
+          "rounded-lg p-3 text-sm max-w-[75%]",
+          isUser
+            ? "bg-primary text-primary-foreground"
+            : "bg-muted text-muted-foreground"
+        )}
+      >
+        {message.text}
+      </div>
+      {isUser && (
+        <Avatar className="h-8 w-8">
+          <AvatarImage src="/placeholder-avatar.png" alt="User Avatar" />
+          <AvatarFallback>U</AvatarFallback>
+        </Avatar>
+      )}
     </div>
   );
 };
 
-export default ModelSelector;`,
-    "hooks/useChat.ts": `import { useState, useEffect, useCallback } from "react"; // Added useEffect
+export default MessageItem;`,
+    "hooks/useChat.ts": `import { useState, useEffect, useCallback } from "react";
 import { Message, ChatState } from "../types";
 import { useStreamingResponse } from "./useStreamingResponse";
 import { v4 as uuidv4 } from "uuid";
 
 const initialChatState: ChatState = {
-  messages: [],
+  messages: [
+    {
+      id: uuidv4(),
+      text: "Hello, how can I help you today?",
+      sender: "ai",
+      timestamp: Date.now(),
+    },
+  ],
   isLoading: false,
   error: null,
 };
 
 export const useChat = () => {
   const [chatState, setChatState] = useState<ChatState>(initialChatState);
-  const { isLoading: isAIThinking, error: aiError, getResponse } = useStreamingResponse();
+  const {
+    isLoading: isAIThinking,
+    error: aiError,
+    getResponse,
+  } = useStreamingResponse();
 
-  // Update loading state based on AI hook
-  useEffect(() => { // Changed from useState to useEffect
-    setChatState(prev => ({ ...prev, isLoading: isAIThinking, error: aiError }));
+  useEffect(() => {
+    setChatState((prev) => ({
+      ...prev,
+      isLoading: isAIThinking,
+      error: aiError,
+    }));
   }, [isAIThinking, aiError]);
 
-
   const addMessage = useCallback((message: Message) => {
-    setChatState(prev => ({
+    setChatState((prev) => ({
       ...prev,
       messages: [...prev.messages, message],
     }));
   }, []);
 
-  const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim()) return;
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!text.trim()) return;
 
-    const userMessage: Message = {
-      id: uuidv4(),
-      text,
-      sender: "user",
-      timestamp: Date.now(),
-    };
-
-    // Add user message immediately using functional update
-    setChatState(prev => ({
-      ...prev,
-      messages: [...prev.messages, userMessage],
-    }));
-
-    // Get AI response - pass the messages including the new user message
-    // Use the state value directly here, as the functional update above might not be processed yet
-    const messagesWithNewUserMessage = [...chatState.messages, userMessage];
-
-    const aiResponseText = await getResponse(messagesWithNewUserMessage);
-
-    if (aiResponseText) {
-      const aiMessage: Message = {
+      const userMessage: Message = {
         id: uuidv4(),
-        text: aiResponseText,
-        sender: "ai",
+        text,
+        sender: "user",
         timestamp: Date.now(),
       };
-      // Add AI message - use functional update again
-      setChatState(prev => ({
-        ...prev, // Spread previous state
-        messages: [...prev.messages, aiMessage], // Add new AI message
+
+      setChatState((prev) => ({
+        ...prev,
+        messages: [...prev.messages, userMessage],
       }));
-    }
-  }, [getResponse, chatState.messages]); // Added chatState.messages to dependencies
+
+      const messagesWithNewUserMessage = [...chatState.messages, userMessage];
+
+      const aiResponseText = await getResponse(messagesWithNewUserMessage);
+
+      if (aiResponseText) {
+        const aiMessage: Message = {
+          id: uuidv4(),
+          text: aiResponseText,
+          sender: "ai",
+          timestamp: Date.now(),
+        };
+        setChatState((prev) => ({
+          ...prev,
+          messages: [...prev.messages, aiMessage],
+        }));
+      }
+    },
+    [getResponse, chatState.messages]
+  );
 
   return {
     chatState,
@@ -305,12 +279,10 @@ export const useStreamingResponse = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Modified to accept message history
   const getResponse = useCallback(async (messages: Message[]): Promise<string | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      // Pass the full message history to the AI service
       const response = await generateResponse(messages);
       setIsLoading(false);
       return response;
@@ -328,18 +300,15 @@ export const useStreamingResponse = () => {
     getResponse,
   };
 };`,
-    "services/aiService.ts": `import { supabase } from "@/services/supabase-client"; // Import Supabase client
+    "services/aiService.ts": `import { supabase } from "@/services/supabase-client";
 import { Message } from '../types';
-
-// Remove direct cohere import and init call
 
 export const generateResponse = async (messages: Message[]): Promise<string> => {
   console.log("Client AI Service: Invoking Edge Function with messages:", messages);
 
   try {
-    // Invoke the Edge Function
     const { data, error } = await supabase.functions.invoke('chat-completion', {
-      body: { messages: messages }, // Pass the messages array in the body
+      body: { messages: messages },
     });
 
     if (error) {
@@ -347,7 +316,6 @@ export const generateResponse = async (messages: Message[]): Promise<string> => 
       throw new Error(\`Edge Function error: \${error.message}\`);
     }
 
-    // Assuming the Edge Function returns { response: string }
     const aiResponseText = data?.response;
 
     if (!aiResponseText) {
@@ -359,7 +327,6 @@ export const generateResponse = async (messages: Message[]): Promise<string> => 
 
   } catch (error: any) {
     console.error("Error in client AI Service:", error);
-    // Provide a more user-friendly error message
     throw new Error(\`Failed to get response from AI: \${error.message || 'Unknown error'}\`);
   }
 };`,
@@ -375,8 +342,7 @@ export interface ChatState {
   isLoading: boolean;
   error: string | null;
 }`,
-    "utils/formatMessages.ts": `// Placeholder utility function - can be expanded later
-export const formatMessageText = (text: string): string => {
+    "utils/formatMessages.ts": `export const formatMessageText = (text: string): string => {
   return text.trim();
 };`,
   };

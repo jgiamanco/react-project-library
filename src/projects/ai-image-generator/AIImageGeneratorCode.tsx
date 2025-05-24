@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { ImageIcon } from "lucide-react";
+import { supabase } from "@/services/supabase-client";
 
 const IMAGE_SIZES = [
   { label: "1:1 (512x512)", value: "512x512" },
@@ -15,27 +16,25 @@ const IMAGE_SIZES = [
   { label: "4:3 (640x480)", value: "640x480" },
 ];
 
-// Call the Supabase Edge Function to generate image via Google Gemini
 async function generateImageFromGoogleGemini(
   positivePrompt: string,
   negativePrompt: string,
   size: string
 ): Promise<string> {
   try {
-    const response = await fetch("/supabase/functions/v1/gemini-image-generation", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ positivePrompt, negativePrompt, size }),
+    const { data, error } = await supabase.functions.invoke("gemini-image-generation", {
+      body: { positivePrompt, negativePrompt, size },
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to generate image");
+    if (error) {
+      console.error("Error invoking Gemini image generation edge function:", error);
+      throw new Error(error.message || "Failed to generate image");
     }
 
-    const data = await response.json();
+    if (!data || !data.imageUrl) {
+      throw new Error("No image URL returned from edge function");
+    }
+
     return data.imageUrl;
   } catch (error) {
     console.error("Error calling Gemini image generation edge function:", error);
@@ -59,7 +58,7 @@ const AIImageGenerator: React.FC = () => {
     try {
       const url = await generateImageFromGoogleGemini(positivePrompt, negativePrompt, imageSize);
       setImageUrl(url);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message || "Failed to generate image");
     } finally {
       setIsGenerating(false);
