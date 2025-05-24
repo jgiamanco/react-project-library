@@ -132,7 +132,7 @@ const ProjectDemo = () => {
         </Button>
         <h1 className="text-xl font-bold">{project.title} - Live Demo</h1>
       </div>
-      <div className="pt-20 pb-10">
+      <div className="pt-24 pb-10">
         <Suspense fallback={<ProjectLoading />}>
           <AppComponent />
         </Suspense>
