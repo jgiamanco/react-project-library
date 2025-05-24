@@ -45,12 +45,12 @@ const ProjectGrid = ({ projects }: ProjectGridProps) => {
     }
 
     // Filter by difficulty
-    if (selectedDifficulty) {
+    if (selectedDifficulty !== "all") {
       result = result.filter((project) => project.difficulty === selectedDifficulty);
     }
 
     // Filter by tag
-    if (selectedTag) {
+    if (selectedTag !== "all") {
       result = result.filter((project) => project.tags.includes(selectedTag));
     }
 
@@ -96,7 +96,7 @@ const ProjectGrid = ({ projects }: ProjectGridProps) => {
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Difficulties</SelectItem>
+              <SelectItem value="all">All Difficulties</SelectItem>
               <SelectItem value="beginner">Beginner</SelectItem>
               <SelectItem value="intermediate">Intermediate</SelectItem>
               <SelectItem value="advanced">Advanced</SelectItem>
@@ -110,7 +110,7 @@ const ProjectGrid = ({ projects }: ProjectGridProps) => {
               <SelectValue placeholder="Tag" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Tags</SelectItem>
+              <SelectItem value="all">All Tags</SelectItem>
               {allTags.map((tag) => (
                 <SelectItem key={tag} value={tag}>
                   {tag}
