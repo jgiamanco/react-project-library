@@ -19,8 +19,8 @@ interface ProjectGridProps {
 
 const ProjectGrid = ({ projects }: ProjectGridProps) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("");
-  const [selectedTag, setSelectedTag] = useState<string>("");
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
+  const [selectedTag, setSelectedTag] = useState<string>("all");
   const [filteredProjects, setFilteredProjects] = useState<Project[]>(projects);
   const [revealed, setRevealed] = useState(false);
 
