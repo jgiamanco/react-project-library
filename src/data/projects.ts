@@ -20,9 +20,9 @@ A modern, feature-rich todo application built with React and TypeScript, featuri
 - Create, edit, and delete tasks
 - Drag and drop to reorder tasks
 - Mark tasks as complete
-- Filter tasks by status
+- Filter tasks by status (all, active, completed)
 - Dark/light theme switching
-- Local storage persistence
+- Persistent storage with Supabase and localStorage
 - Keyboard accessibility
 - Responsive design
 
@@ -31,50 +31,27 @@ A modern, feature-rich todo application built with React and TypeScript, featuri
 - React 18 with TypeScript
 - React Beautiful DnD for drag and drop
 - Tailwind CSS for styling
+- Supabase for backend persistence
 - Zustand for state management
 - React Hook Form for form handling
-- Zod for form validation
+- UUID for unique IDs
 
 ## Project Structure
 
 \`\`\`
 src/
 ├── components/
-│   ├── TaskList.tsx
-│   ├── TaskItem.tsx
-│   ├── TaskForm.tsx
-│   └── TaskFilter.tsx
-├── stores/
-│   └── taskStore.ts
-├── types/
-│   └── Task.ts
-└── utils/
-    └── localStorage.ts
-\`\`\`
-
-## Key Components
-
-### TaskList
-The main component that renders the list of tasks and handles the drag and drop functionality. It uses react-beautiful-dnd to enable smooth reordering of tasks.
-
-### TaskItem
-Individual task component that displays the task details and provides actions like edit, delete, and toggle completion status.
-
-### TaskForm
-Form component for creating and editing tasks. Uses React Hook Form with Zod validation to ensure data integrity.
-
-## State Management
-
-The application uses Zustand for state management, providing a simple and efficient way to handle the task list state and persistence.
-
-\`\`\`typescript
-interface TaskStore {
-  tasks: Task[];
-  addTask: (task: Task) => void;
-  updateTask: (id: string, updates: Partial<Task>) => void;
-  deleteTask: (id: string) => void;
-  reorderTasks: (startIndex: number, endIndex: number) => void;
-}
+│   ├── TodoInput.tsx
+│   ├── TodoFilters.tsx
+│   ├── TodoList.tsx
+│   ├── TodoItem.tsx
+│   └── TodoFooter.tsx
+├── hooks/
+│   └── useTodoState.tsx
+├── services/
+│   └── todo-service.ts
+└── types/
+    └── types.ts
 \`\`\`
 
 ## Getting Started
@@ -82,21 +59,16 @@ interface TaskStore {
 To run the project locally:
 
 \`\`\`bash
-# Clone the repository
-git clone https://github.com/your-username/todo-app.git
-
-# Install dependencies
 npm install
-
-# Start the development server
 npm run dev
 \`\`\`
 
 ## Learn More
 
 - [React Beautiful DnD Documentation](https://react-beautiful-dnd.netlify.app/)
+- [Supabase Documentation](https://supabase.com/docs)
 - [Zustand Documentation](https://zustand-demo.pmnd.rs/)
-- [React Hook Form Documentation](https://react-hook-form.com/)`,
+`,
     resources: [
       {
         title: "Documentation",
@@ -131,21 +103,21 @@ A comprehensive weather dashboard application built with React and TypeScript, p
 ## Features
 
 - Real-time weather data from OpenWeatherMap API
-- Location search with autocomplete
-- 5-day weather forecast
+- Location search with autocomplete and zip code support
+- 7-day weather forecast with min/max temperatures
 - Detailed weather information (temperature, humidity, wind, etc.)
-- Weather condition animations
+- Weather condition animations for day and night
 - Responsive design for all devices
-- Save favorite locations
+- Save favorite locations with persistence
 - Temperature unit conversion (°C/°F)
 
 ## Technical Stack
 
 - React 18 with TypeScript
-- TanStack Query for data fetching
-- Framer Motion for animations
-- Chart.js for weather graphs
+- TanStack Query for data fetching and caching
+- Chart.js for temperature trend charts
 - Tailwind CSS for styling
+- Supabase for user favorites persistence
 - OpenWeatherMap API integration
 
 ## Project Structure
@@ -153,50 +125,19 @@ A comprehensive weather dashboard application built with React and TypeScript, p
 \`\`\`
 src/
 ├── components/
-│   ├── CurrentWeather.tsx
-│   ├── WeatherForecast.tsx
 │   ├── LocationSearch.tsx
+│   ├── WeatherCard.tsx
+│   ├── ForecastCard.tsx
 │   ├── WeatherChart.tsx
-│   └── WeatherAnimation.tsx
+│   └── FavoritesList.tsx
 ├── hooks/
-│   ├── useWeather.ts
-│   └── useGeolocation.ts
-├── services/
-│   └── weatherApi.ts
-└── utils/
-    ├── formatWeatherData.ts
-    └── weatherIcons.ts
-\`\`\`
-
-## Key Components
-
-### CurrentWeather
-Displays current weather conditions including temperature, weather description, humidity, wind speed, and pressure. Features smooth animations for weather condition changes.
-
-### WeatherForecast
-Shows a 5-day weather forecast with daily high and low temperatures, precipitation probability, and weather conditions.
-
-### LocationSearch
-Autocomplete search component for finding locations, with recent searches and favorite locations functionality.
-
-## API Integration
-
-The application uses TanStack Query to manage API requests and caching, providing a smooth user experience with optimistic updates and error handling.
-
-\`\`\`typescript
-interface WeatherData {
-  current: {
-    temp: number;
-    humidity: number;
-    windSpeed: number;
-    condition: string;
-  };
-  forecast: Array<{
-    date: string;
-    temp: { min: number; max: number };
-    condition: string;
-  }>;
-}
+│   ├── useWeatherApi.ts
+│   ├── useWeatherData.ts
+│   ├── useWeatherSearch.ts
+│   ├── useFavorites.ts
+│   └── useTemperatureUtils.ts
+└── types/
+    └── types.ts
 \`\`\`
 
 ## Getting Started
@@ -204,25 +145,16 @@ interface WeatherData {
 To run the project locally:
 
 \`\`\`bash
-# Clone the repository
-git clone https://github.com/your-username/weather-dashboard.git
-
-# Install dependencies
 npm install
-
-# Set up environment variables
-cp .env.example .env
-# Add your OpenWeatherMap API key to .env
-
-# Start the development server
 npm run dev
 \`\`\`
 
 ## Learn More
 
 - [OpenWeatherMap API Documentation](https://openweathermap.org/api)
+- [Chart.js Documentation](https://www.chartjs.org/)
 - [TanStack Query Documentation](https://tanstack.com/query/latest)
-- [Framer Motion Documentation](https://www.framer.com/motion/)`,
+`,
     resources: [
       {
         title: "Documentation",
@@ -252,93 +184,38 @@ npm run dev
     difficulty: "intermediate",
     readme: `# Markdown Note Editor
 
-A powerful markdown editor built with React and TypeScript, featuring real-time preview, file organization, and extensive markdown support with syntax highlighting.
+A powerful markdown editor built with React and TypeScript, featuring real-time preview, file organization with folders, and syntax highlighting.
 
 ## Features
 
-- Real-time markdown preview
-- File system-like organization
+- Real-time markdown preview with GitHub Flavored Markdown support
+- Organize notes into folders
 - Syntax highlighting for code blocks
-- Support for GitHub Flavored Markdown
-- Auto-save functionality
+- Export notes as markdown files
 - Dark/light theme support
-- File import/export (MD, PDF)
-- Keyboard shortcuts
-- Search across notes
+- Persistent storage with Supabase and localStorage
+- Search notes by title and content
 
 ## Technical Stack
 
 - React 18 with TypeScript
-- CodeMirror 6 for the editor
-- Marked for markdown parsing
-- PrismJS for syntax highlighting
-- Zustand for state management
+- React Markdown for rendering markdown
 - Tailwind CSS for styling
+- Supabase for backend persistence
+- Zustand for state management
 
 ## Project Structure
 
 \`\`\`
 src/
 ├── components/
-│   ├── Editor/
-│   │   ├── CodeMirror.tsx
-│   │   └── ToolBar.tsx
-│   ├── Preview/
-│   │   ├── MarkdownPreview.tsx
-│   │   └── CodeBlock.tsx
-│   └── FileSystem/
-│       ├── FileTree.tsx
-│       └── FileActions.tsx
+│   ├── Sidebar.tsx
+│   ├── NoteEditor.tsx
+│   ├── EditorToolbar.tsx
 ├── hooks/
-│   ├── useMarkdown.ts
-│   └── useFileSystem.ts
-├── stores/
-│   └── editorStore.ts
-└── utils/
-    ├── markdownParser.ts
-    └── fileSystem.ts
-\`\`\`
-
-## Key Components
-
-### Editor
-Built on CodeMirror 6, providing a powerful editing experience with markdown syntax highlighting, auto-completion, and keyboard shortcuts.
-
-### Preview
-Real-time markdown preview with support for GitHub Flavored Markdown, math equations, diagrams, and code syntax highlighting.
-
-### FileSystem
-Hierarchical file organization with folders, drag-and-drop support, and file operations (create, rename, delete).
-
-## Markdown Features
-
-The editor supports various markdown extensions and features:
-
-\`\`\`markdown
-# Headers
-## Subheaders
-**Bold** and *Italic*
-- Lists
-  - Nested Lists
-1. Numbered Lists
-
-\`\`\`javascript
-// Code blocks with syntax highlighting
-function hello() {
-  console.log("Hello, World!");
-}
-\`\`\`
-
-| Tables | Are | Supported |
-|--------|-----|-----------|
-| Data   | In  | Tables    |
-
-> Blockquotes
-> With multiple lines
-
-Math equations: $E = mc^2$
-
-And much more...
+│   └── useMarkdownEditor.ts
+└── types/
+    └── types.ts
 \`\`\`
 
 ## Getting Started
@@ -346,21 +223,15 @@ And much more...
 To run the project locally:
 
 \`\`\`bash
-# Clone the repository
-git clone https://github.com/your-username/markdown-editor.git
-
-# Install dependencies
 npm install
-
-# Start the development server
 npm run dev
 \`\`\`
 
 ## Learn More
 
-- [CodeMirror Documentation](https://codemirror.net/)
-- [Marked Documentation](https://marked.js.org/)
-- [PrismJS Documentation](https://prismjs.com/)`,
+- [React Markdown Documentation](https://github.com/remarkjs/react-markdown)
+- [Tailwind CSS Documentation](https://tailwindcss.com/)
+`,
     resources: [
       {
         title: "Documentation",
@@ -394,33 +265,47 @@ A customizable pomodoro timer application built with React and TypeScript. This 
 
 ## Features
 
-- Customizable work and break intervals
-- Task tracking for each pomodoro session
-- Sound notifications
-- Session statistics
+- Customizable work, break, and long break intervals
+- Session tracking and statistics
+- Sound notifications with mute option
 - Dark/light theme support
-- Progress tracking
+- Responsive design
 
 ## Technical Stack
 
 - React 18 with TypeScript
 - Tailwind CSS for styling
-- Howler.js for audio
-- Chart.js for statistics
-- Local storage for data persistence
+- React Hooks for timer logic
+- Lucide React for icons
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── TimerDisplay.tsx
+│   ├── SettingsPanel.tsx
+│   ├── SessionCounter.tsx
+├── hooks/
+│   └── usePomodoroTimer.ts
+└── types/
+    └── types.ts
+\`\`\`
 
 ## Getting Started
 
+To run the project locally:
+
 \`\`\`bash
-# Clone the repository
-git clone https://github.com/your-username/pomodoro-timer.git
-
-# Install dependencies
 npm install
-
-# Start the development server
 npm run dev
-\`\`\``,
+\`\`\`
+
+## Learn More
+
+- [Pomodoro Technique](https://en.wikipedia.org/wiki/Pomodoro_Technique)
+- [React Hooks](https://reactjs.org/docs/hooks-intro.html)
+`,
     resources: [
       {
         title: "View Demo",
@@ -449,31 +334,45 @@ A sleek calculator application built with React and TypeScript. This project dem
 
 ## Features
 
-- Basic arithmetic operations
-- Memory functions
-- History log
-- Responsive design
-- Keyboard support
-- Scientific mode
+- Basic arithmetic operations (+, -, *, /, %)
+- Clear, delete, toggle sign, and decimal input
+- Responsive design with keyboard support
+- Clean and modern UI with Tailwind CSS
 
 ## Technical Stack
 
 - React 18 with TypeScript
 - Custom hooks for calculator logic
 - Tailwind CSS for styling
+- Lucide React for icons
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── CalculatorDisplay.tsx
+│   ├── CalculatorKeypad.tsx
+├── hooks/
+│   └── useCalculator.ts
+└── types/
+    └── types.ts
+\`\`\`
 
 ## Getting Started
 
+To run the project locally:
+
 \`\`\`bash
-# Clone the repository
-git clone https://github.com/your-username/calculator.git
-
-# Install dependencies
 npm install
-
-# Start the development server
 npm run dev
-\`\`\``,
+\`\`\`
+
+## Learn More
+
+- [React Hooks](https://reactjs.org/docs/hooks-intro.html)
+- [Tailwind CSS](https://tailwindcss.com/)
+`,
     resources: [
       {
         title: "View Demo",
@@ -503,33 +402,48 @@ A recipe search application built with React and TypeScript. This project allows
 ## Features
 
 - Search recipes by ingredients or name
-- Filter by dietary restrictions
+- Filter by dietary restrictions and meal types
 - Save favorite recipes
-- Detailed cooking instructions
-- Nutritional information
-- Shopping list generation
+- Detailed cooking instructions and nutrition info
+- Responsive design
 
 ## Technical Stack
 
 - React 18 with TypeScript
 - TanStack Query for API calls
 - Tailwind CSS for styling
-- Zustand for state management
-- React Hook Form for search
+- React Hook Form for search input
 - Local storage for favorites
+
+## Project Structure
+
+\`\`\`
+src/
+├── components/
+│   ├── SearchBar.tsx
+│   ├── FilterPanel.tsx
+│   ├── RecipeList.tsx
+│   ├── RecipeDetails.tsx
+├── hooks/
+│   └── useRecipeSearch.ts
+└── types/
+    └── types.ts
+\`\`\`
 
 ## Getting Started
 
+To run the project locally:
+
 \`\`\`bash
-# Clone the repository
-git clone https://github.com/your-username/recipe-finder.git
-
-# Install dependencies
 npm install
-
-# Start the development server
 npm run dev
-\`\`\``,
+\`\`\`
+
+## Learn More
+
+- [TanStack Query](https://tanstack.com/query/latest)
+- [React Hook Form](https://react-hook-form.com/)
+`,
     resources: [
       {
         title: "View Demo",
@@ -560,21 +474,18 @@ A sophisticated AI chatbot application built with React and TypeScript. This pro
 ## Features
 
 - Natural language understanding and generation
-- Context-aware conversations
-- Message history management
+- Context-aware conversations with message history
 - Streaming responses for real-time feedback
-- Multiple AI model support
-- Custom prompt templates
-- Responsive chat interface
+- Responsive chat interface with user and AI avatars
 - Dark/light theme support
 
 ## Technical Stack
 
 - React 18 with TypeScript
-- OpenAI API or similar LLM integration
-- TanStack Query for API handling
+- Supabase Edge Functions for AI API proxy
+- Cohere AI for language model integration
 - Tailwind CSS for styling
-- React Hook Form for user input
+- React Hook Form for input handling
 - Local storage for conversation history
 
 ## Project Structure
@@ -592,8 +503,8 @@ src/
 │   └── useStreamingResponse.ts
 ├── services/
 │   └── aiService.ts
-└── utils/
-    └── formatMessages.ts
+└── types/
+    └── types.ts
 \`\`\`
 
 ## Getting Started
@@ -601,15 +512,15 @@ src/
 To run the project locally:
 
 \`\`\`bash
-# Clone the repository
-git clone https://github.com/your-username/ai-chatbot.git
-
-# Install dependencies
 npm install
-
-# Start the development server
 npm run dev
-\`\`\``,
+\`\`\`
+
+## Learn More
+
+- [Cohere AI](https://cohere.ai/)
+- [Supabase Edge Functions](https://supabase.com/docs/guides/functions)
+`,
     resources: [
       {
         title: "View Demo",
@@ -629,7 +540,7 @@ npm run dev
     description:
       "A creative tool that utilizes generative AI to transform text prompts into unique images with various style options.",
     image:
-      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80", // Updated to a digital art related image
+      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1024&q=80",
     tags: ["React", "TypeScript", "Generative AI", "Stable Diffusion"],
     difficulty: "advanced",
     readme: `# AI Image Generator
@@ -638,41 +549,28 @@ A powerful image generation application built with React and TypeScript. This pr
 
 ## Features
 
-- Text-to-image generation
-- Style customization options
-- Prompt history management
-- Gallery of generated images
-- Image download and sharing
-- Advanced prompt engineering interface
-- Response time optimization
-- Authentication and user galleries
+- Text-to-image generation with positive and negative prompts
+- Image size and aspect ratio selection
+- Display generated images with download option
+- Responsive UI with loading and error states
 
 ## Technical Stack
 
 - React 18 with TypeScript
-- OpenAI DALL-E or Stable Diffusion API integration
-- TanStack Query for API handling
+- Supabase Edge Functions for Google Gemini API proxy
 - Tailwind CSS for styling
-- React Hook Form for prompts
-- Local storage for history
+- React Hook Form for prompt input
 
 ## Project Structure
 
 \`\`\`
 src/
 ├── components/
-│   ├── PromptInput.tsx
-│   ├── StyleOptions.tsx
-│   ├── ImageGallery.tsx
-│   ├── ImageCard.tsx
-│   └── PromptHistory.tsx
-├── hooks/
-│   ├── useImageGeneration.ts
-│   └── usePromptHistory.ts
+│   ├── AIImageGenerator.tsx
 ├── services/
 │   └── imageGenerationService.ts
-└── utils/
-    └── formatPrompts.ts
+└── types/
+    └── types.ts
 \`\`\`
 
 ## Getting Started
@@ -680,15 +578,15 @@ src/
 To run the project locally:
 
 \`\`\`bash
-# Clone the repository
-git clone https://github.com/your-username/ai-image-generator.git
-
-# Install dependencies
 npm install
-
-# Start the development server
 npm run dev
-\`\`\``,
+\`\`\`
+
+## Learn More
+
+- [Google Gemini API](https://developers.google.com/ai)
+- [Supabase Edge Functions](https://supabase.com/docs/guides/functions)
+`,
     resources: [
       {
         title: "View Demo",
@@ -717,42 +615,28 @@ A content summarization application built with React and TypeScript. This projec
 
 ## Features
 
-- URL content extraction
-- Document upload and processing
-- Adjustable summary length
-- Key points extraction
-- Multiple summary styles (bullet points, paragraphs)
-- Reading time estimation
-- History of summarized content
-- Content sharing options
+- Paste or type text to generate concise summaries
+- Adjustable summary length and style (via edge function parameters)
+- Responsive UI with loading and error states
+- Dark/light theme support
 
 ## Technical Stack
 
 - React 18 with TypeScript
-- OpenAI API or similar AI summarization integration
-- TanStack Query for API handling
+- Supabase Edge Functions for Cohere API proxy
 - Tailwind CSS for styling
-- React Hook Form for input
-- File handling for document uploads
+- React Hook Form for input handling
 
 ## Project Structure
 
 \`\`\`
 src/
 ├── components/
-│   ├── InputForm.tsx
-│   ├── SummarySettings.tsx
-│   ├── SummaryOutput.tsx
-│   ├── DocumentUploader.tsx
-│   └── SummaryHistory.tsx
-├── hooks/
-│   ├── useSummarizer.ts
-│   └── useContentExtractor.ts
+│   ├── AIContentSummarizer.tsx
 ├── services/
 │   └── summarizerService.ts
-└── utils/
-    ├── extractContent.ts
-    └── formatSummary.ts
+└── types/
+    └── types.ts
 \`\`\`
 
 ## Getting Started
@@ -760,15 +644,15 @@ src/
 To run the project locally:
 
 \`\`\`bash
-# Clone the repository
-git clone https://github.com/your-username/ai-summarizer.git
-
-# Install dependencies
 npm install
-
-# Start the development server
 npm run dev
-\`\`\``,
+\`\`\`
+
+## Learn More
+
+- [Cohere AI](https://cohere.ai/)
+- [Supabase Edge Functions](https://supabase.com/docs/guides/functions)
+`,
     resources: [
       {
         title: "View Demo",
@@ -1334,12 +1218,12 @@ npm run dev
     resources: [
       {
         title: "View Demo",
-        url: "/projects/web-audio-visualizer/demo",
+        url: "/projects/audio-visualizer/demo",
         internal: true,
       },
       {
         title: "View Code",
-        url: "/projects/web-audio-visualizer/demo/code",
+        url: "/projects/audio-visualizer/demo/code",
         internal: true,
       },
     ],
@@ -1566,8 +1450,8 @@ A personal finance application built with React and TypeScript. This project hel
 - Chart.js for visualizations
 - Tailwind CSS for styling
 - React Hook Form for inputs
-- Local storage for data
-- CSV export functionality
+- IndexedDB for storage
+- PWA support
 
 ## Getting Started
 

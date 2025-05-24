@@ -344,7 +344,7 @@ const TodoItem: React.FC<TodoItemProps> = memo(({
               />
             </Button>
             <span
-              className={\`${
+              className={\`$\{
                 todo.completed
                   ? "line-through text-gray-500"
                   : darkMode
