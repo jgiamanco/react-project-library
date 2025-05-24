@@ -41,21 +41,19 @@ serve(async (req) => {
       token: COHERE_API_KEY,
     });
 
-    // Use Cohere's chat endpoint with a system message to summarize
-    const messages = [
+    // Prepare chatHistory with system message
+    const chatHistory = [
       {
         role: "system",
-        content: "You are a helpful assistant that summarizes text concisely.",
-      },
-      {
-        role: "user",
-        content: text,
+        message: "You are a helpful assistant that summarizes text concisely.",
       },
     ];
 
+    // Pass the input text as the required 'message' parameter
     const response = await cohere.chat({
       model: "command-xlarge-nightly",
-      messages: messages,
+      message: text,
+      chatHistory: chatHistory,
       max_tokens: 200,
       temperature: 0.3,
       stop_sequences: ["\n"],
