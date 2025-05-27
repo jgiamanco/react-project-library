@@ -12,6 +12,7 @@ export default function Header() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-6 md:gap-10">
           <Link to="/" className="flex items-center space-x-2">
+            <img src="/logo.png" alt="Logo" className="h-8 mr-2" />
             <span className="font-bold text-xl">React Project Library</span>
           </Link>
           <nav className="hidden md:flex gap-6">
